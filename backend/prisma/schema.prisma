@@ -1,0 +1,232 @@
+// Prisma schema configuration for DEVSYNX Activity Tracker
+// Database Engine: Local SQLite File (devsynx.db)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Employee / User Entity
+model User {
+  id                 String           @id @default(uuid())
+  email              String           @unique
+  fullName           String
+  employeeId         String?          @unique
+  avatarUrl          String?
+  jobTitle           String?
+  department         String?
+  role               String           @default("EMPLOYEE") // "SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"
+  status             String           @default("ACTIVE")   // "ACTIVE", "INACTIVE", "OFFBOARDED"
+  isActive           Boolean          @default(true)
+  joiningDate        DateTime?
+
+  // Work Profile Self-Service Fields
+  bio                String?
+  responsibilities   String?
+  currentFocus       String?
+  workLinksJson      String?          // JSON array string of work links
+
+  // Manager Self-Referencing Relation (Employee -> Manager)
+  managerId          String?
+  manager            User?            @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports      User[]           @relation("UserManager")
+
+  // Target Relations
+  devices            Device[]
+  sessions           Session[]
+  dailyAggregates    DailyAggregate[]
+  auditLogs          AuditLog[]
+  employeeSkills     EmployeeSkill[]
+  projectMemberships ProjectMember[]
+  workUpdates        WorkUpdate[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([managerId])
+  @@index([department])
+  @@index([status])
+}
+
+// 2. Skill Entity
+model Skill {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  category       String?
+  employeeSkills EmployeeSkill[]
+  createdAt      DateTime        @default(now())
+}
+
+// 3. EmployeeSkill Join Entity
+model EmployeeSkill {
+  id          String   @id @default(uuid())
+  userId      String
+  skillId     String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  proficiency String?  // "BEGINNER", "INTERMEDIATE", "EXPERT"
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, skillId])
+  @@index([userId])
+}
+
+// 4. Project Entity
+model Project {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  status      String          @default("ACTIVE") // "PLANNING", "ACTIVE", "COMPLETED", "ON_HOLD"
+  startDate   DateTime?
+  endDate     DateTime?
+  members     ProjectMember[]
+  workUpdates WorkUpdate[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+// 5. ProjectMember Join Entity
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // "LEAD", "MEMBER", "CONTRIBUTOR"
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// 6. WorkUpdate Entity
+model WorkUpdate {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title       String
+  description String
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([projectId])
+}
+
+// 7. Manual Attachment Metadata Entity
+model Attachment {
+  id           String     @id @default(uuid())
+  workUpdateId String
+  workUpdate   WorkUpdate @relation(fields: [workUpdateId], references: [id], onDelete: Cascade)
+  originalName String
+  storedName   String
+  mimeType     String
+  size         Int
+  storagePath  String
+  createdAt    DateTime   @default(now())
+
+  @@index([workUpdateId])
+}
+
+// 8. Device Entity
+model Device {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hostname        String
+  osType          String    // "WINDOWS" or "MACOS"
+  osVersion       String?
+  agentVersion    String?
+  deviceTokenHash String    @unique
+  status          String    @default("ACTIVE") // "ACTIVE", "DISABLED", "REVOKED"
+  isRevoked       Boolean   @default(false)
+  lastSeenAt      DateTime?
+  revokedAt       DateTime?
+  sessions        Session[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([isRevoked])
+}
+
+// 9. Activity Session Entity
+model Session {
+  id              String   @id @default(uuid())
+  deviceId        String
+  device          Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appName         String
+  windowTitle     String?
+  startTime       DateTime
+  endTime         DateTime
+  durationSeconds Int
+  isIdle          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([userId, startTime])
+  @@index([deviceId, startTime])
+  @@index([appName, startTime])
+  @@index([isIdle])
+}
+
+// 10. Daily Aggregate Entity
+model DailyAggregate {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date               String   // YYYY-MM-DD
+  totalActiveSeconds Int      @default(0)
+  totalIdleSeconds   Int      @default(0)
+  topAppsJson        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+// 11. Audit Log Entity
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String?
+  actorUser    User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action       String
+  targetEntity String?
+  ipAddress    String?
+  detailsJson  String?
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([action])
+}
+
+// 12. System Health Check Placeholder
+model HealthCheck {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+}
+
+// 13. Activity Batch Entity (Idempotency & Duplicate Telemetry Protection)
+model ActivityBatch {
+  id          String   @id @default(uuid())
+  batchId     String   @unique
+  deviceId    String
+  userId      String
+  sampleCount Int
+  createdAt   DateTime @default(now())
+
+  @@index([batchId])
+  @@index([deviceId])
+  @@index([userId])
+}

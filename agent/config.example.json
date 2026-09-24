@@ -1,0 +1,9 @@
+{
+  "backend_url": "http://localhost:4000",
+  "device_id": "REPLACE_WITH_PROVISIONED_DEVICE_ID",
+  "device_token": "REPLACE_WITH_PROVISIONED_DEVICE_SECRET_TOKEN",
+  "sample_interval_seconds": 5,
+  "idle_threshold_seconds": 180,
+  "upload_interval_seconds": 60,
+  "window_title_enabled": false
+}

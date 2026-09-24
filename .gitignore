@@ -1,0 +1,59 @@
+# Node & JavaScript dependencies
+node_modules/
+vendor/
+
+# Environment files & local secrets (Keep .env.example committed)
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+
+# Build outputs
+dist/
+build/
+out/
+.vite/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# Databases & local agent queues
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+agent-data/
+agent_data/
+*.log
+
+# Python virtual environments & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+agent/config.json
+agent/*.env
+agent/*.spec
+agent/build/
+agent/dist/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
