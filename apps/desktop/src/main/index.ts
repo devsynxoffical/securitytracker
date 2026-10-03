@@ -10,7 +10,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    title: 'Company OS - Desktop Workstation',
+    title: 'WorkPulse — Desktop Workstation',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
@@ -37,7 +37,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.companyos.desktop');
+  electronApp.setAppUserModelId('com.workpulse.desktop');
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window);

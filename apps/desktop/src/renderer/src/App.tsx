@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { ShiftState, CallOutcome } from '@company-os/contracts';
 import { ApiClient } from './apiClient';
+import logoImg from './assets/logo.jpg';
 
 type ScreenId =
   | 'D01-login'
@@ -130,7 +131,7 @@ export default function App() {
     {
       id: 'EM-501',
       from: 'Sarah Jenkins <s.jenkins@apexlogistics.com>',
-      subject: 'Re: Company OS Enterprise Workstation SLA details',
+      subject: 'Re: WorkPulse Enterprise Workstation SLA details',
       time: '2:15 PM',
       snippet: 'Thanks for the quick response! We reviewed the monitoring specs and transparency model...',
       body: 'Hi Daniyal,\n\nThanks for the quick turnaround! We reviewed the monitoring specs and employee transparency model with our executive board. They are very pleased with the zero-keystroke/clipboard architecture.\n\nCould you send over the final pricing schedule for 50 initial seats?\n\nBest regards,\nSarah Jenkins\nVP Operations, Apex Logistics',
@@ -234,8 +235,8 @@ export default function App() {
     return (
       <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
         <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
-          <span className="font-semibold text-[#151A1E]">Company OS</span>
+          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
+          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
           <div className="ml-auto flex items-center gap-2">
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><Minus className="w-3.5 h-3.5" /></span>
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><X className="w-3.5 h-3.5" /></span>
@@ -244,9 +245,9 @@ export default function App() {
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-[420px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
             <div className="flex items-center gap-3 mb-6">
-              <span className="w-8 h-8 rounded-lg bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-sm">C</span>
+              <img src={logoImg} alt="WorkPulse" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
               <div>
-                <h1 className="text-base font-semibold text-[#151A1E]">Sign in to Company OS</h1>
+                <h1 className="text-base font-semibold text-[#151A1E]">Sign in to WorkPulse</h1>
                 <p className="text-xs text-[#8A939B]">Live PostgreSQL &bull; NestJS Authenticated</p>
               </div>
             </div>
@@ -301,8 +302,8 @@ export default function App() {
     return (
       <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
         <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
-          <span className="font-semibold text-[#151A1E]">Company OS</span>
+          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
+          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-[440px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8 text-center">
@@ -349,8 +350,8 @@ export default function App() {
     return (
       <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
         <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
-          <span className="font-semibold text-[#151A1E]">Company OS</span>
+          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
+          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-[440px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
@@ -398,8 +399,8 @@ export default function App() {
     return (
       <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
         <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
-          <span className="font-semibold text-[#151A1E]">Company OS</span>
+          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
+          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-[520px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
@@ -451,8 +452,8 @@ export default function App() {
     <div className="flex flex-col h-screen w-screen bg-[#F5F6F3] overflow-hidden select-none font-sans">
       {/* 34px Custom Titlebar */}
       <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B] shrink-0">
-        <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
-        <span className="font-semibold text-[#151A1E]">Company OS Workstation</span>
+        <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
+        <span className="font-semibold text-[#151A1E]">WorkPulse Workstation</span>
         <span className="text-[11px] text-[#8A939B] ml-2">Live Backend (Port 4000)</span>
 
         {/* Quick Debug Screen Selector */}
@@ -482,8 +483,8 @@ export default function App() {
           <div className="space-y-1">
             {/* Brand Header */}
             <div className="flex items-center gap-2.5 px-2 py-1 mb-4">
-              <span className="w-6 h-6 rounded-md bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-xs">C</span>
-              <span className="font-semibold text-sm text-[#151A1E]">Company OS</span>
+              <img src={logoImg} alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
+              <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
             </div>
 
             <div className="text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold px-2 py-1">
@@ -1295,7 +1296,7 @@ export default function App() {
                   <div className="space-y-3 pt-2">
                     <div>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="font-medium text-[#151A1E]">Company OS CRM</span>
+                        <span className="font-medium text-[#151A1E]">WorkPulse CRM</span>
                         <span className="font-mono font-semibold text-[#0F6B5C]">3h 42m (48%)</span>
                       </div>
                       <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">

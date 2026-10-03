@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Company OS - Admin Control Center',
-  description: 'Enterprise Employee Management, Security & CRM Platform',
+  title: 'WorkPulse — Enterprise Workforce Intelligence & Operations',
+  description: 'Real-time telemetry, employee tracking, and unified CRM operations platform',
 };
 
 export default function RootLayout({

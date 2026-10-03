@@ -240,8 +240,8 @@ export default function AdminControlCenter() {
         <div className="overflow-y-auto p-3 space-y-1">
           {/* Brand Header */}
           <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-            <span className="w-6 h-6 rounded-md bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-xs">C</span>
-            <span className="font-semibold text-sm text-[#151A1E]">Company OS</span>
+            <img src="/logo.jpg" alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
+            <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
             <span className="ml-auto px-2 py-0.5 rounded-full bg-[#ECEEEB] text-[#5C666E] font-semibold text-[10px]">
               Admin Live
             </span>
@@ -454,7 +454,7 @@ export default function AdminControlCenter() {
         {/* 56px Top Bar */}
         <div className="h-[56px] bg-white border-b border-[#E4E7E1] flex items-center px-6 gap-3 shrink-0">
           <div>
-            <div className="text-[11px] text-[#8A939B]">Company OS &bull; Connected to PostgreSQL (Port 4000)</div>
+            <div className="text-[11px] text-[#8A939B]">WorkPulse &bull; Connected to PostgreSQL (Port 4000)</div>
             <h1 className="text-base font-semibold text-[#151A1E]">
               {currentSection === 'dashboard' && 'Executive Dashboard'}
               {currentSection === 'employees' && 'Employee Directory (Live Database)'}
