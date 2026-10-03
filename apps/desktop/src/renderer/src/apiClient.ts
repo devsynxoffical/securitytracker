@@ -2,13 +2,9 @@ const API_BASE = 'http://localhost:4000/api/v1';
 
 export class ApiClient {
   private static token: string | null = null;
-  private static companyId: string | null = null;
-  private static employeeId: string | null = null;
 
   static setAuth(token: string, companyId?: string, employeeId?: string) {
     this.token = token;
-    if (companyId) this.companyId = companyId;
-    if (employeeId) this.employeeId = employeeId;
     localStorage.setItem('companyos_desktop_token', token);
     if (companyId) localStorage.setItem('companyos_company_id', companyId);
     if (employeeId) localStorage.setItem('companyos_employee_id', employeeId);

@@ -62,12 +62,10 @@ export default function App() {
   const [activeSeconds, setActiveSeconds] = useState<number>(21960);
   const [idleSeconds] = useState<number>(2195);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [queuedEventsCount, setQueuedEventsCount] = useState<number>(0);
 
   // Modals & Drawers
   const [showBreakModal, setShowBreakModal] = useState<boolean>(false);
   const [breakType, setBreakType] = useState<string>('Lunch break');
-  const [showIdlePrompt, setShowIdlePrompt] = useState<boolean>(false);
   const [showEndShiftModal, setShowEndShiftModal] = useState<boolean>(false);
   const [showLogCallModal, setShowLogCallModal] = useState<boolean>(false);
   const [showComposeModal, setShowComposeModal] = useState<boolean>(false);
@@ -150,7 +148,7 @@ export default function App() {
   ]);
 
   // Notifications Data
-  const [notifications, setNotifications] = useState([
+  const [notifications] = useState([
     { id: 'N-1', title: 'Target Milestone: 80% Calls Completed', time: '15m ago', unread: true, type: 'target', desc: 'You completed 32 of 40 calls scheduled for today. Great momentum!' },
     { id: 'N-2', title: 'Correction Request Approved', time: '2h ago', unread: true, type: 'attendance', desc: 'Manager approved your attendance adjustment for Oct 1st (09:00 AM - 05:30 PM).' },
   ]);
