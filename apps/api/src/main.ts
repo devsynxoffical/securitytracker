@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ClockService } from './common/clock.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import cookieParser from 'cookie-parser';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const cookieParser = require('cookie-parser');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

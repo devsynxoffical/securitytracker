@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { PrismaService } from './common/prisma.service';
-import { RedisService } from './common/redis.service';
-import { ClockService } from './common/clock.service';
+import { CommonModule } from './common/common.module';
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { DevicesModule } from './devices/devices.module';
@@ -25,6 +23,7 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    CommonModule,
     AuthModule,
     DevicesModule,
     OrgModule,
@@ -40,9 +39,6 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
   ],
   controllers: [HealthController],
   providers: [
-    PrismaService,
-    RedisService,
-    ClockService,
     {
       provide: APP_GUARD,
       useClass: RbacGuard,
@@ -52,6 +48,5 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
       useClass: AuditInterceptor,
     },
   ],
-  exports: [PrismaService, RedisService, ClockService],
 })
 export class AppModule {}

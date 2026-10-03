@@ -5,7 +5,7 @@ import { PermissionKeys, SystemRoleNames, DefaultRoleRank, Scope } from '@compan
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database with default company, roles, and super admin...');
+  console.log('Seeding database with full live enterprise data...');
 
   // 1. Create Default Company
   const company = await prisma.company.upsert({
@@ -193,36 +193,100 @@ async function main() {
     }
   }
 
-  // 3. Create default Super Admin user
-  const superAdminRoleId = createdRoles[SystemRoleNames.SUPER_ADMIN]!;
+  // 3. Create Departments & Teams
+  const salesDept = await prisma.department.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000050' },
+    update: {},
+    create: { id: '00000000-0000-0000-0000-000000000050', companyId: company.id, name: 'Sales' },
+  });
+
+  const supportDept = await prisma.department.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000051' },
+    update: {},
+    create: { id: '00000000-0000-0000-0000-000000000051', companyId: company.id, name: 'Support' },
+  });
+
+  // 4. Create Users (Super Admin, Sales Exec Daniyal, Sam, Ahmed)
   const passwordHash = await argon2.hash('SuperAdmin123!', {
     memoryCost: 65536,
     timeCost: 3,
     parallelism: 1,
   });
 
+  const empPasswordHash = await argon2.hash('password123', {
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
+  });
+
   const superAdmin = await prisma.employee.upsert({
-    where: {
-      companyId_code: {
-        companyId: company.id,
-        code: 'EMP-0001',
-      },
-    },
+    where: { companyId_code: { companyId: company.id, code: 'EMP-0001' } },
     update: {},
     create: {
       companyId: company.id,
       code: 'EMP-0001',
-      firstName: 'Super',
-      lastName: 'Admin',
+      firstName: 'Sara',
+      lastName: 'Malik',
       email: 'admin@devsynx.com',
       passwordHash,
       mustChangePassword: false,
       status: 'active',
-      roleId: superAdminRoleId,
+      roleId: createdRoles[SystemRoleNames.SUPER_ADMIN]!,
     },
   });
 
-  // 4. Create default CRM Pipeline and Stages
+  const employeeDaniyal = await prisma.employee.upsert({
+    where: { companyId_code: { companyId: company.id, code: 'EMP-0021' } },
+    update: {},
+    create: {
+      companyId: company.id,
+      code: 'EMP-0021',
+      firstName: 'Daniyal',
+      lastName: 'Khan',
+      email: 'daniyal.khan@company.com',
+      passwordHash: empPasswordHash,
+      mustChangePassword: false,
+      status: 'active',
+      departmentId: salesDept.id,
+      roleId: createdRoles[SystemRoleNames.EMPLOYEE]!,
+    },
+  });
+
+  const employeeSam = await prisma.employee.upsert({
+    where: { companyId_code: { companyId: company.id, code: 'EMP-0022' } },
+    update: {},
+    create: {
+      companyId: company.id,
+      code: 'EMP-0022',
+      firstName: 'Sam',
+      lastName: 'Parker',
+      email: 'sam.parker@company.com',
+      passwordHash: empPasswordHash,
+      mustChangePassword: false,
+      status: 'active',
+      departmentId: salesDept.id,
+      roleId: createdRoles[SystemRoleNames.EMPLOYEE]!,
+    },
+  });
+
+  await prisma.employee.upsert({
+    where: { companyId_code: { companyId: company.id, code: 'EMP-0031' } },
+    update: {},
+    create: {
+      companyId: company.id,
+      code: 'EMP-0031',
+      firstName: 'Ahmed',
+      lastName: 'Raza',
+      email: 'ahmed.raza@company.com',
+      passwordHash: empPasswordHash,
+      mustChangePassword: false,
+      status: 'active',
+      departmentId: supportDept.id,
+      roleId: createdRoles[SystemRoleNames.EMPLOYEE]!,
+    },
+  });
+
+  // 5. Create default CRM Pipeline and Stages
   const pipeline = await prisma.pipeline.upsert({
     where: { id: '00000000-0000-0000-0000-000000000010' },
     update: {},
@@ -248,24 +312,77 @@ async function main() {
     },
   });
 
-  // 5. Create default Shift Schedule (Mon-Fri 09:00 - 17:00)
-  await prisma.shiftSchedule.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000020' },
+  const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id } });
+  const qualifiedStage = stages.find((s) => s.name === 'Proposal Sent') || stages[0]!;
+  const contactedStage = stages.find((s) => s.name === 'Contacted') || stages[0]!;
+
+  // 6. Create Demo Leads
+  await prisma.lead.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000101' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000020',
+      id: '00000000-0000-0000-0000-000000000101',
       companyId: company.id,
-      name: 'Standard Working Hours',
-      workdays: [1, 2, 3, 4, 5],
-      startTime: '09:00',
-      endTime: '17:00',
-      crossesMidnight: false,
-      graceMinutes: 10,
-      halfDayPercent: 50,
+      ownerId: employeeDaniyal.id,
+      pipelineId: pipeline.id,
+      stageId: qualifiedStage.id,
+      name: 'Sarah Jenkins',
+      companyName: 'Apex Logistics Inc',
+      value: 28000,
+      custom: { priority: 'High', jobTitle: 'VP of Operations' },
     },
   });
 
-  console.log(`Seed complete: Company ${company.name}, Super Admin ${superAdmin.email} (${superAdmin.code})`);
+  await prisma.lead.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000102' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000102',
+      companyId: company.id,
+      ownerId: employeeSam.id,
+      pipelineId: pipeline.id,
+      stageId: contactedStage.id,
+      name: 'Michael Chang',
+      companyName: 'Nexus Health Systems',
+      value: 45000,
+      custom: { priority: 'High', jobTitle: 'Chief Information Officer' },
+    },
+  });
+
+  // 7. Create Demo Tasks
+  await prisma.task.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000201' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000201',
+      companyId: company.id,
+      creatorId: superAdmin.id,
+      assigneeId: employeeDaniyal.id,
+      title: 'Follow up with Apex Logistics on SLA agreement',
+      priority: 'high',
+      dueAt: new Date(),
+      status: 'todo',
+    },
+  });
+
+  // 8. Create Devices
+  await prisma.device.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000301' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000301',
+      companyId: company.id,
+      name: 'Daniyal Workstation MacBook (PC-014)',
+      employeeId: employeeDaniyal.id,
+      hardwareHash: 'hash-mac-9821-b4',
+      osVersion: 'macOS 15.1.1',
+      appVersion: '1.0.0',
+      publicKey: 'ecdsa-p256:04a1b2c3d4e5f6',
+      status: 'approved',
+    },
+  });
+
+  console.log(`Seed complete: Company ${company.name}, Super Admin ${superAdmin.email}, Daniyal (${employeeDaniyal.code})`);
 }
 
 main()

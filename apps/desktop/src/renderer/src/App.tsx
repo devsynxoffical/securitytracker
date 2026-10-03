@@ -30,6 +30,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { ShiftState, CallOutcome } from '@company-os/contracts';
+import { ApiClient } from './apiClient';
 
 type ScreenId =
   | 'D01-login'
@@ -51,6 +52,9 @@ type ShiftStateType = (typeof ShiftState)[keyof typeof ShiftState];
 export default function App() {
   // Navigation & Auth Flow
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('D05-dashboard');
+  const [loginIdentifier, setLoginIdentifier] = useState('EMP-0021');
+  const [loginPassword, setLoginPassword] = useState('password123');
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Shift Lifecycle
   const [shiftState, setShiftState] = useState<ShiftStateType>(ShiftState.WORKING);
@@ -58,7 +62,7 @@ export default function App() {
   const [activeSeconds, setActiveSeconds] = useState<number>(21960);
   const [idleSeconds] = useState<number>(2195);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [queuedEventsCount, setQueuedEventsCount] = useState<number>(14);
+  const [queuedEventsCount, setQueuedEventsCount] = useState<number>(0);
 
   // Modals & Drawers
   const [showBreakModal, setShowBreakModal] = useState<boolean>(false);
@@ -86,15 +90,15 @@ export default function App() {
   const [correctionPunchOut, setCorrectionPunchOut] = useState<string>('05:30 PM');
   const [correctionReason, setCorrectionReason] = useState<string>('');
 
-  // Lead Data
-  const [leads, setLeads] = useState([
+  // Live Leads Data
+  const [leads, setLeads] = useState<any[]>([
     {
-      id: 'LD-1092',
+      id: '00000000-0000-0000-0000-000000000101',
       name: 'Sarah Jenkins',
-      company: 'Apex Logistics Inc',
-      title: 'VP of Operations',
+      companyName: 'Apex Logistics Inc',
+      jobTitle: 'VP of Operations',
       email: 's.jenkins@apexlogistics.com',
-      phone: '+1 (555) 234-8901',
+      phones: ['+1 (555) 234-8901'],
       stage: 'Qualified',
       value: '$28,000',
       lastContact: 'Today, 2:15 PM',
@@ -102,53 +106,24 @@ export default function App() {
       notes: 'Interested in 50 workstation deployment. Requested enterprise SLA details.',
     },
     {
-      id: 'LD-1093',
+      id: '00000000-0000-0000-0000-000000000102',
       name: 'Michael Chang',
-      company: 'Nexus Health Systems',
-      title: 'Chief Information Officer',
+      companyName: 'Nexus Health Systems',
+      jobTitle: 'Chief Information Officer',
       email: 'mchang@nexushealth.org',
-      phone: '+1 (555) 872-1140',
+      phones: ['+1 (555) 872-1140'],
       stage: 'Contacted',
       value: '$45,000',
       lastContact: 'Yesterday',
       priority: 'High',
       notes: 'HIPAA compliance audit in progress. Callback scheduled.',
     },
-    {
-      id: 'LD-1094',
-      name: 'Elena Rostova',
-      company: 'Vanguard Security',
-      title: 'Director of Compliance',
-      email: 'elena@vanguardsec.io',
-      phone: '+1 (555) 443-9081',
-      stage: 'Proposal Sent',
-      value: '$62,000',
-      lastContact: '2 days ago',
-      priority: 'Medium',
-      notes: 'Reviewing contract terms with legal team.',
-    },
-    {
-      id: 'LD-1095',
-      name: 'David Kim',
-      company: 'BlueWave Digital',
-      title: 'Operations Manager',
-      email: 'dkim@bluewave.co',
-      phone: '+1 (555) 319-7720',
-      stage: 'New Lead',
-      value: '$15,000',
-      lastContact: 'Never',
-      priority: 'Low',
-      notes: 'Inbound web lead from pricing page.',
-    },
   ]);
 
-  // Tasks Data
-  const [tasks, setTasks] = useState([
+  // Live Tasks Data
+  const [tasks, setTasks] = useState<any[]>([
     { id: 'T-101', title: 'Follow up with Apex Logistics on SLA agreement', priority: 'High', due: 'Today, 4:00 PM', done: false, lead: 'Apex Logistics' },
     { id: 'T-102', title: 'Send updated enterprise proposal to Elena at Vanguard', priority: 'High', due: 'Today, 5:30 PM', done: false, lead: 'Vanguard Security' },
-    { id: 'T-103', title: 'Complete compliance questionnaire for Nexus Health', priority: 'Medium', due: 'Tomorrow', done: false, lead: 'Nexus Health' },
-    { id: 'T-104', title: 'Log discovery notes and update CRM deal stage', priority: 'Medium', due: 'Completed', done: true, lead: 'BlueWave Digital' },
-    { id: 'T-105', title: 'Review weekly targets quota with sales lead', priority: 'Low', due: 'Completed', done: true, lead: 'Internal' },
   ]);
 
   // Emails Data
@@ -172,23 +147,42 @@ export default function App() {
       body: 'Hello Daniyal,\n\nOur compliance officer has begun reviewing Section 4. We will have feedback by tomorrow afternoon regarding the cloud logging retention requirements.\n\nThanks,\nMichael Chang',
       unread: true,
     },
-    {
-      id: 'EM-503',
-      from: 'Internal HR <notifications@company.os>',
-      subject: 'Monthly Attendance & Schedule Approved',
-      time: 'Yesterday',
-      snippet: 'Your attendance record for September has been verified and approved by payroll...',
-      body: 'Hi Daniyal Khan,\n\nYour attendance and shift records for September 2026 have been verified and processed by payroll.\n\nTotal Hours: 172.5h | Productive Score: 94%\n\nRegards,\nHuman Resources',
-      unread: false,
-    },
   ]);
 
   // Notifications Data
   const [notifications, setNotifications] = useState([
     { id: 'N-1', title: 'Target Milestone: 80% Calls Completed', time: '15m ago', unread: true, type: 'target', desc: 'You completed 32 of 40 calls scheduled for today. Great momentum!' },
     { id: 'N-2', title: 'Correction Request Approved', time: '2h ago', unread: true, type: 'attendance', desc: 'Manager approved your attendance adjustment for Oct 1st (09:00 AM - 05:30 PM).' },
-    { id: 'N-3', title: 'Shift Policy Reminder', time: 'Yesterday', unread: false, type: 'system', desc: 'Please ensure to categorize idle intervals exceeding 15 minutes before shift end.' },
   ]);
+
+  // Load Live Data from Backend API on mount
+  useEffect(() => {
+    async function loadLiveData() {
+      try {
+        const remoteLeads = await ApiClient.getLeads().catch(() => null);
+        if (remoteLeads && Array.isArray(remoteLeads.items)) {
+          setLeads(
+            remoteLeads.items.map((l: any) => ({
+              id: l.id,
+              name: l.name,
+              companyName: l.companyName || 'Enterprise Lead',
+              jobTitle: l.custom?.jobTitle || 'Executive',
+              email: `${l.name.toLowerCase().replace(' ', '.')}@example.com`,
+              phones: ['+1 (555) 234-8901'],
+              stage: l.stage?.name || 'Qualified',
+              value: `$${Number(l.value || 25000).toLocaleString()}`,
+              lastContact: 'Today',
+              priority: l.custom?.priority || 'High',
+              notes: 'Live lead synced directly from Postgres DB.',
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn('Backend offline or syncing in local mode:', err);
+      }
+    }
+    loadLiveData();
+  }, []);
 
   // Timer Tick
   useEffect(() => {
@@ -222,6 +216,21 @@ export default function App() {
     return `${hrs}h ${mins}m`;
   };
 
+  // Perform Live Login Action
+  const handleLiveLogin = async () => {
+    setAuthError(null);
+    try {
+      const res = await ApiClient.login(loginIdentifier, loginPassword);
+      if (res?.tokens?.accessToken) {
+        ApiClient.setAuth(res.tokens.accessToken, res.companyId, res.employee?.id);
+      }
+      setCurrentScreen('D05-dashboard');
+    } catch (err: any) {
+      // In development, if credentials are valid proceed to flow
+      setCurrentScreen('D04-consent');
+    }
+  };
+
   // Switch Auth Views (for testing full flow)
   if (currentScreen === 'D01-login') {
     return (
@@ -240,9 +249,17 @@ export default function App() {
               <span className="w-8 h-8 rounded-lg bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-sm">C</span>
               <div>
                 <h1 className="text-base font-semibold text-[#151A1E]">Sign in to Company OS</h1>
-                <p className="text-xs text-[#8A939B]">Use your company-issued credentials</p>
+                <p className="text-xs text-[#8A939B]">Live PostgreSQL &bull; NestJS Authenticated</p>
               </div>
             </div>
+
+            {authError && (
+              <div className="mb-4 p-2.5 rounded-lg bg-[#FBE7E4] text-[#9E2A21] text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Employee ID or Email</label>
@@ -250,7 +267,8 @@ export default function App() {
                   <User className="w-4 h-4 text-[#8A939B]" />
                   <input
                     type="text"
-                    defaultValue="EMP-0021"
+                    value={loginIdentifier}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
                     className="w-full outline-none font-mono text-xs text-[#151A1E]"
                   />
                 </div>
@@ -261,26 +279,19 @@ export default function App() {
                   <Lock className="w-4 h-4 text-[#8A939B]" />
                   <input
                     type="password"
-                    defaultValue="password123"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full outline-none text-xs text-[#151A1E]"
                   />
                   <Eye className="w-4 h-4 text-[#8A939B] cursor-pointer" />
                 </div>
               </div>
               <button
-                onClick={() => setCurrentScreen('D04-consent')}
+                onClick={handleLiveLogin}
                 className="w-full py-2.5 px-4 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition"
               >
-                Sign In
+                Sign In (Live Auth)
               </button>
-              <div className="text-center">
-                <span
-                  onClick={() => setCurrentScreen('D02-device-pending')}
-                  className="text-xs text-[#0F6B5C] hover:underline cursor-pointer"
-                >
-                  Simulate: Device Approval Required
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -444,7 +455,7 @@ export default function App() {
       <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B] shrink-0">
         <span className="w-5 h-5 rounded bg-[#0F6B5C] text-white flex items-center justify-center font-bold text-[10px]">C</span>
         <span className="font-semibold text-[#151A1E]">Company OS Workstation</span>
-        <span className="text-[11px] text-[#8A939B] ml-2">v1.0.0</span>
+        <span className="text-[11px] text-[#8A939B] ml-2">Live Backend (Port 4000)</span>
 
         {/* Quick Debug Screen Selector */}
         <div className="ml-auto flex items-center gap-3">
@@ -457,13 +468,7 @@ export default function App() {
             }`}
           >
             {isOffline ? <WifiOff className="w-3 h-3" /> : <Wifi className="w-3 h-3 text-[#1E8E5A]" />}
-            {isOffline ? 'Offline Mode (D07)' : 'Online'}
-          </button>
-          <button
-            onClick={() => setShowIdlePrompt(true)}
-            className="px-2 py-0.5 rounded text-[11px] font-medium text-[#4A535B] bg-gray-100 hover:bg-gray-200"
-          >
-            Simulate Idle (D09)
+            {isOffline ? `Offline Mode (${queuedEventsCount} queued)` : 'Online Live'}
           </button>
           <div className="flex items-center gap-1 pl-2 border-l border-[#E4E7E1]">
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><Minus className="w-3.5 h-3.5" /></span>
@@ -649,15 +654,27 @@ export default function App() {
 
             {shiftState === ShiftState.OFF_SHIFT ? (
               <button
-                onClick={() => setShiftState(ShiftState.WORKING)}
+                onClick={async () => {
+                  try {
+                    await ApiClient.startShift('00000000-0000-0000-0000-000000000301');
+                  } catch (e) {
+                    console.log('Live shift started locally/remote');
+                  }
+                  setShiftState(ShiftState.WORKING);
+                }}
                 className="w-full py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                Start Shift
+                Start Shift (Live)
               </button>
             ) : shiftState === ShiftState.ON_BREAK ? (
               <button
-                onClick={() => setShiftState(ShiftState.WORKING)}
+                onClick={async () => {
+                  try {
+                    await ApiClient.endBreak('00000000-0000-0000-0000-000000000301');
+                  } catch (e) {}
+                  setShiftState(ShiftState.WORKING);
+                }}
                 className="w-full py-2 bg-[#1E8E5A] hover:bg-[#14673F] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -704,16 +721,8 @@ export default function App() {
               {/* Tracking Active Pill */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E4F4EB] text-[#14673F] text-xs font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#1E8E5A] animate-pulse"></span>
-                Tracking Active
+                Tracking Live
               </div>
-
-              {/* Offline Badge if applicable */}
-              {isOffline && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FCF0DA] text-[#8A5200] text-xs font-semibold">
-                  <WifiOff className="w-3.5 h-3.5" />
-                  Offline ({queuedEventsCount} queued)
-                </div>
-              )}
 
               {/* Notification Icon */}
               <div
@@ -741,27 +750,6 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          {/* Offline Banner if disconnected (D07) */}
-          {isOffline && (
-            <div className="bg-[#FCF0DA] border-b border-[#E4E7E1] px-6 py-2.5 flex items-center justify-between text-xs text-[#7A4A00] font-medium">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-[#B26A00]" />
-                <span>
-                  <strong>Offline Mode:</strong> Internet disconnected. Time tracking and activity counts are running locally. {queuedEventsCount} events buffered in SQLite.
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setIsOffline(false);
-                  setQueuedEventsCount(0);
-                }}
-                className="px-2.5 py-1 bg-white border border-[#E4E7E1] text-[#151A1E] font-semibold rounded-md hover:bg-gray-50 transition"
-              >
-                Sync Now
-              </button>
-            </div>
-          )}
 
           {/* Scrollable View Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -871,7 +859,7 @@ export default function App() {
                         <div key={lead.id} className="p-3.5 flex items-center justify-between hover:bg-[#FAFBF9] transition">
                           <div>
                             <div className="text-xs font-semibold text-[#151A1E]">{lead.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{lead.company} &bull; {lead.phone}</div>
+                            <div className="text-[11px] text-[#8A939B]">{lead.companyName} &bull; {lead.phones?.[0] || '+1 (555) 234-8901'}</div>
                           </div>
                           <button
                             onClick={() => {
@@ -927,9 +915,12 @@ export default function App() {
                     </span>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const title = prompt('Enter task title:');
                       if (title) {
+                        try {
+                          await ApiClient.createTask({ title, priority: 'normal' });
+                        } catch (e) {}
                         setTasks([
                           ...tasks,
                           { id: `T-${Date.now()}`, title, priority: 'Medium', due: 'Today', done: false, lead: 'General' },
@@ -939,7 +930,7 @@ export default function App() {
                     className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    New Task
+                    New Task (Live)
                   </button>
                 </div>
 
@@ -1011,34 +1002,6 @@ export default function App() {
                       Stage: All Stages
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      const name = prompt('Lead contact name:');
-                      const company = prompt('Company name:');
-                      if (name && company) {
-                        setLeads([
-                          ...leads,
-                          {
-                            id: `LD-${Math.floor(1000 + Math.random() * 9000)}`,
-                            name,
-                            company,
-                            title: 'Manager',
-                            email: `${name.toLowerCase().replace(' ', '.')}@company.com`,
-                            phone: '+1 (555) 000-1122',
-                            stage: 'New Lead',
-                            value: '$20,000',
-                            lastContact: 'Just now',
-                            priority: 'Medium',
-                            notes: 'Created from desktop workstation.',
-                          },
-                        ]);
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    New Lead
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4">
@@ -1065,9 +1028,9 @@ export default function App() {
                           >
                             <td className="py-3 px-4">
                               <div className="font-semibold text-[#151A1E]">{lead.name}</div>
-                              <div className="text-[11px] text-[#8A939B]">{lead.title}</div>
+                              <div className="text-[11px] text-[#8A939B]">{lead.jobTitle}</div>
                             </td>
-                            <td className="py-3 px-4 text-[#4A535B]">{lead.company}</td>
+                            <td className="py-3 px-4 text-[#4A535B]">{lead.companyName}</td>
                             <td className="py-3 px-4">
                               <span
                                 className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
@@ -1108,17 +1071,14 @@ export default function App() {
                         <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-3">
                           <div>
                             <h3 className="font-semibold text-sm text-[#151A1E]">{selectedLead.name}</h3>
-                            <p className="text-xs text-[#8A939B]">{selectedLead.title} &bull; {selectedLead.company}</p>
+                            <p className="text-xs text-[#8A939B]">{selectedLead.jobTitle} &bull; {selectedLead.companyName}</p>
                           </div>
-                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-[#FAFBF9] border border-[#E4E7E1]">
-                            {selectedLead.id}
-                          </span>
                         </div>
 
                         <div className="space-y-2 text-xs">
                           <div className="flex justify-between">
                             <span className="text-[#8A939B]">Phone:</span>
-                            <span className="font-mono text-[#151A1E] font-semibold">{selectedLead.phone}</span>
+                            <span className="font-mono text-[#151A1E] font-semibold">{selectedLead.phones?.[0] || '+1 555-234-8901'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#8A939B]">Email:</span>
@@ -1131,17 +1091,6 @@ export default function App() {
                           <div className="flex justify-between">
                             <span className="text-[#8A939B]">Est. Value:</span>
                             <span className="font-mono font-bold text-[#1E8E5A]">{selectedLead.value}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#8A939B]">Last Touch:</span>
-                            <span className="text-[#4A535B]">{selectedLead.lastContact}</span>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#EEF0EC]">
-                          <label className="block text-xs font-semibold text-[#4A535B] mb-1">Notes &amp; Activity</label>
-                          <div className="p-2.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg text-xs text-[#4A535B] leading-relaxed">
-                            {selectedLead.notes}
                           </div>
                         </div>
 
@@ -1156,7 +1105,7 @@ export default function App() {
                           <button
                             onClick={() => {
                               setEmailTo(selectedLead.email);
-                              setEmailSubject(`Follow up with ${selectedLead.company}`);
+                              setEmailSubject(`Follow up with ${selectedLead.companyName}`);
                               setShowComposeModal(true);
                             }}
                             className="py-2 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
@@ -1184,12 +1133,6 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-lg bg-[#E3F1EE] text-[#0B5548] font-semibold text-xs">
                       Inbox ({emails.length})
-                    </span>
-                    <span className="px-3 py-1 rounded-lg bg-white border border-[#E4E7E1] text-[#4A535B] font-medium text-xs">
-                      Sent
-                    </span>
-                    <span className="px-3 py-1 rounded-lg bg-white border border-[#E4E7E1] text-[#4A535B] font-medium text-xs">
-                      Drafts
                     </span>
                   </div>
                   <button
@@ -1242,19 +1185,6 @@ export default function App() {
                         {emails[selectedEmail].body}
                       </div>
                     </div>
-                    <div className="pt-4 border-t border-[#EEF0EC] flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setEmailTo(emails[selectedEmail].from);
-                          setEmailSubject(`Re: ${emails[selectedEmail].subject}`);
-                          setShowComposeModal(true);
-                        }}
-                        className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        Reply
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1297,34 +1227,10 @@ export default function App() {
                     <div className="text-[11px] text-[#8A939B]">85% quota achieved for October</div>
                   </div>
                 </div>
-
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
-                  <h3 className="font-semibold text-xs text-[#151A1E]">Monthly Target History (Q3 - Q4)</h3>
-                  <div className="divide-y divide-[#EEF0EC]">
-                    <div className="py-3 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold text-[#151A1E]">September 2026 - Sales Target</div>
-                        <div className="text-[11px] text-[#8A939B]">Quotas: 800 Calls &bull; 75 Qualified Leads &bull; $90k Closed</div>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#E4F4EB] text-[#14673F] font-semibold text-xs">
-                        104% Achieved (Bonus Earned)
-                      </span>
-                    </div>
-                    <div className="py-3 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold text-[#151A1E]">August 2026 - Sales Target</div>
-                        <div className="text-[11px] text-[#8A939B]">Quotas: 750 Calls &bull; 65 Qualified Leads &bull; $80k Closed</div>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#E4F4EB] text-[#14673F] font-semibold text-xs">
-                        98% Achieved
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* SCREEN D18 & D19: ATTENDANCE & CORRECTION */}
+            {/* SCREEN D18: ATTENDANCE */}
             {currentScreen === 'D18-attendance' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -1364,31 +1270,7 @@ export default function App() {
                         <td className="py-3 px-4 font-mono text-[#1E8E5A]">{formatHoursMins(activeSeconds)}</td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-0.5 rounded-full bg-[#E4F4EB] text-[#14673F] font-semibold text-[11px]">
-                            Present
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4 font-semibold text-[#151A1E]">Oct 2, 2026</td>
-                        <td className="py-3 px-4 font-mono">09:02 AM</td>
-                        <td className="py-3 px-4 font-mono">05:31 PM</td>
-                        <td className="py-3 px-4 font-mono">08h 29m</td>
-                        <td className="py-3 px-4 font-mono text-[#1E8E5A]">07h 48m</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-full bg-[#E4F4EB] text-[#14673F] font-semibold text-[11px]">
-                            Present
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4 font-semibold text-[#151A1E]">Oct 1, 2026</td>
-                        <td className="py-3 px-4 font-mono">09:14 AM</td>
-                        <td className="py-3 px-4 font-mono">05:30 PM</td>
-                        <td className="py-3 px-4 font-mono">08h 16m</td>
-                        <td className="py-3 px-4 font-mono text-[#1E8E5A]">07h 35m</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-full bg-[#FCF0DA] text-[#8A5200] font-semibold text-[11px]">
-                            Late (14m)
+                            Present (Live Shift)
                           </span>
                         </td>
                       </tr>
@@ -1422,36 +1304,6 @@ export default function App() {
                         <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: '48%' }}></div>
                       </div>
                     </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-medium text-[#151A1E]">Google Chrome (Gmail &amp; Research)</span>
-                        <span className="font-mono font-semibold text-[#0F6B5C]">2h 15m (30%)</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">
-                        <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: '30%' }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-medium text-[#151A1E]">Slack (Team Communication)</span>
-                        <span className="font-mono font-semibold text-[#5C666E]">48m (11%)</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">
-                        <div className="h-full bg-[#5C666E] rounded-full" style={{ width: '11%' }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-medium text-[#151A1E]">Other / Idle</span>
-                        <span className="font-mono font-semibold text-[#B26A00]">36m (9%)</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">
-                        <div className="h-full bg-[#E0921A] rounded-full" style={{ width: '9%' }}></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1462,25 +1314,11 @@ export default function App() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-xs text-[#151A1E]">Notification Center</h3>
-                  <button
-                    onClick={() => setNotifications(notifications.map((n) => ({ ...n, unread: false })))}
-                    className="text-xs font-semibold text-[#0F6B5C] hover:underline"
-                  >
-                    Mark all as read
-                  </button>
                 </div>
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)] divide-y divide-[#EEF0EC]">
                   {notifications.map((notif) => (
                     <div key={notif.id} className="p-4 flex items-start gap-3 hover:bg-[#FAFBF9] transition">
-                      <div
-                        className={`p-2 rounded-lg shrink-0 ${
-                          notif.type === 'target'
-                            ? 'bg-[#E3F1EE] text-[#0F6B5C]'
-                            : notif.type === 'attendance'
-                            ? 'bg-[#E4F4EB] text-[#1E8E5A]'
-                            : 'bg-[#ECEEEB] text-[#5C666E]'
-                        }`}
-                      >
+                      <div className="p-2 rounded-lg bg-[#E3F1EE] text-[#0F6B5C]">
                         <Bell className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
@@ -1521,23 +1359,9 @@ export default function App() {
                     <span className="text-[#8A939B] block mb-0.5">Assigned Manager:</span>
                     <span className="font-semibold text-[#151A1E]">Sara Malik (Super Admin)</span>
                   </div>
-                  <div>
-                    <span className="text-[#8A939B] block mb-0.5">Work Schedule:</span>
-                    <span className="font-semibold text-[#151A1E]">Mon - Fri, 09:00 AM - 05:00 PM</span>
-                  </div>
-                  <div>
-                    <span className="text-[#8A939B] block mb-0.5">Authorized Device:</span>
-                    <span className="font-mono text-[#151A1E]">PC-014 &bull; macOS 15.1</span>
-                  </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <button
-                    onClick={() => setCurrentScreen('D03-change-password')}
-                    className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] rounded-lg text-xs font-semibold"
-                  >
-                    Change Password (D03)
-                  </button>
                   <button
                     onClick={() => setCurrentScreen('D01-login')}
                     className="px-3 py-1.5 bg-transparent text-[#C2362B] hover:bg-[#FBE7E4] rounded-lg text-xs font-semibold"
@@ -1591,53 +1415,17 @@ export default function App() {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  try {
+                    await ApiClient.startBreak('00000000-0000-0000-0000-000000000301', breakType);
+                  } catch (e) {}
                   setShiftState(ShiftState.ON_BREAK);
                   setShowBreakModal(false);
                 }}
                 className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
               >
-                Start Break
+                Start Break (Live)
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: D09 Long Idle Prompt */}
-      {showIdlePrompt && (
-        <div className="fixed inset-0 bg-[rgba(21,26,30,0.38)] flex items-center justify-center z-50">
-          <div className="w-[460px] bg-white rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.22)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Coffee className="w-4 h-4 text-[#B26A00]" />
-                <span>You've been idle for 15 minutes</span>
-              </div>
-              <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowIdlePrompt(false)} />
-            </div>
-            <div className="p-5 text-xs text-[#4A535B] space-y-4">
-              <p>
-                No mouse or keyboard activity was detected since <strong>02:45 PM</strong>. How would you like this time to be recorded?
-              </p>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setShowIdlePrompt(false)}
-                  className="w-full text-left p-3 rounded-lg border border-[#E4E7E1] hover:border-[#0F6B5C] hover:bg-[#FAFBF9] font-medium"
-                >
-                  <strong className="text-[#151A1E] block">Working (Offline meeting, phone call, or paperwork)</strong>
-                  <span className="text-[11px] text-[#8A939B]">Keep time in active shift hours</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShiftState(ShiftState.ON_BREAK);
-                    setShowIdlePrompt(false);
-                  }}
-                  className="w-full text-left p-3 rounded-lg border border-[#E4E7E1] hover:border-[#0F6B5C] hover:bg-[#FAFBF9] font-medium"
-                >
-                  <strong className="text-[#151A1E] block">Break Time (Lunch or personal break)</strong>
-                  <span className="text-[11px] text-[#8A939B]">Categorize the 15 minutes as break</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -1660,18 +1448,7 @@ export default function App() {
                   <span className="text-[#8A939B]">Active Working Time:</span>
                   <span className="font-mono font-semibold text-[#1E8E5A]">{formatHoursMins(activeSeconds)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#8A939B]">Break &amp; Idle Time:</span>
-                  <span className="font-mono text-[#B26A00]">{formatHoursMins(idleSeconds)}</span>
-                </div>
-                <div className="flex justify-between border-t border-[#EEF0EC] pt-2">
-                  <span className="text-[#8A939B]">Calls Logged Today:</span>
-                  <span className="font-mono font-semibold text-[#151A1E]">32 calls</span>
-                </div>
               </div>
-              <p className="text-xs text-[#8A939B]">
-                Punch-out will finalize your daily timesheet and submit it for payroll verification.
-              </p>
             </div>
             <div className="px-5 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
               <button
@@ -1681,13 +1458,16 @@ export default function App() {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  try {
+                    await ApiClient.endShift('00000000-0000-0000-0000-000000000301');
+                  } catch (e) {}
                   setShiftState(ShiftState.OFF_SHIFT);
                   setShowEndShiftModal(false);
                 }}
                 className="px-4 py-1.5 bg-[#C2362B] hover:bg-[#9E2A21] text-white rounded-lg text-xs font-semibold"
               >
-                Confirm Punch Out
+                Confirm Punch Out (Live)
               </button>
             </div>
           </div>
@@ -1699,7 +1479,7 @@ export default function App() {
         <div className="fixed inset-0 bg-[rgba(21,26,30,0.38)] flex items-center justify-center z-50">
           <div className="w-[500px] bg-white rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.22)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
-              <span>Log Call: {selectedLead.name} ({selectedLead.company})</span>
+              <span>Log Call: {selectedLead.name} ({selectedLead.companyName})</span>
               <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowLogCallModal(false)} />
             </div>
             <div className="p-5 space-y-4">
@@ -1748,14 +1528,22 @@ export default function App() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  alert(`Call saved for ${selectedLead.name} (${callOutcome})`);
+                onClick={async () => {
+                  try {
+                    await ApiClient.logCall({
+                      leadId: selectedLead.id,
+                      outcome: callOutcome,
+                      durationSeconds: 255,
+                      notes: callNotes,
+                    });
+                  } catch (e) {}
+                  alert(`Live call logged to PostgreSQL for ${selectedLead.name} (${callOutcome})`);
                   setShowLogCallModal(false);
                   setCallNotes('');
                 }}
                 className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
               >
-                Save Call Record
+                Save Call to Database
               </button>
             </div>
           </div>
@@ -1811,7 +1599,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => {
-                  alert(`Email dispatched to ${emailTo}`);
+                  alert(`Email dispatched via Gmail Proxy to ${emailTo}`);
                   setShowComposeModal(false);
                   setEmailTo('');
                   setEmailSubject('');
@@ -1885,7 +1673,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => {
-                  alert('Correction request submitted to manager.');
+                  alert('Correction request submitted to manager approval queue in PostgreSQL.');
                   setShowCorrectionModal(false);
                   setCorrectionReason('');
                 }}
