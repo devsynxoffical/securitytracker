@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Company OS Domain Reporter",
+  "version": "1.0.0",
+  "description": "Reports active tab domain to the local Company OS tracker agent",
+  "permissions": ["tabs", "nativeMessaging"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "com.companyos.agent",
+  "description": "Company OS Tracker Native Messaging Host",
+  "path": "C:\\Program Files\\CompanyOS\\agent\\CompanyOS.NativeHost.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://companyos-domain-reporter-id/"
+  ]
+}

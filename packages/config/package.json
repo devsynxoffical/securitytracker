@@ -1,0 +1,9 @@
+{
+  "name": "@company-os/config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,111 +1,125 @@
-# DEVSYNX Activity Tracker (`devsynx-activity-tracker`)
+# Company OS
 
-Production-grade, privacy-first employee activity tracking system developed for **DEVSYNX Private Limited**.
-
----
-
-## 📌 Project Overview
-
-`devsynx-activity-tracker` is designed to track employee application usage and idle patterns while strictly enforcing privacy boundaries. The system consists of three main components:
-
-1. **Desktop Agent**: Background service running on employee workstations (Windows/macOS) sampling foreground applications every 5 seconds, detecting keyboard/mouse inactivity, maintaining a local SQLite queue, and batch-uploading activity sessions over HTTPS every 60 seconds.
-2. **Backend Services**: Node.js & TypeScript REST API backed by Prisma ORM and a **Local SQLite database (`file:./devsynx.db`)**, managing employee profiles, work information CRM, device provisioning, session storage, reporting, role-based authorization, and audit logging.
-3. **Management Dashboard**: React 18 + TypeScript + Vite web application supporting Google OAuth authentication, Employee Directory, Employee Profile views, work updates, role-based access control, high-level and granular activity analytics, daily/weekly aggregate visualizations, idle time monitoring, device management, and CSV reporting exports.
+**Company OS** is an enterprise-grade, unified platform for Employee Management, Attendance, Activity Tracking, and Google Workspace CRM built to specifications across `docs/` and [AGENTS.md](AGENTS.md).
 
 ---
 
-## 🏗️ Architecture Overview
+## Workspace Structure
 
 ```
-devsynx-activity-tracker/
-├── docs/                 # Architectural specifications, API contracts, CRM, & security design
-├── backend/              # Node.js + TypeScript Express REST API (Port 4000, Local SQLite)
-├── dashboard/            # React + TypeScript + Vite Dashboard SPA (Port 5173)
-├── agent/                # Desktop background agent project (Go / Python)
-├── README.md             # Project documentation index
-└── .gitignore            # Git ignore rules
+securitytracker/
+├── AGENTS.md                                # Project Hard Rules & Commit Conventions
+├── package.json                             # Monorepo root (pnpm + Turborepo)
+├── pnpm-workspace.yaml                      # Workspaces configuration
+├── turbo.json                               # Build cache & pipeline orchestration
+├── infra/
+│   └── docker-compose.yml                   # Postgres 16, Redis 7, MinIO
+├── packages/
+│   ├── contracts/                           # Single source of truth (Zod DTOs, enums, errors, events, reports)
+│   └── config/                              # Shared TSConfig & linting rules
+├── apps/
+│   ├── api/                                 # NestJS + Prisma + Socket.IO Backend
+│   ├── admin/                               # Next.js 15 (App Router) + Tailwind Admin Control Center
+│   └── desktop/                             # Electron (electron-vite) + React Workstation Client
+├── extension/                               # Chrome/Edge Manifest V3 Domain Reporter
+└── agent/
+    ├── CompanyOS.Agent/                     # .NET 8 User Session Background Agent
+    ├── CompanyOS.Watchdog/                  # .NET 8 Session 0 Windows Service
+    └── CompanyOS.Shared/                    # Shared C# IPC Models
 ```
 
 ---
 
-## ⚙️ Prerequisites
+## Getting Started
 
-- **Node.js**: v20.x or higher
-- **npm**: v10.x or higher
-- **Database**: Zero external setup required (uses embedded Local SQLite `devsynx.db` file)
+### 1. Prerequisites
+- **Node.js**: v22 LTS
+- **pnpm**: v12+
+- **Docker & Docker Compose**: For PostgreSQL 16, Redis 7, and MinIO
+- **.NET 8 SDK** (optional, for building Windows Agent binaries)
 
 ---
 
-## 🚀 How to Start Local Development
+### 2. Infrastructure Setup (Docker)
 
-### 1. Environment Setup
+Start the backing database, cache, and object storage:
 
-#### Backend Setup:
 ```bash
-cd backend
-cp .env.example .env
-npm install
-npm run db:generate
-```
-
-#### Dashboard Setup:
-```bash
-cd dashboard
-cp .env.example .env
-npm install
+docker compose -f infra/docker-compose.yml up -d
 ```
 
 ---
 
-### 2. How to Start Backend
+### 3. Install Dependencies & Build
 
-From the `/backend` directory:
 ```bash
-# Run backend in development mode (with hot reloading)
-npm run dev
-```
-The backend API starts at `http://localhost:4000`.
+# Install workspace dependencies
+pnpm install
 
-- Liveness check: `GET http://localhost:4000/health` -> `{"status": "ok"}`
-- Readiness & DB check: `GET http://localhost:4000/ready` -> `{"status": "ready", "database": "connected"}`
-
-To run backend tests:
-```bash
-npm test
+# Build all packages (contracts, api, admin, desktop)
+pnpm build
 ```
 
 ---
 
-### 3. How to Start Dashboard
+### 4. Database Setup & Seeding
 
-From the `/dashboard` directory:
 ```bash
-# Run dashboard in development mode
-npm run dev
+# Generate Prisma Client
+pnpm --filter @company-os/api prisma:generate
+
+# Run Migrations
+pnpm --filter @company-os/api prisma:migrate
+
+# Seed database with baseline Company, Roles, Schedules, and Super Admin
+pnpm --filter @company-os/api prisma:seed
 ```
-The dashboard application starts at `http://localhost:5173`.
 
 ---
 
-## 🔒 Privacy Core Principles
+### 5. Running the Application
 
-Privacy is engineered into the architecture by design. The system explicitly prohibits collection of:
-- Keystrokes or input logging
-- Screenshots automatically
-- Passwords or credentials
-- Clipboard contents
-- Local file content or system files
-- Web browser page contents / DOM / URLs
+Run the complete stack in development mode:
+
+```bash
+# Start all apps simultaneously (API on :4000, Admin on :3000, Desktop Electron app)
+pnpm dev
+```
+
+Or run individual apps:
+
+```bash
+# Central Backend (NestJS on http://localhost:4000/api/v1)
+pnpm --filter @company-os/api dev
+
+# Admin Web Control Center (Next.js on http://localhost:3000)
+pnpm --filter @company-os/admin dev
+
+# Desktop Workstation Client (Electron)
+pnpm --filter @company-os/desktop dev
+```
 
 ---
 
-## 📊 Phase Status
+## Testing & Quality Verification
 
-**Phase 5: Employee CRM / Profile & Work Information Module** (Completed ✅)
-- [x] Prisma schema extended with `Skill`, `EmployeeSkill`, `Project`, `ProjectMember`, `WorkUpdate`, and `Attachment` models targeting SQLite.
-- [x] Local storage service abstraction implemented (`backend/storage/employee-attachments/`).
-- [x] Field-level self-service vs admin authorization enforced on profile endpoints.
-- [x] Manager direct-report reporting boundary enforced on employee profile lookups.
-- [x] React Employee Directory page (`/employees`) and Profile page (`/employees/:id`) built with Overview, Skills, Projects, Work Updates, Activity, and Devices tabs.
-- [x] Work update creation, skills management, and self-service edit forms added.
-- [x] Automated Vitest test suite (`backend/tests/employee.test.ts`) passing 100%.
+```bash
+# Run unit & integration test suites
+pnpm test
+
+# Run TypeScript strict typecheck across all packages
+pnpm typecheck
+
+# Format codebase
+pnpm format
+```
+
+---
+
+## Security & Privacy Highlights
+
+- **Zero Keystroke/Clipboard Capture**: Counts only (`keyCount`, `mouseCount`); zero keyboard hooks.
+- **Privacy Domain-Level Tracking**: URLs stripped of paths and query parameters by the Manifest V3 browser extension.
+- **Isolated Mailbox Proxy**: Backend is the exclusive Gmail API client; refresh tokens stored with AES-256-GCM encryption; employees never receive Google credentials.
+- **Multitenancy & Scope Filtering**: Every endpoint enforces `@RequirePermission` and dynamic `ScopeFilter` (`own`, `team`, `department`, `all`).
+- **Immutable Audit Trail**: All state-modifying operations are written to `audit_logs` and `mail_audit`.
