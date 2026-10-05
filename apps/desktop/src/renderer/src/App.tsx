@@ -28,6 +28,14 @@ import {
   Minus,
   X,
   Filter,
+  Cpu,
+  HardDrive,
+  MousePointer,
+  Keyboard,
+  Monitor,
+  Gauge,
+  Zap,
+  RefreshCw,
 } from 'lucide-react';
 import { ShiftState, CallOutcome } from '@company-os/contracts';
 import { ApiClient } from './apiClient';
@@ -46,7 +54,9 @@ type ScreenId =
   | 'D18-attendance'
   | 'D20-my-activity'
   | 'D21-notifications'
-  | 'D22-profile';
+  | 'D22-profile'
+  | 'D23-hardware-telemetry';
+
 
 type ShiftStateType = (typeof ShiftState)[keyof typeof ShiftState];
 
@@ -154,7 +164,52 @@ export default function App() {
     { id: 'N-2', title: 'Correction Request Approved', time: '2h ago', unread: true, type: 'attendance', desc: 'Manager approved your attendance adjustment for Oct 1st (09:00 AM - 05:30 PM).' },
   ]);
 
-  // Load Live Data from Backend API on mount
+  // Live Hardware & Input Telemetry State
+  const [telemetry, setTelemetry] = useState<any>({
+    isTracking: true,
+    cursorPosition: { x: 0, y: 0 },
+    cursorDistancePixels: 48920,
+    cursorMovementSeconds: 1420,
+    mouseClicksCount: 842,
+    mouseActive: true,
+    keystrokeTapsCount: 2950,
+    typingActiveSeconds: 980,
+    keyboardActive: true,
+    activeApp: {
+      name: 'Visual Studio Code',
+      processName: 'Code.app',
+      windowTitle: 'WorkPulse — Desktop Workstation & Activity Telemetry',
+      activeSeconds: 2450,
+      category: 'PRODUCTIVE',
+    },
+    shiftDurationSeconds: 24155,
+    totalActiveSeconds: 21960,
+    totalIdleSeconds: 2195,
+    currentIdleStreakSeconds: 12,
+    isIdle: false,
+    queuedSegmentsCount: 3,
+    lastSyncedAt: 'Just now',
+    hardware: {
+      hostname: 'MacBook-Pro.local',
+      platform: 'darwin',
+      osRelease: '24.2.0',
+      osVersion: 'macOS 15.2 (Sequoia)',
+      arch: 'arm64',
+      cpuModel: 'Apple M3 Pro',
+      cpuCores: 12,
+      cpuSpeedMhz: 4050,
+      totalMemoryMb: 36864,
+      freeMemoryMb: 14220,
+      usedMemoryPercent: 61,
+      systemUptimeSeconds: 148290,
+      macAddress: '3c:22:fb:91:a4:02',
+      ipAddress: '192.168.1.45',
+      hardwareHash: '8f7a1c4e92b34d58e01934ba72c918f0a45e9981245b73e512cf3498a1b528c1',
+      displayInfo: { width: 3456, height: 2234, scaleFactor: 2 },
+    },
+  });
+
+  // Load Live Data & Connect Telemetry IPC on mount
   useEffect(() => {
     async function loadLiveData() {
       try {
@@ -181,9 +236,67 @@ export default function App() {
       }
     }
     loadLiveData();
+
+    // Check if running inside Electron with preload API
+    if (typeof window !== 'undefined' && (window as any).api) {
+      const api = (window as any).api;
+
+      // Start Shift Tracking in Main Process Engine
+      api.startShift('00000000-0000-0000-0000-000000000301').catch(() => {});
+
+      // Initial Hardware & Telemetry Fetch
+      api.getLiveTelemetry().then((state: any) => {
+        if (state) setTelemetry((prev: any) => ({ ...prev, ...state }));
+      }).catch(() => {});
+
+      // Subscribe to Real-Time 1-Second Telemetry Stream
+      const unsubscribe = api.onTelemetryUpdate((liveData: any) => {
+        if (liveData) {
+          setTelemetry((prev: any) => ({ ...prev, ...liveData }));
+          if (liveData.shiftDurationSeconds) setShiftSeconds(liveData.shiftDurationSeconds);
+          if (liveData.totalActiveSeconds) setActiveSeconds(liveData.totalActiveSeconds);
+        }
+      });
+
+      // Window Event Listeners for Input Registration
+      const handleKeyDown = () => {
+        api.registerKeyTap(1).catch(() => {});
+      };
+      const handleClick = () => {
+        api.registerMouseClick(1).catch(() => {});
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('click', handleClick);
+
+      // Periodic 30-second Segment Sync to Backend
+      const syncInterval = setInterval(async () => {
+        try {
+          const queued = await api.getQueuedSegments();
+          if (queued && queued.length > 0) {
+            const resp = await ApiClient.ingestSegments(
+              '00000000-0000-0000-0000-000000000301',
+              queued
+            ).catch(() => null);
+            if (resp && resp.accepted) {
+              await api.acknowledgeSegments(resp.accepted);
+            }
+          }
+        } catch (e) {
+          // Offline retry safeguard
+        }
+      }, 30000);
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('click', handleClick);
+        clearInterval(syncInterval);
+      };
+    }
   }, []);
 
-  // Timer Tick
+  // Timer Tick Fallback
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (shiftState === ShiftState.WORKING) {
@@ -200,6 +313,7 @@ export default function App() {
       if (interval) clearInterval(interval);
     };
   }, [shiftState]);
+
 
   // Format Seconds to HH:MM:SS
   const formatTimer = (totalSeconds: number) => {
@@ -467,8 +581,9 @@ export default function App() {
             }`}
           >
             {isOffline ? <WifiOff className="w-3 h-3" /> : <Wifi className="w-3 h-3 text-[#1E8E5A]" />}
-            {isOffline ? `Offline Mode (${queuedEventsCount} queued)` : 'Online Live'}
+            {isOffline ? `Offline Mode (${telemetry.queuedSegmentsCount || 0} queued)` : 'Online Live'}
           </button>
+
           <div className="flex items-center gap-1 pl-2 border-l border-[#E4E7E1]">
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><Minus className="w-3.5 h-3.5" /></span>
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><X className="w-3.5 h-3.5" /></span>
@@ -593,6 +708,21 @@ export default function App() {
             >
               <Activity className="w-4 h-4" />
               <span>My Activity</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentScreen('D23-hardware-telemetry')}
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                currentScreen === 'D23-hardware-telemetry'
+                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
+                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Cpu className="w-4 h-4 text-[#0F6B5C]" />
+                <span>Hardware &amp; Telemetry</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-[#1E8E5A] animate-ping"></span>
             </button>
 
             <button
@@ -792,6 +922,44 @@ export default function App() {
                     <div className="text-2xl font-bold font-mono text-[#1E8E5A] mt-1">4</div>
                     <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">Target reached!</div>
                   </div>
+                </div>
+
+                {/* Live Hardware & Telemetry Bar */}
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3.5 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="font-semibold text-[#151A1E]">Host: {telemetry.hardware?.hostname || 'Workstation'}</span>
+                      <span className="text-[11px] font-mono text-[#8A939B]">({telemetry.hardware?.arch || 'arm64'})</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
+                      <MousePointer className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span className="text-[#8A939B]">Cursor:</span>
+                      <span className="font-mono font-bold text-[#151A1E]">
+                        {Number(telemetry.cursorDistancePixels || 0).toLocaleString()} px ({Number(telemetry.mouseClicksCount || 0).toLocaleString()} clicks)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
+                      <Keyboard className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span className="text-[#8A939B]">Key Taps:</span>
+                      <span className="font-mono font-bold text-[#151A1E]">{Number(telemetry.keystrokeTapsCount || 0).toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
+                      <Monitor className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span className="text-[#8A939B]">Active App:</span>
+                      <span className="font-semibold text-[#151A1E] truncate max-w-[160px]">{telemetry.activeApp?.name || 'WorkPulse'}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentScreen('D23-hardware-telemetry')}
+                    className="text-[11px] font-bold text-[#0F6B5C] hover:underline"
+                  >
+                    View Telemetry Details &rarr;
+                  </button>
                 </div>
 
                 {/* Grid 2-column: Tasks & CRM Call Queue */}
@@ -1370,9 +1538,324 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {/* SCREEN D23: HARDWARE & ACTIVITY TELEMETRY INSPECTOR */}
+            {currentScreen === 'D23-hardware-telemetry' && (
+              <div className="space-y-6 pb-12">
+                {/* Header Banner */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#E3F1EE] text-[#0B5548] flex items-center justify-center">
+                      <Cpu className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base font-bold text-[#151A1E]">System Hardware &amp; Activity Telemetry</h2>
+                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E3F1EE] text-[#0B5548] border border-[#C5E4DC]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E5A] animate-ping"></span>
+                          Live Engine Active
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#8A939B] mt-0.5">
+                        High-resolution hardware profiling, cursor displacement, keystroke volume &amp; foreground application radar.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (typeof window !== 'undefined' && (window as any).api) {
+                          const queued = await (window as any).api.getQueuedSegments();
+                          if (queued && queued.length > 0) {
+                            const resp = await ApiClient.ingestSegments(
+                              '00000000-0000-0000-0000-000000000301',
+                              queued
+                            ).catch(() => null);
+                            if (resp && resp.accepted) {
+                              await (window as any).api.acknowledgeSegments(resp.accepted);
+                              alert(`Successfully synced ${resp.accepted.length} segments to PostgreSQL backend.`);
+                            }
+                          } else {
+                            alert('Local telemetry buffer is in sync with backend.');
+                          }
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAFBF9] border border-[#E4E7E1] hover:bg-[#F2F4F0] rounded-lg text-xs font-semibold text-[#151A1E] transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      Sync Segments ({telemetry.queuedSegmentsCount} queued)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. Hardware Specifications Matrix */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#EEF0EC]">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                        Hardware Profile &amp; Device Identity
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#8A939B]">
+                      Host: {telemetry.hardware?.hostname} ({telemetry.hardware?.arch})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    {/* CPU Box */}
+                    <div className="p-3.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg space-y-1.5">
+                      <span className="text-[11px] font-semibold text-[#8A939B] uppercase">CPU &amp; Architecture</span>
+                      <div className="text-xs font-bold text-[#151A1E] truncate">{telemetry.hardware?.cpuModel}</div>
+                      <div className="flex items-center justify-between text-[11px] text-[#4A535B] pt-1 border-t border-[#EEF0EC]">
+                        <span>Cores: <strong>{telemetry.hardware?.cpuCores}</strong></span>
+                        <span>Arch: <strong>{telemetry.hardware?.arch}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* RAM Box */}
+                    <div className="p-3.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg space-y-1.5">
+                      <span className="text-[11px] font-semibold text-[#8A939B] uppercase">Memory Utilization</span>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs font-bold text-[#151A1E]">
+                          {Math.round((telemetry.hardware?.totalMemoryMb || 16384) / 1024)} GB Total
+                        </span>
+                        <span className="text-[11px] font-mono font-semibold text-[#0F6B5C]">
+                          {telemetry.hardware?.usedMemoryPercent}% Used
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#E4E7E1] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#0F6B5C] rounded-full transition-all duration-500"
+                          style={{ width: `${telemetry.hardware?.usedMemoryPercent || 50}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Network & Display */}
+                    <div className="p-3.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg space-y-1.5">
+                      <span className="text-[11px] font-semibold text-[#8A939B] uppercase">Network &amp; Display</span>
+                      <div className="text-xs font-semibold text-[#151A1E] font-mono truncate">
+                        IP: {telemetry.hardware?.ipAddress}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-[#4A535B] pt-1 border-t border-[#EEF0EC]">
+                        <span>Display: <strong>{telemetry.hardware?.displayInfo?.width}x{telemetry.hardware?.displayInfo?.height}</strong></span>
+                        <span>DPI: <strong>@{telemetry.hardware?.displayInfo?.scaleFactor}x</strong></span>
+                      </div>
+                    </div>
+
+                    {/* OS & Uptime */}
+                    <div className="p-3.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg space-y-1.5">
+                      <span className="text-[11px] font-semibold text-[#8A939B] uppercase">Operating System</span>
+                      <div className="text-xs font-bold text-[#151A1E] truncate">{telemetry.hardware?.osVersion}</div>
+                      <div className="flex items-center justify-between text-[11px] text-[#4A535B] pt-1 border-t border-[#EEF0EC]">
+                        <span>Platform: <strong>{telemetry.hardware?.platform}</strong></span>
+                        <span>Uptime: <strong>{Math.round((telemetry.hardware?.systemUptimeSeconds || 0) / 3600)}h</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fingerprint Bar */}
+                  <div className="p-2.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="font-semibold text-[#4A535B]">Hardware Signature Hash (Tamper-Resistant SHA-256):</span>
+                    </div>
+                    <span className="font-mono text-[11px] text-[#151A1E] bg-white px-2 py-0.5 rounded border border-[#E4E7E1]">
+                      {telemetry.hardware?.hardwareHash}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Live Hardware Input & Movement Telemetry */}
+                <div className="grid grid-cols-3 gap-5">
+                  {/* Mouse & Cursor Telemetry */}
+                  <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                      <div className="flex items-center gap-2">
+                        <MousePointer className="w-4 h-4 text-[#0F6B5C]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                          Mouse &amp; Cursor Dynamics
+                        </span>
+                      </div>
+                      <span className={`flex items-center gap-1 text-[11px] font-semibold ${
+                        telemetry.mouseActive ? 'text-[#1E8E5A]' : 'text-[#8A939B]'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${
+                          telemetry.mouseActive ? 'bg-[#1E8E5A] animate-ping' : 'bg-gray-300'
+                        }`}></span>
+                        {telemetry.mouseActive ? 'Moving' : 'Stationary'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] text-xs">
+                        <span className="text-[#8A939B] font-medium">Live Coordinates:</span>
+                        <span className="font-mono font-bold text-[#151A1E]">
+                          X: {telemetry.cursorPosition?.x || 0}px &bull; Y: {telemetry.cursorPosition?.y || 0}px
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] space-y-1">
+                          <span className="text-[11px] text-[#8A939B] block">Total Distance:</span>
+                          <span className="text-base font-extrabold text-[#151A1E] font-mono">
+                            {Number(telemetry.cursorDistancePixels || 0).toLocaleString()} <span className="text-xs font-normal text-[#8A939B]">px</span>
+                          </span>
+                        </div>
+                        <div className="p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] space-y-1">
+                          <span className="text-[11px] text-[#8A939B] block">Mouse Clicks:</span>
+                          <span className="text-base font-extrabold text-[#0F6B5C] font-mono">
+                            {Number(telemetry.mouseClicksCount || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-[#4A535B] pt-1">
+                        <span>Movement Active Time:</span>
+                        <span className="font-mono font-semibold text-[#151A1E]">{formatHoursMins(telemetry.cursorMovementSeconds || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Keystroke & Typing Telemetry */}
+                  <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                      <div className="flex items-center gap-2">
+                        <Keyboard className="w-4 h-4 text-[#0F6B5C]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                          Keystroke &amp; Typing Volume
+                        </span>
+                      </div>
+                      <span className={`flex items-center gap-1 text-[11px] font-semibold ${
+                        telemetry.keyboardActive ? 'text-[#1E8E5A]' : 'text-[#8A939B]'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${
+                          telemetry.keyboardActive ? 'bg-[#1E8E5A] animate-ping' : 'bg-gray-300'
+                        }`}></span>
+                        {telemetry.keyboardActive ? 'Typing' : 'Idle'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] space-y-1">
+                          <span className="text-[11px] text-[#8A939B] block">Total Key Taps:</span>
+                          <span className="text-base font-extrabold text-[#151A1E] font-mono">
+                            {Number(telemetry.keystrokeTapsCount || 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] space-y-1">
+                          <span className="text-[11px] text-[#8A939B] block">Typing Time:</span>
+                          <span className="text-base font-extrabold text-[#0F6B5C] font-mono">
+                            {formatHoursMins(telemetry.typingActiveSeconds || 0)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Privacy Compliance Callout */}
+                      <div className="p-2.5 bg-[#E3F1EE] border border-[#C5E4DC] rounded-lg text-[11px] text-[#0B5548] space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <Shield className="w-3.5 h-3.5 text-[#0B5548]" />
+                          <span>Hard Rule 8 Privacy Protected</span>
+                        </div>
+                        <p className="text-[10.5px] leading-relaxed text-[#144238]">
+                          Volume counter only. Raw keys, passwords, and clipboard are never recorded or transmitted.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Foreground Application Radar */}
+                  <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-4 h-4 text-[#0F6B5C]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                          Foreground Application
+                        </span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${
+                        telemetry.activeApp?.category === 'PRODUCTIVE'
+                          ? 'bg-[#E3F1EE] text-[#0B5548]'
+                          : telemetry.activeApp?.category === 'UNPRODUCTIVE'
+                          ? 'bg-[#FBE7E4] text-[#C2362B]'
+                          : 'bg-gray-100 text-[#4A535B]'
+                      }`}>
+                        {telemetry.activeApp?.category}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="p-2.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] space-y-1">
+                        <span className="text-[11px] text-[#8A939B] block">Application Name:</span>
+                        <span className="text-sm font-bold text-[#151A1E] block truncate">
+                          {telemetry.activeApp?.name || 'WorkPulse Workstation'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-[#4A535B]">
+                        <span>Process Binary:</span>
+                        <span className="font-mono font-semibold text-[#151A1E]">{telemetry.activeApp?.processName}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-[#4A535B]">
+                        <span>Active Session in App:</span>
+                        <span className="font-mono font-semibold text-[#0F6B5C]">
+                          {formatHoursMins(telemetry.activeApp?.activeSeconds || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Shift Lifecycle & Idle Streak Gauge */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                    <div className="flex items-center gap-2">
+                      <Gauge className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                        Shift State &amp; Idle Detection Gauge
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-semibold text-[#151A1E]">
+                      Current Idle Streak: {telemetry.currentIdleStreakSeconds || 0}s / 300s limit
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-xs">
+                    <div className="p-3.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] flex justify-between items-center">
+                      <div>
+                        <span className="text-[11px] text-[#8A939B] block">Total Shift Duration:</span>
+                        <span className="text-base font-extrabold text-[#151A1E] font-mono">{formatTimer(shiftSeconds)}</span>
+                      </div>
+                      <Clock className="w-5 h-5 text-[#8A939B]" />
+                    </div>
+
+                    <div className="p-3.5 bg-[#E3F1EE] rounded-lg border border-[#C5E4DC] flex justify-between items-center">
+                      <div>
+                        <span className="text-[11px] text-[#0B5548] block">Active Working Time:</span>
+                        <span className="text-base font-extrabold text-[#0B5548] font-mono">{formatHoursMins(activeSeconds)}</span>
+                      </div>
+                      <Zap className="w-5 h-5 text-[#0F6B5C]" />
+                    </div>
+
+                    <div className="p-3.5 bg-[#FAFBF9] rounded-lg border border-[#E4E7E1] flex justify-between items-center">
+                      <div>
+                        <span className="text-[11px] text-[#8A939B] block">Idle &amp; Inactive Time:</span>
+                        <span className="text-base font-extrabold text-[#B26A00] font-mono">{formatHoursMins(idleSeconds)}</span>
+                      </div>
+                      <Coffee className="w-5 h-5 text-[#B26A00]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
 
       {/* MODAL: D08 Break Dialog */}
       {showBreakModal && (

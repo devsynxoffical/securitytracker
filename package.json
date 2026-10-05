@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Company OS - Employee Management + Security + CRM Platform",
-  "packageManager": "pnpm@12.8.1",
   "scripts": {
     "build": "turbo run build",
+
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",

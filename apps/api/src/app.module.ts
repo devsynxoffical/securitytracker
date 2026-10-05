@@ -15,6 +15,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TargetsModule } from './targets/targets.module';
 import { MailModule } from './mail/mail.module';
 import { ReportsModule } from './reports/reports.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RbacGuard } from './auth/guards/rbac.guard';
 import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
 
@@ -41,6 +42,10 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
   providers: [
     {
       provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
       useClass: RbacGuard,
     },
     {
@@ -50,3 +55,4 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
   ],
 })
 export class AppModule {}
+

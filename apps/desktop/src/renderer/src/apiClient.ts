@@ -121,4 +121,12 @@ export class ApiClient {
       body: JSON.stringify({ events }),
     });
   }
+
+  static async ingestSegments(shiftId: string, segments: any[]) {
+    return this.request('/tracking/segments', {
+      method: 'POST',
+      body: JSON.stringify({ shiftId, segments }),
+    });
+  }
 }
+
