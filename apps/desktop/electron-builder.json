@@ -10,6 +10,8 @@
     "out/**/*"
   ],
   "mac": {
+    "identity": null,
+    "forceCodeSigning": false,
     "target": ["dmg", "zip"],
     "category": "public.app-category.business",
     "artifactName": "WorkPulse-Mac-${version}.${ext}"
