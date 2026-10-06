@@ -35,6 +35,14 @@ if (fs.existsSync(adminOutDir)) {
     console.log(`[postbuild] Copied ${srcAdminDir} -> ${rootAdminDir}`);
   }
 
+  // Copy downloads folder to root downloads/
+  const srcDownloadsDir = path.join(adminOutDir, 'downloads');
+  const rootDownloadsDir = path.join(__dirname, '..', 'downloads');
+  if (fs.existsSync(srcDownloadsDir)) {
+    copyRecursive(srcDownloadsDir, rootDownloadsDir);
+    console.log(`[postbuild] Copied ${srcDownloadsDir} -> ${rootDownloadsDir}`);
+  }
+
   // Copy all assets to public/
   function copyRecursive(src, dest) {
     if (!fs.existsSync(dest)) {

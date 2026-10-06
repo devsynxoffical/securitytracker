@@ -12,6 +12,16 @@ DirectoryIndex index.html index.php
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
+  # Direct downloads folder mapping
+  RewriteCond %{DOCUMENT_ROOT}/downloads/$1 -f
+  RewriteRule ^downloads/(.*)$ /downloads/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/public/downloads/$1 -f
+  RewriteRule ^downloads/(.*)$ /public/downloads/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/downloads/$1 -f
+  RewriteRule ^downloads/(.*)$ /apps/admin/out/downloads/$1 [L]
+
   # Route /admin to admin.html
   RewriteRule ^admin/?$ admin.html [L]
 
@@ -41,4 +51,7 @@ DirectoryIndex index.html index.php
   AddType application/json .json
   AddType font/woff2 .woff2
   AddType font/woff .woff
+  AddType application/octet-stream .dmg .exe .pkg
+  AddType application/x-apple-diskimage .dmg
+  AddType application/zip .zip
 </IfModule>

@@ -34,11 +34,16 @@ export default function PublicLandingPage() {
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', fileName);
+      link.setAttribute('target', '_self');
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 300);
     } catch (e) {
-      window.open(downloadUrl, '_blank');
+      window.location.href = downloadUrl;
     }
   };
 
