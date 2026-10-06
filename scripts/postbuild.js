@@ -53,6 +53,12 @@ if (fs.existsSync(adminOutDir)) {
   }
 
   copyRecursive(adminOutDir, publicDir);
+
+  const rootHtaccess = path.join(__dirname, '..', '.htaccess');
+  const publicHtaccess = path.join(publicDir, '.htaccess');
+  if (fs.existsSync(rootHtaccess)) {
+    fs.copyFileSync(rootHtaccess, publicHtaccess);
+  }
   console.log(`[postbuild] Synchronized all assets into public/`);
 } else {
   console.log(`[postbuild] Notice: ${adminOutDir} does not exist yet.`);
