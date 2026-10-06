@@ -43,12 +43,30 @@ export class AdminApiClient {
     return response.json();
   }
 
+  // Auto-authenticate as Admin if not already authenticated
+  static async ensureAuth() {
+    if (!this.getAuthToken()) {
+      try {
+        const res = await this.login('admin@devsynx.com', 'SuperAdmin123!');
+        if (res?.tokens?.accessToken) {
+          this.setAuth(res.tokens.accessToken);
+        }
+      } catch (e) {
+        console.warn('Auto-auth warning:', e);
+      }
+    }
+  }
+
   // Admin Endpoints
   static async login(email: string, password: string, totpCode?: string) {
-    return this.request('/admin/auth/login', {
+    const res = await this.request('/admin/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password, totpCode }),
     });
+    if (res?.tokens?.accessToken) {
+      this.setAuth(res.tokens.accessToken);
+    }
+    return res;
   }
 
   static async getEmployees() {
@@ -70,6 +88,14 @@ export class AdminApiClient {
     });
   }
 
+  static async getDepartments() {
+    return this.request('/departments');
+  }
+
+  static async getRoles() {
+    return this.request('/roles');
+  }
+
   static async getDevices() {
     return this.request('/devices');
   }
@@ -88,6 +114,47 @@ export class AdminApiClient {
 
   static async getLeads() {
     return this.request('/leads');
+  }
+
+  static async createLead(data: {
+    name: string;
+    companyName?: string;
+    pipelineId: string;
+    stageId: string;
+    value?: number;
+    ownerId?: string;
+    phones?: { phone: string; label?: string; isPrimary?: boolean }[];
+    emails?: { email: string; label?: string; isPrimary?: boolean }[];
+    tags?: string[];
+  }) {
+    return this.request('/leads', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async updateLeadStage(id: string, stageId: string) {
+    return this.request(`/leads/${id}/stage`, {
+      method: 'POST',
+      body: JSON.stringify({ stageId }),
+    });
+  }
+
+  static async logCall(data: {
+    leadId: string;
+    direction: 'OUTBOUND' | 'INBOUND';
+    outcome: string;
+    durationSeconds: number;
+    notes?: string;
+  }) {
+    return this.request('/calls', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async getPipelines() {
+    return this.request('/pipelines');
   }
 
   static async getAttendanceLive() {

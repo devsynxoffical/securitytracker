@@ -303,21 +303,47 @@ export default function App() {
   useEffect(() => {
     async function loadLiveData() {
       try {
-        const remoteLeads = await ApiClient.getLeads().catch(() => null);
-        if (remoteLeads && Array.isArray(remoteLeads.items)) {
+        const [remoteLeads, remoteTasks] = await Promise.allSettled([
+          ApiClient.getLeads(),
+          ApiClient.getTasks(),
+        ]);
+
+        if (remoteLeads.status === 'fulfilled' && remoteLeads.value && Array.isArray(remoteLeads.value.items)) {
           setLeads(
-            remoteLeads.items.map((l: any) => ({
+            remoteLeads.value.items.map((l: any) => ({
               id: l.id,
               name: l.name,
-              companyName: l.companyName || 'Enterprise Lead',
-              jobTitle: l.custom?.jobTitle || 'Executive',
-              email: `${l.name.toLowerCase().replace(' ', '.')}@example.com`,
-              phones: ['+1 (555) 234-8901'],
+              companyName: l.companyName || 'Enterprise Account',
+              jobTitle: l.customFields?.jobTitle || 'Decision Maker',
+              email: l.emails?.[0]?.email || 'contact@lead.com',
+              phones: l.phones?.map((p: any) => p.phone) || ['+1 (555) 234-8901'],
               stage: l.stage?.name || 'Qualified',
-              value: `$${Number(l.value || 25000).toLocaleString()}`,
-              lastContact: 'Today',
-              priority: l.custom?.priority || 'High',
-              notes: 'Live lead synced directly from Postgres DB.',
+              value: `$${Number(l.value || 0).toLocaleString()}`,
+              numericValue: Number(l.value || 0),
+              lastContact: new Date(l.updatedAt || l.createdAt).toLocaleDateString(),
+              nextFollowUp: l.followUpAt ? new Date(l.followUpAt).toLocaleDateString() : 'Tomorrow',
+              priority: l.customFields?.priority || 'high',
+              sheet: l.customFields?.sheet || 'Assigned Outreach Sheet',
+              tags: l.tags || ['Enterprise'],
+              subtasks: l.customFields?.subtasks || [
+                { id: `st-${l.id}-1`, title: 'Verify requirement scope & stakeholders', completed: true },
+                { id: `st-${l.id}-2`, title: 'Present platform capabilities & SLA', completed: false },
+              ],
+              timeSpent: l.customFields?.timeSpent || '0h 30m',
+              notes: l.customFields?.notes || 'Live record synced from PostgreSQL DB.',
+            }))
+          );
+        }
+
+        if (remoteTasks.status === 'fulfilled' && remoteTasks.value && Array.isArray(remoteTasks.value.items)) {
+          setTasks(
+            remoteTasks.value.items.map((t: any) => ({
+              id: t.id,
+              title: t.title,
+              priority: t.priority === 'urgent' ? 'High' : 'Normal',
+              due: t.dueAt ? new Date(t.dueAt).toLocaleDateString() : 'Today',
+              done: t.status === 'done',
+              lead: t.lead?.companyName || 'General Task',
             }))
           );
         }
