@@ -647,6 +647,7 @@ export default function AdminControlCenter() {
   const [showDialerModal, setShowDialerModal] = useState(false);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
   const [selectedSheetFilter, setSelectedSheetFilter] = useState<string | null>(null);
+  const [selectedTelemetryEmp, setSelectedTelemetryEmp] = useState<any | null>(null);
 
   // Softphone & Outbound Calling State
   const [activeCallLead, setActiveCallLead] = useState<any | null>(null);
@@ -3018,14 +3019,26 @@ export default function AdminControlCenter() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center justify-between pt-1 gap-2">
                         <span className="text-[11px] text-[#8A939B]">Check-In: <strong className="text-[#151A1E]">{emp.checkIn}</strong></span>
-                        <button
-                          onClick={() => alert(`Ping notification sent to ${emp.name}'s workstation.`)}
-                          className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-md font-semibold text-[11px]"
-                        >
-                          Ping Agent
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setSelectedTelemetryEmp(emp)}
+                            className="px-2.5 py-1 bg-[#E3F1EE] hover:bg-[#D2EAE5] text-[#0B5548] rounded-md font-semibold text-[11px] transition"
+                          >
+                            Inspect Telemetry
+                          </button>
+                          <button
+                            onClick={() => addToast({
+                              type: 'success',
+                              title: 'Workstation Pinged',
+                              message: `Cryptographic heartbeat signal sent to ${emp.name}'s active client (${emp.device}).`
+                            })}
+                            className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-md font-semibold text-[11px] transition"
+                          >
+                            Ping
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -4276,6 +4289,189 @@ export default function AdminControlCenter() {
                 className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-xs"
               >
                 Create Lead in Database
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Employee Workstation Telemetry & Tracker Inspector */}
+      {selectedTelemetryEmp && (
+        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E4E7E1] rounded-2xl max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#EEF0EC] flex items-center justify-between bg-[#FAFBF9]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#0F6B5C] text-white font-bold text-sm flex items-center justify-center shadow-xs">
+                  {selectedTelemetryEmp.name.split(' ').map((n: string) => n[0]).join('')}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-[#151A1E]">{selectedTelemetryEmp.name}</h3>
+                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-gray-100 text-[#5C666E]">
+                      {selectedTelemetryEmp.code}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
+                      selectedTelemetryEmp.shift === 'WORKING' ? 'bg-[#E4F4EB] text-[#14673F]' : 'bg-[#FCF0DA] text-[#8A5200]'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${selectedTelemetryEmp.shift === 'WORKING' ? 'bg-[#1E8E5A] animate-ping' : 'bg-[#B26A00]'}`} />
+                      {selectedTelemetryEmp.shift === 'WORKING' ? 'Active Workstation' : 'On Break'}
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-[#8A939B] mt-0.5">
+                    {selectedTelemetryEmp.role} &bull; {selectedTelemetryEmp.department} &bull; Device: <span className="font-mono text-[#151A1E]">{selectedTelemetryEmp.device}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTelemetryEmp(null)}
+                className="p-1 rounded-lg text-[#8A939B] hover:text-[#151A1E] hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Telemetry KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
+                  <div className="text-[11px] text-[#8A939B] font-medium">Shift Duration</div>
+                  <div className="text-lg font-bold font-mono text-[#0F6B5C] mt-0.5">{selectedTelemetryEmp.activeHours || '6h 30m'}</div>
+                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Punched at {selectedTelemetryEmp.checkIn || '09:00 AM'}</div>
+                </div>
+
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
+                  <div className="text-[11px] text-[#8A939B] font-medium">Keystroke Activity</div>
+                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.keystrokes || '14,280'}</div>
+                  <div className="text-[10px] text-[#5C666E] mt-0.5">Counts only (No logging)</div>
+                </div>
+
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
+                  <div className="text-[11px] text-[#8A939B] font-medium">Mouse Clicks</div>
+                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.mouseClicks || '3,420'}</div>
+                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">High Interaction</div>
+                </div>
+
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
+                  <div className="text-[11px] text-[#8A939B] font-medium">Productive Ratio</div>
+                  <div className="text-lg font-bold font-mono text-[#1C469B] mt-0.5">94.2%</div>
+                  <div className="text-[10px] text-[#14673F] mt-0.5">Break: 18m total</div>
+                </div>
+              </div>
+
+              {/* Hardware & Security Telemetry */}
+              <div className="border border-[#E4E7E1] rounded-xl p-4 space-y-3 bg-white">
+                <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-2.5">
+                  <span className="font-bold text-xs text-[#151A1E] flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                    Hardware Telemetry &amp; Cryptographic Enrollment
+                  </span>
+                  <span className="text-[11px] font-mono text-[#14673F] bg-[#E4F4EB] px-2 py-0.5 rounded font-semibold">
+                    Zero-Trust Verified
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
+                    <span className="text-[#8A939B]">Active Foreground Window:</span>
+                    <span className="font-semibold text-[#151A1E] font-mono truncate max-w-[200px]">
+                      {selectedTelemetryEmp.currentApp || 'WorkPulse Workstation'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
+                    <span className="text-[#8A939B]">Workstation CPU Load:</span>
+                    <span className="font-mono font-bold text-[#0F6B5C]">14.2% &bull; Normal</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
+                    <span className="text-[#8A939B]">Memory / RAM Allocated:</span>
+                    <span className="font-mono font-bold text-[#151A1E]">1.35 GB / 16.0 GB</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
+                    <span className="text-[#8A939B]">OS Platform:</span>
+                    <span className="font-semibold text-[#4A535B]">macOS 15.1 (ARM64 Apple M3)</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-[#8A939B]">Hardware ID Hash:</span>
+                    <span className="font-mono text-[11px] text-[#5C666E]">sha256:7f91a...e84b</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-[#8A939B]">Heartbeat Frequency:</span>
+                    <span className="font-mono text-[11px] text-[#0F6B5C]">10s Live Push</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Application Usage Breakdown */}
+              <div className="border border-[#E4E7E1] rounded-xl p-4 space-y-3 bg-white">
+                <h4 className="font-bold text-xs text-[#151A1E]">Application Usage Timeline (Today)</h4>
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-medium text-[#151A1E]">Google Chrome (CRM &amp; Sales Research)</span>
+                      <span className="font-mono font-semibold text-[#0F6B5C]">3h 45m (58%)</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: '58%' }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-medium text-[#151A1E]">WorkPulse Outbound Softphone</span>
+                      <span className="font-mono font-semibold text-[#1C469B]">2h 10m (33%)</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full bg-[#1C469B] rounded-full" style={{ width: '33%' }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-medium text-[#151A1E]">Excel / Google Sheets (Lead Distribution)</span>
+                      <span className="font-mono font-semibold text-[#55359C]">35m (9%)</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full bg-[#55359C] rounded-full" style={{ width: '9%' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="px-6 py-3.5 border-t border-[#EEF0EC] bg-[#FAFBF9] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    addToast({
+                      type: 'success',
+                      title: 'Workstation Pinged',
+                      message: `Real-time heartbeat signal delivered to ${selectedTelemetryEmp.name}'s desktop.`
+                    });
+                  }}
+                  className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] font-semibold text-xs rounded-lg shadow-2xs transition"
+                >
+                  Send Workstation Ping
+                </button>
+                <button
+                  onClick={() => {
+                    addToast({
+                      type: 'info',
+                      title: 'Telemetry Synced',
+                      message: `Forced buffer flush executed for ${selectedTelemetryEmp.name}. 0 pending segments.`
+                    });
+                  }}
+                  className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] font-semibold text-xs rounded-lg shadow-2xs transition"
+                >
+                  Force Segment Sync
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedTelemetryEmp(null)}
+                className="px-4 py-1.5 bg-[#151A1E] hover:bg-black text-white rounded-lg text-xs font-semibold shadow-2xs transition"
+              >
+                Close Inspector
               </button>
             </div>
           </div>

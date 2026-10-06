@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.devsynx.workpulse",
+  "productName": "WorkPulse Workstation",
+  "directories": {
+    "output": "dist",
+    "buildResources": "resources"
+  },
+  "files": [
+    "out/**/*"
+  ],
+  "mac": {
+    "target": ["dmg", "zip"],
+    "category": "public.app-category.business",
+    "artifactName": "WorkPulse-Mac-${version}.${ext}"
+  },
+  "win": {
+    "target": ["nsis", "portable"],
+    "artifactName": "WorkPulse-Setup-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}
