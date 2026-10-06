@@ -8,6 +8,10 @@ DirectoryIndex index.html index.php
   # Serve root index.html immediately
   RewriteRule ^$ index.html [L]
 
+  # Direct redirect for Mac DMG installer to GitHub Release CDN
+  RewriteRule ^downloads/WorkPulse-Mac-Universal\.dmg$ https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg [R=302,L]
+  RewriteRule ^downloads/WorkPulse-Mac-Installer\.zip$ https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg [R=302,L]
+
   # If direct file exists on disk, serve it
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]

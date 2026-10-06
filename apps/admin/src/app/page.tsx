@@ -25,16 +25,22 @@ import {
 export default function PublicLandingPage() {
   const [downloadModal, setDownloadModal] = useState<'windows' | 'mac' | null>(null);
 
+  const MAC_RELEASE_URL = 'https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg';
+
   const triggerDownload = (os: 'windows' | 'mac') => {
     setDownloadModal(os);
     const fileName = os === 'windows' ? 'WorkPulse-Setup-x64.exe' : 'WorkPulse-Mac-Universal.dmg';
-    const downloadUrl = `/downloads/${fileName}`;
+    const downloadUrl = os === 'mac' ? MAC_RELEASE_URL : `/downloads/${fileName}`;
     
     try {
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', fileName);
-      link.setAttribute('target', '_self');
+      if (os === 'mac') {
+        link.setAttribute('target', '_blank');
+      } else {
+        link.setAttribute('target', '_self');
+      }
       document.body.appendChild(link);
       link.click();
       setTimeout(() => {

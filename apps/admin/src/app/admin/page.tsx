@@ -1558,12 +1558,13 @@ export default function AdminControlCenter() {
                     </p>
                   </div>
                   <a
-                    href="/downloads/WorkPulse-Mac-Universal.dmg"
-                    download
+                    href="https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg"
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-3.5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Download Workstation Agent
+                    Download Workstation Agent (.DMG)
                   </a>
                 </div>
               ) : (
@@ -2807,8 +2808,9 @@ export default function AdminControlCenter() {
                       Enroll New Employee
                     </button>
                     <a
-                      href="/downloads/WorkPulse-Mac-Universal.dmg"
-                      download
+                      href="https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg"
+                      target="_blank"
+                      rel="noreferrer"
                       className="px-3.5 py-2 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-lg font-semibold text-xs flex items-center gap-1.5 transition shadow-2xs"
                     >
                       <Download className="w-4 h-4" />
@@ -3369,7 +3371,7 @@ export default function AdminControlCenter() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    const textToCopy = `WorkPulse Workstation Login Credentials:\nEmployee: ${createdEmpCredentials.name}\nEmployee Code: ${createdEmpCredentials.code}\nLogin Email: ${createdEmpCredentials.email}\nPassword: ${createdEmpCredentials.password}\n\nDownload WorkPulse Workstation: https://roofingclients.us/downloads/WorkPulse-Mac-Universal.dmg`;
+                    const textToCopy = `WorkPulse Workstation Login Credentials:\nEmployee: ${createdEmpCredentials.name}\nEmployee Code: ${createdEmpCredentials.code}\nLogin Email: ${createdEmpCredentials.email}\nPassword: ${createdEmpCredentials.password}\n\nDownload WorkPulse Workstation: https://github.com/devsynxoffical/securitytracker/releases/download/v1.0.0/WorkPulse-Mac-Universal.dmg`;
                     navigator.clipboard.writeText(textToCopy);
                     showToast('Credentials copied to clipboard!', 'success');
                   }}
