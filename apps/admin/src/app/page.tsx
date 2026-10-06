@@ -57,18 +57,10 @@ export default function PublicLandingPage() {
           <div className="flex items-center gap-3">
             <a
               href="#downloads"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E4E7E1] hover:bg-[#F5F6F3] text-xs font-semibold text-[#151A1E] transition"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Get Agent</span>
-            </a>
-            <a
-              href="/admin"
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0F6B5C] hover:bg-[#0B5548] text-white text-xs font-semibold shadow-sm transition"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Admin Portal</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Workstation</span>
             </a>
           </div>
         </div>
@@ -92,26 +84,17 @@ export default function PublicLandingPage() {
 
           {/* Action CTAs */}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <a
-              href="/admin"
-              className="px-6 py-3.5 rounded-xl bg-[#0F6B5C] hover:bg-[#0B5548] text-white font-semibold text-sm shadow-md flex items-center gap-2 transition"
-            >
-              <Lock className="w-4 h-4" />
-              <span>Enter Admin Panel</span>
-              <ChevronRight className="w-4 h-4" />
-            </a>
-
             <button
               onClick={() => triggerDownload('windows')}
-              className="px-5 py-3.5 rounded-xl bg-white border border-[#E4E7E1] hover:border-[#0F6B5C] hover:bg-[#FAFBF9] text-[#151A1E] font-semibold text-sm shadow-sm flex items-center gap-2.5 transition"
+              className="px-6 py-3.5 rounded-xl bg-[#0F6B5C] hover:bg-[#0B5548] text-white font-semibold text-sm shadow-md flex items-center gap-2.5 transition"
             >
-              <Monitor className="w-4 h-4 text-[#0F6B5C]" />
+              <Monitor className="w-4 h-4" />
               <span>Download for Windows (.exe)</span>
             </button>
 
             <button
               onClick={() => triggerDownload('mac')}
-              className="px-5 py-3.5 rounded-xl bg-white border border-[#E4E7E1] hover:border-[#0F6B5C] hover:bg-[#FAFBF9] text-[#151A1E] font-semibold text-sm shadow-sm flex items-center gap-2.5 transition"
+              className="px-6 py-3.5 rounded-xl bg-white border border-[#E4E7E1] hover:border-[#0F6B5C] hover:bg-[#FAFBF9] text-[#151A1E] font-semibold text-sm shadow-sm flex items-center gap-2.5 transition"
             >
               <Apple className="w-4 h-4 text-[#151A1E]" />
               <span>Download for macOS (.dmg)</span>
@@ -312,11 +295,11 @@ export default function PublicLandingPage() {
             </p>
           </div>
           <a
-            href="/admin"
+            href="#downloads"
             className="px-6 py-3 bg-white text-[#0B5548] hover:bg-[#FAFBF9] rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 transition"
           >
-            <Lock className="w-4 h-4" />
-            <span>Open Admin Portal Login</span>
+            <Download className="w-4 h-4" />
+            <span>Download Workstation Client</span>
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>
@@ -331,7 +314,6 @@ export default function PublicLandingPage() {
             <span>&bull; © 2026 DEVSYNX. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="/admin" className="text-[#0B5548] font-semibold hover:underline">Administrator Login</a>
             <a href="#downloads" className="hover:underline">Windows &amp; Mac Client</a>
             <span className="font-mono text-[#0F6B5C]">https://roofingclients.us/api/v1</span>
           </div>
