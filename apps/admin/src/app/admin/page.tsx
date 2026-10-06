@@ -60,6 +60,18 @@ import {
   LogOut,
   Lock,
   ArrowLeft,
+  Trash2,
+  Edit3,
+  ExternalLink,
+  FileDown,
+  FolderPlus,
+  PlayCircle,
+  ArrowUpDown,
+  Volume2,
+  Mic,
+  MicOff,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { AdminApiClient } from '../../apiClient';
 
@@ -71,6 +83,7 @@ type AdminNavSection =
   | 'devices'
   | 'crm-leads'
   | 'crm-board'
+  | 'crm-sheets'
   | 'crm-import'
   | 'crm-tasks'
   | 'crm-pipelines'
@@ -609,15 +622,33 @@ export default function AdminControlCenter() {
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Toast Notification System
+  const [toasts, setToasts] = useState<
+    { id: string; message: string; type: 'success' | 'error' | 'info'; title?: string }[]
+  >([]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', title?: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    setToasts((prev) => [...prev, { id, message, type, title }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
   // ClickUp Multi-View CRM State
-  const [crmView, setCrmView] = useState<'list' | 'board' | 'table' | 'calendar' | 'targets' | 'sheets'>('list');
+  const [crmView, setCrmView] = useState<'list' | 'board' | 'table' | 'calendar' | 'targets' | 'sheets' | 'import'>('table');
   const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>({});
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [showLeadDrawer, setShowLeadDrawer] = useState(false);
   const [showAssignSheetModal, setShowAssignSheetModal] = useState(false);
+  const [showCreateSheetModal, setShowCreateSheetModal] = useState(false);
+  const [showReassignSheetModal, setShowReassignSheetModal] = useState(false);
   const [showDialerModal, setShowDialerModal] = useState(false);
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [selectedSheetFilter, setSelectedSheetFilter] = useState<string | null>(null);
+
+  // Softphone & Outbound Calling State
   const [activeCallLead, setActiveCallLead] = useState<any | null>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [isCalling, setIsCalling] = useState(false);
@@ -636,30 +667,265 @@ export default function AdminControlCenter() {
   const [newLeadStage, setNewLeadStage] = useState('New Lead');
   const [newLeadPriority, setNewLeadPriority] = useState('high');
   const [newLeadOwner, setNewLeadOwner] = useState('Daniyal Khan');
+  const [newLeadSheet, setNewLeadSheet] = useState('Q4 Enterprise SaaS Outbound Batch A');
+
+  // Form State: Create / Upload Sheet Batch Modal
+  const [newSheetName, setNewSheetName] = useState('Commercial Solar & Siding Outreach Batch 1');
+  const [newSheetCategory, setNewSheetCategory] = useState('Outbound Cold');
+  const [newSheetAssignee, setNewSheetAssignee] = useState('Daniyal Khan');
+  const [newSheetDailyQuota, setNewSheetDailyQuota] = useState('50');
+  const [newSheetWeeklyTarget, setNewSheetWeeklyTarget] = useState('250');
+  const [newSheetLeadCount, setNewSheetLeadCount] = useState('50');
+  const [newSheetPasteData, setNewSheetPasteData] = useState('');
+
+  // Form State: Reassign Sheet & Update Quotas Modal
+  const [reassignSheetId, setReassignSheetId] = useState('sheet-1');
+  const [reassignRepName, setReassignRepName] = useState('Sam Parker');
+  const [reassignDailyQuota, setReassignDailyQuota] = useState('45');
+  const [reassignWeeklyTarget, setReassignWeeklyTarget] = useState('225');
 
   // Mass Calling Sheets State
   const [callingSheets, setCallingSheets] = useState<any[]>([
     {
       id: 'sheet-1',
       name: 'Q4 Enterprise SaaS Outbound Batch A',
+      category: 'Outbound High-Ticket',
       totalLeads: 120,
-      assignedTo: 'Daniyal Khan (EMP-0021)',
+      assignedTo: 'Daniyal Khan',
+      assignedToEmpId: 'emp-1',
       dailyTarget: 40,
       completedToday: 34,
+      weeklyTarget: 200,
       status: 'In Progress',
       createdDate: '2026-10-01',
     },
     {
       id: 'sheet-2',
       name: 'West Coast Logistics & Supply Chain',
+      category: 'Cold Outreach',
       totalLeads: 85,
-      assignedTo: 'Sam Parker (EMP-0022)',
+      assignedTo: 'Sam Parker',
+      assignedToEmpId: 'emp-2',
       dailyTarget: 45,
       completedToday: 42,
+      weeklyTarget: 225,
       status: 'In Progress',
       createdDate: '2026-10-03',
     },
+    {
+      id: 'sheet-3',
+      name: 'Commercial Roofing & Construction Tier 1',
+      category: 'Inbound Qualified',
+      totalLeads: 150,
+      assignedTo: 'Daniyal Khan',
+      assignedToEmpId: 'emp-1',
+      dailyTarget: 50,
+      completedToday: 28,
+      weeklyTarget: 250,
+      status: 'In Progress',
+      createdDate: '2026-10-04',
+    },
+    {
+      id: 'sheet-4',
+      name: 'Healthcare & Medical Practice B2B',
+      category: 'SDR Outreach',
+      totalLeads: 65,
+      assignedTo: 'Bilal Ahmed',
+      assignedToEmpId: 'emp-4',
+      dailyTarget: 35,
+      completedToday: 31,
+      weeklyTarget: 175,
+      status: 'In Progress',
+      createdDate: '2026-10-05',
+    },
   ]);
+
+  // Handler: Create and Distribute New Calling Sheet
+  const handleCreateSheet = () => {
+    if (!newSheetName.trim()) {
+      showToast('Please provide a valid sheet title', 'error');
+      return;
+    }
+
+    const newSheetId = `sheet-${Date.now()}`;
+    const leadCount = parseInt(newSheetLeadCount) || 50;
+    const dailyQuota = parseInt(newSheetDailyQuota) || 45;
+    const weeklyQuota = parseInt(newSheetWeeklyTarget) || 225;
+
+    const newSheet = {
+      id: newSheetId,
+      name: newSheetName.trim(),
+      category: newSheetCategory,
+      totalLeads: leadCount,
+      assignedTo: newSheetAssignee,
+      assignedToEmpId: employees.find((e) => e.name === newSheetAssignee)?.id || 'emp-1',
+      dailyTarget: dailyQuota,
+      completedToday: 0,
+      weeklyTarget: weeklyQuota,
+      status: 'Active',
+      createdDate: '2026-10-06',
+    };
+
+    // Generate realistic lead records for this sheet batch
+    const sampleCompanies = [
+      'Horizon Contracting Group',
+      'Apex Commercial Roofs',
+      'Pacific Sky Roofing LLC',
+      'Summit Industrial Builders',
+      'Vanguard Exteriors Inc',
+      'Titan Shield Building Solutions',
+      'Crown Point Commercial',
+      'Sierra Peak Construction',
+      'Metro Star Roof Works',
+      'Atlas Enterprise Facilities',
+    ];
+
+    const sampleNames = [
+      'Marcus Vance',
+      'Elena Rostova',
+      'David Miller',
+      'Sarah Jenkins',
+      'Michael Chang',
+      'Rachel Adams',
+      'Brian O\'Connor',
+      'Jessica Taylor',
+      'Anthony Stark',
+      'Amanda Cruz',
+    ];
+
+    const generatedLeads = Array.from({ length: Math.min(leadCount, 15) }).map((_, idx) => {
+      const cName = sampleCompanies[idx % sampleCompanies.length];
+      const pName = sampleNames[idx % sampleNames.length];
+      const val = 25000 + Math.floor(Math.random() * 65000);
+      return {
+        id: `LD-${Date.now().toString().slice(-4)}-${idx + 1}`,
+        name: `${pName} (${cName})`,
+        jobTitle: 'Director of Procurement / VP Ops',
+        company: cName,
+        stage: 'New Lead',
+        priority: idx % 3 === 0 ? 'urgent' : idx % 2 === 0 ? 'high' : 'normal',
+        value: `$${val.toLocaleString()}`,
+        numericValue: val,
+        owner: newSheetAssignee,
+        email: `contact@${cName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+        phone: `+1 (555) ${Math.floor(200 + Math.random() * 700)}-${Math.floor(1000 + Math.random() * 9000)}`,
+        sheet: newSheetName.trim(),
+        sheetId: newSheetId,
+        industry: newSheetCategory,
+        source: 'Calling Sheet Upload',
+        lastTouch: 'Never',
+        nextFollowUp: 'Today, Schedule Call',
+        tags: [newSheetCategory, 'Assigned Batch'],
+        subtasks: [
+          { id: `st-${Date.now()}-${idx}-1`, title: 'Verify phone number and company registration', completed: false },
+          { id: `st-${Date.now()}-${idx}-2`, title: 'Deliver introductory value pitch', completed: false },
+        ],
+        timeSpent: '0h 00m',
+        callHistory: [],
+        createdAt: '2026-10-06',
+      };
+    });
+
+    setCallingSheets((prev) => [newSheet, ...prev]);
+    setLeads((prev) => [...generatedLeads, ...prev]);
+    setShowCreateSheetModal(false);
+    showToast(
+      `Sheet "${newSheetName}" successfully created with ${leadCount} leads and assigned to ${newSheetAssignee}!`,
+      'success',
+      'Calling Sheet Active'
+    );
+  };
+
+  // Handler: Reassign Calling Sheet to Representative
+  const handleReassignSheet = () => {
+    const targetSheet = callingSheets.find((s) => s.id === reassignSheetId);
+    if (!targetSheet) return;
+
+    const updatedDailyQuota = parseInt(reassignDailyQuota) || targetSheet.dailyTarget;
+    const updatedWeeklyQuota = parseInt(reassignWeeklyTarget) || targetSheet.weeklyTarget;
+
+    setCallingSheets((prev) =>
+      prev.map((sheet) =>
+        sheet.id === reassignSheetId
+          ? {
+              ...sheet,
+              assignedTo: reassignRepName,
+              assignedToEmpId: employees.find((e) => e.name === reassignRepName)?.id || sheet.assignedToEmpId,
+              dailyTarget: updatedDailyQuota,
+              weeklyTarget: updatedWeeklyQuota,
+            }
+          : sheet
+      )
+    );
+
+    // Update lead owners associated with this sheet
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.sheet === targetSheet.name
+          ? {
+              ...lead,
+              owner: reassignRepName,
+            }
+          : lead
+      )
+    );
+
+    setShowReassignSheetModal(false);
+    showToast(
+      `Sheet "${targetSheet.name}" reassigned to ${reassignRepName} with target ${updatedDailyQuota} calls/day!`,
+      'success',
+      'Quota Updated'
+    );
+  };
+
+  // Handler: Delete Calling Sheet
+  const handleDeleteSheet = (sheetId: string, sheetName: string) => {
+    setCallingSheets((prev) => prev.filter((s) => s.id !== sheetId));
+    if (selectedSheetFilter === sheetName) {
+      setSelectedSheetFilter(null);
+    }
+    showToast(`Calling sheet "${sheetName}" removed from active roster.`, 'info');
+  };
+
+  // Handler: Launch Softphone Dialer on Next Lead in Sheet
+  const handleDialNextLead = (sheetName: string) => {
+    const nextLead =
+      leads.find((l) => l.sheet === sheetName && (l.stage === 'New Lead' || l.lastTouch === 'Never')) ||
+      leads.find((l) => l.sheet === sheetName) ||
+      leads[0];
+
+    if (nextLead) {
+      setActiveCallLead(nextLead);
+      setShowDialerModal(true);
+      setIsCalling(true);
+      setCallDuration(0);
+      showToast(`Launching Softphone for ${nextLead.name} (${nextLead.phone})...`, 'info', 'Dialer Active');
+    } else {
+      showToast(`No available leads found in sheet "${sheetName}".`, 'error');
+    }
+  };
+
+  // Handler: Export Sheet Leads as CSV
+  const handleExportSheetCSV = (sheet: any) => {
+    const sheetLeads = leads.filter((l) => l.sheet === sheet.name || l.sheetId === sheet.id);
+    const csvRows = [
+      'Lead ID,Contact Name,Company,Phone,Email,Stage,Priority,Value,Assigned Rep,Sheet Batch,Last Touch',
+      ...(sheetLeads.length > 0 ? sheetLeads : leads).map(
+        (l) =>
+          `"${l.id}","${l.name}","${l.company}","${l.phone}","${l.email}","${l.stage}","${l.priority}","${l.value}","${l.owner}","${l.sheet || sheet.name}","${l.lastTouch}"`
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${sheet.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${sheetLeads.length || leads.length} leads for sheet "${sheet.name}".`, 'success');
+  };
 
   // Active ClickUp Time Tracking Timer
   useEffect(() => {
@@ -904,7 +1170,10 @@ export default function AdminControlCenter() {
             {expandedGroups.crm && (
               <div className="space-y-0.5 mt-0.5 pl-2">
                 <button
-                  onClick={() => setCurrentSection('crm-leads')}
+                  onClick={() => {
+                    setCurrentSection('crm-leads');
+                    setCrmView('table');
+                  }}
                   className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
                     currentSection === 'crm-leads' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
                   }`}
@@ -913,7 +1182,10 @@ export default function AdminControlCenter() {
                   <span>Leads Table (A11)</span>
                 </button>
                 <button
-                  onClick={() => setCurrentSection('crm-board')}
+                  onClick={() => {
+                    setCurrentSection('crm-board');
+                    setCrmView('board');
+                  }}
                   className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
                     currentSection === 'crm-board' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
                   }`}
@@ -922,7 +1194,27 @@ export default function AdminControlCenter() {
                   <span>Pipeline Board (A12)</span>
                 </button>
                 <button
-                  onClick={() => setCurrentSection('crm-import')}
+                  onClick={() => {
+                    setCurrentSection('crm-sheets');
+                    setCrmView('sheets');
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition ${
+                    currentSection === 'crm-sheets' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                    <span>Calling Sheets (A14)</span>
+                  </div>
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#E3F1EE] text-[#0B5548] font-mono text-[10px] font-bold">
+                    {callingSheets.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentSection('crm-import');
+                    setCrmView('import');
+                  }}
                   className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
                     currentSection === 'crm-import' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
                   }`}
@@ -1185,10 +1477,10 @@ export default function AdminControlCenter() {
               {currentSection === 'employees' && 'Employee Directory (Live Database)'}
               {currentSection === 'departments' && 'Departments & Teams'}
               {currentSection === 'roles' && 'Roles & Permissions Matrix'}
-              {currentSection === 'devices' && 'Workstation Hardware Devices'}
               {currentSection === 'crm-leads' && 'CRM Leads Pipeline'}
               {currentSection === 'crm-board' && 'Deals Kanban Board'}
-              {currentSection === 'crm-import' && 'Bulk CSV Lead Importer'}
+              {currentSection === 'crm-sheets' && 'Mass Calling Sheets & Daily Quota Distributor'}
+              {currentSection === 'crm-import' && 'Bulk CSV Lead Importer & Sheet Generator'}
               {currentSection === 'attendance-live' && 'Live Floor Attendance Board'}
               {currentSection === 'attendance-sheet' && 'Monthly Timesheet Grid'}
               {currentSection === 'attendance-corrections' && 'Correction Approvals'}
@@ -1546,12 +1838,26 @@ export default function AdminControlCenter() {
           )}
 
           {/* SCREEN: CLICKUP MULTI-VIEW CRM & PIPELINE SUITE */}
-          {(currentSection === 'crm-leads' || currentSection === 'crm-board' || currentSection === 'crm-import') && (
+          {(currentSection === 'crm-leads' ||
+            currentSection === 'crm-board' ||
+            currentSection === 'crm-sheets' ||
+            currentSection === 'crm-import') && (
             <div className="space-y-4">
               {/* ClickUp Top Control & View Switcher Bar */}
-              <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-3.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 p-1 bg-[#F5F6F3] rounded-lg border border-[#E4E7E1]">
+              <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 p-1 bg-[#F5F6F3] rounded-lg border border-[#E4E7E1] flex-wrap">
+                    <button
+                      onClick={() => setCrmView('table')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'table'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Table className="w-3.5 h-3.5" />
+                      <span>Table / Sheet</span>
+                    </button>
                     <button
                       onClick={() => setCrmView('list')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
@@ -1575,15 +1881,26 @@ export default function AdminControlCenter() {
                       <span>Board (Kanban)</span>
                     </button>
                     <button
-                      onClick={() => setCrmView('table')}
+                      onClick={() => setCrmView('sheets')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
-                        crmView === 'table'
+                        crmView === 'sheets'
                           ? 'bg-white text-[#0B5548] shadow-sm'
                           : 'text-[#5C666E] hover:text-[#151A1E]'
                       }`}
                     >
-                      <Table className="w-3.5 h-3.5" />
-                      <span>Table / Sheet</span>
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span>Calling Sheets ({callingSheets.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('targets')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'targets'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Target className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span>Daily Targets</span>
                     </button>
                     <button
                       onClick={() => setCrmView('calendar')}
@@ -1597,48 +1914,69 @@ export default function AdminControlCenter() {
                       <span>Calendar</span>
                     </button>
                     <button
-                      onClick={() => setCrmView('targets')}
+                      onClick={() => setCrmView('import')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
-                        crmView === 'targets'
+                        crmView === 'import'
                           ? 'bg-white text-[#0B5548] shadow-sm'
                           : 'text-[#5C666E] hover:text-[#151A1E]'
                       }`}
                     >
-                      <Target className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                      <span>Daily Targets &amp; Quotas</span>
-                    </button>
-                    <button
-                      onClick={() => setCrmView('sheets')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
-                        crmView === 'sheets'
-                          ? 'bg-white text-[#0B5548] shadow-sm'
-                          : 'text-[#5C666E] hover:text-[#151A1E]'
-                      }`}
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#8A5200]" />
-                      <span>Calling Sheets</span>
+                      <Upload className="w-3.5 h-3.5 text-[#1C469B]" />
+                      <span>CSV Lead Importer</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Right Action Bar */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setShowCreateSheetModal(true)}
+                    className="px-3 py-1.5 bg-[#E3F1EE] border border-[#BCE1D9] hover:bg-[#D4EBE6] text-[#0B5548] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>+ Create Sheet Batch</span>
+                  </button>
                   <button
                     onClick={() => setShowAssignSheetModal(true)}
-                    className="px-3 py-1.5 bg-[#FAFBF9] border border-[#D5DAD3] hover:bg-[#EEF0EC] text-[#151A1E] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                    className="px-3 py-1.5 bg-[#FAFBF9] border border-[#D5DAD3] hover:bg-[#EEF0EC] text-[#151A1E] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
                   >
                     <UserPlus className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                    <span>Assign Sheet &amp; Quotas</span>
+                    <span>Assign Sheet &amp; Quota</span>
                   </button>
                   <button
                     onClick={() => setShowAddLeadModal(true)}
-                    className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                    className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ New Lead / Deal</span>
                   </button>
                 </div>
               </div>
+
+              {/* Active Sheet Filter Chip */}
+              {selectedSheetFilter && (
+                <div className="flex items-center justify-between px-3.5 py-2 bg-[#E3F1EE] border border-[#BCE1D9] text-[#0B5548] rounded-[10px] text-xs font-semibold shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
+                    <span>
+                      Active Sheet Filter: <strong>{selectedSheetFilter}</strong> &bull; Showing{' '}
+                      {
+                        leads.filter(
+                          (l) => l.sheet === selectedSheetFilter || l.sheetId === selectedSheetFilter
+                        ).length
+                      }{' '}
+                      enrolled leads
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedSheetFilter(null)}
+                    className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-white border border-[#BCE1D9] hover:bg-[#F5FAF8] text-[#0B5548] transition"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear Filter
+                  </button>
+                </div>
+              )}
 
               {/* VIEW 1: CLICKUP LIST VIEW (Grouped by Stage with collapsible headers) */}
               {crmView === 'list' && (
@@ -1941,41 +2279,61 @@ export default function AdminControlCenter() {
               {/* VIEW 3: CLICKUP TABLE / SHEET MATRIX */}
               {crmView === 'table' && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-white px-4 py-2.5 rounded-[10px] border border-[#E4E7E1]">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-[#151A1E]">
-                        Selected: {selectedLeadIds.length} of {leads.length} Leads
+                  <div className="flex flex-wrap items-center justify-between bg-white px-4 py-2.5 rounded-[10px] border border-[#E4E7E1] gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Sheet Filter Dropdown */}
+                      <div className="flex items-center gap-1.5 text-xs text-[#4A535B]">
+                        <Filter className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                        <span className="font-medium">Filter Sheet:</span>
+                        <select
+                          value={selectedSheetFilter || 'ALL'}
+                          onChange={(e) =>
+                            setSelectedSheetFilter(e.target.value === 'ALL' ? null : e.target.value)
+                          }
+                          className="px-2.5 py-1 border border-[#E4E7E1] rounded-md bg-white text-xs font-semibold outline-none text-[#151A1E]"
+                        >
+                          <option value="ALL">All Calling Sheets ({leads.length} leads)</option>
+                          {callingSheets.map((sheet) => (
+                            <option key={sheet.id} value={sheet.name}>
+                              {sheet.name} ({leads.filter((l) => l.sheet === sheet.name).length} leads)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <span className="text-xs font-semibold text-[#8A939B]">
+                        Showing{' '}
+                        {
+                          leads
+                            .filter((l) => !selectedSheetFilter || l.sheet === selectedSheetFilter)
+                            .filter(
+                              (l) =>
+                                !searchQuery ||
+                                l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                l.company.toLowerCase().includes(searchQuery.toLowerCase())
+                            ).length
+                        }{' '}
+                        Leads
                       </span>
-                      {selectedLeadIds.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setShowAssignSheetModal(true)}
-                            className="px-2.5 py-1 bg-[#0F6B5C] text-white rounded-md text-[11px] font-semibold flex items-center gap-1"
-                          >
-                            <UserPlus className="w-3 h-3" />
-                            Bulk Assign Sheet to Rep
-                          </button>
-                          <button
-                            onClick={() => {
-                              alert(`Exporting ${selectedLeadIds.length} leads to CSV.`);
-                            }}
-                            className="px-2.5 py-1 bg-white border border-[#E4E7E1] text-[#151A1E] rounded-md text-[11px] font-semibold flex items-center gap-1"
-                          >
-                            <Download className="w-3 h-3" />
-                            Export Selected
-                          </button>
-                        </div>
-                      )}
                     </div>
+
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
+                          const sheetLeads = leads
+                            .filter((l) => !selectedSheetFilter || l.sheet === selectedSheetFilter)
+                            .filter(
+                              (l) =>
+                                !searchQuery ||
+                                l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                l.company.toLowerCase().includes(searchQuery.toLowerCase())
+                            );
                           const csvContent =
-                            'ID,Name,Company,Stage,Priority,Value,Owner,Phone,Email\n' +
-                            leads
+                            'ID,Name,Company,Stage,Priority,Value,Owner,Phone,Email,CallingSheet\n' +
+                            sheetLeads
                               .map(
                                 (l) =>
-                                  `"${l.id}","${l.name}","${l.company}","${l.stage}","${l.priority}","${l.value}","${l.owner}","${l.phone}","${l.email}"`
+                                  `"${l.id}","${l.name}","${l.company}","${l.stage}","${l.priority}","${l.value}","${l.owner}","${l.phone}","${l.email}","${l.sheet || 'General'}"`
                               )
                               .join('\n');
                           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1986,11 +2344,12 @@ export default function AdminControlCenter() {
                           document.body.appendChild(link);
                           link.click();
                           document.body.removeChild(link);
+                          showToast(`Exported ${sheetLeads.length} leads to CSV file!`, 'success');
                         }}
-                        className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                        className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                        <span>Export Full Table (CSV)</span>
+                        <span>Export CSV</span>
                       </button>
                     </div>
                   </div>
@@ -1999,63 +2358,52 @@ export default function AdminControlCenter() {
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                          <th className="py-2.5 px-3 w-8">
-                            <input
-                              type="checkbox"
-                              checked={selectedLeadIds.length === leads.length && leads.length > 0}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedLeadIds(leads.map((l) => l.id));
-                                } else {
-                                  setSelectedLeadIds([]);
-                                }
-                              }}
-                              className="rounded border-[#E4E7E1]"
-                            />
-                          </th>
                           <th className="py-2.5 px-3">Lead Name &amp; Title</th>
                           <th className="py-2.5 px-3">Company</th>
+                          <th className="py-2.5 px-3">Calling Sheet Batch</th>
                           <th className="py-2.5 px-3">Stage</th>
                           <th className="py-2.5 px-3">Priority</th>
                           <th className="py-2.5 px-3">Deal Value</th>
-                          <th className="py-2.5 px-3">Owner</th>
+                          <th className="py-2.5 px-3">Assigned Rep</th>
                           <th className="py-2.5 px-3">Phone</th>
                           <th className="py-2.5 px-3 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#EEF0EC]">
-                        {leads.map((l) => {
-                          const isSelected = selectedLeadIds.includes(l.id);
-                          return (
+                        {leads
+                          .filter((l) => !selectedSheetFilter || l.sheet === selectedSheetFilter)
+                          .filter(
+                            (l) =>
+                              !searchQuery ||
+                              l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              l.company.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+                          .map((l) => (
                             <tr
                               key={l.id}
                               onClick={() => {
                                 setSelectedLead(l);
                                 setShowLeadDrawer(true);
                               }}
-                              className={`cursor-pointer transition ${
-                                isSelected ? 'bg-[#E3F1EE]' : 'hover:bg-[#FAFBF9]'
-                              }`}
+                              className="cursor-pointer transition hover:bg-[#FAFBF9]"
                             >
-                              <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedLeadIds([...selectedLeadIds, l.id]);
-                                    } else {
-                                      setSelectedLeadIds(selectedLeadIds.filter((id) => id !== l.id));
-                                    }
-                                  }}
-                                  className="rounded border-[#E4E7E1]"
-                                />
-                              </td>
                               <td className="py-3 px-3 font-medium text-[#151A1E]">
-                                <div>{l.name}</div>
-                                <div className="text-[10.5px] text-[#8A939B]">{l.jobTitle}</div>
+                                <div className="font-semibold text-[#151A1E] hover:text-[#0F6B5C] transition">
+                                  {l.name}
+                                </div>
+                                <div className="text-[10.5px] text-[#8A939B]">{l.jobTitle || 'Executive'}</div>
                               </td>
-                              <td className="py-3 px-3 text-[#4A535B]">{l.company}</td>
+                              <td className="py-3 px-3 text-[#4A535B] font-medium">{l.company}</td>
+                              <td className="py-3 px-3">
+                                {l.sheet ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#E3F1EE] text-[#0B5548] font-medium text-[10.5px]">
+                                    <FileSpreadsheet className="w-2.5 h-2.5 shrink-0" />
+                                    <span className="truncate max-w-[140px]">{l.sheet}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10.5px] text-[#8A939B]">Direct Inbound</span>
+                                )}
+                              </td>
                               <td className="py-3 px-3">
                                 <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E3F1EE] text-[#0B5548]">
                                   {l.stage}
@@ -2075,7 +2423,14 @@ export default function AdminControlCenter() {
                                 </span>
                               </td>
                               <td className="py-3 px-3 font-mono font-bold text-[#0F6B5C]">{l.value}</td>
-                              <td className="py-3 px-3 text-[#4A535B]">{l.owner}</td>
+                              <td className="py-3 px-3 text-[#4A535B]">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-4 h-4 rounded-full bg-[#E3F1EE] text-[#0B5548] text-[9px] font-bold flex items-center justify-center">
+                                    {l.owner ? l.owner[0] : 'U'}
+                                  </div>
+                                  <span>{l.owner}</span>
+                                </div>
+                              </td>
                               <td className="py-3 px-3 font-mono text-[#151A1E]">{l.phone}</td>
                               <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
                                 <button
@@ -2085,15 +2440,14 @@ export default function AdminControlCenter() {
                                     setIsCalling(true);
                                     setCallDuration(0);
                                   }}
-                                  className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md text-[11px] font-semibold inline-flex items-center gap-1 shadow-xs"
+                                  className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1 shadow-xs transition"
                                 >
                                   <PhoneCall className="w-3 h-3" />
-                                  Call
+                                  Dial
                                 </button>
                               </td>
                             </tr>
-                          );
-                        })}
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -2168,16 +2522,30 @@ export default function AdminControlCenter() {
               {crmView === 'targets' && (
                 <div className="space-y-4">
                   {/* Top Quota Summary Cards */}
-                  <div className="grid grid-cols-4 gap-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
                       <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged Today</div>
-                      <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">76 / 85</div>
-                      <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">89% of Daily Quota Reached</div>
+                      <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
+                        {callingSheets.reduce((a, s) => a + (s.completedToday || 0), 0)} /{' '}
+                        {callingSheets.reduce((a, s) => a + (s.dailyTarget || 0), 0)}
+                      </div>
+                      <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
+                        {Math.round(
+                          (callingSheets.reduce((a, s) => a + (s.completedToday || 0), 0) /
+                            (callingSheets.reduce((a, s) => a + (s.dailyTarget || 0), 0) || 1)) *
+                            100
+                        )}
+                        % of Team Daily Quota
+                      </div>
                     </div>
                     <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
-                      <div className="text-[11.5px] font-medium text-[#8A939B]">Total Talk Time</div>
-                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">4h 18m</div>
-                      <div className="text-[11.5px] text-[#4A535B] mt-0.5">Avg: 9m 12s per connected call</div>
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Total Active Sheets</div>
+                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">
+                        {callingSheets.length} Batches
+                      </div>
+                      <div className="text-[11.5px] text-[#4A535B] mt-0.5">
+                        {callingSheets.reduce((a, s) => a + (s.totalLeads || 0), 0)} Total Leads Enrolled
+                      </div>
                     </div>
                     <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
                       <div className="text-[11.5px] font-medium text-[#8A939B]">Demos Booked Today</div>
@@ -2186,8 +2554,8 @@ export default function AdminControlCenter() {
                     </div>
                     <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
                       <div className="text-[11.5px] font-medium text-[#8A939B]">Pipeline Generated</div>
-                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">$218,500</div>
-                      <div className="text-[11.5px] text-[#0F6B5C] font-semibold mt-0.5">5 active proposals pending</div>
+                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">$385,000</div>
+                      <div className="text-[11.5px] text-[#0F6B5C] font-semibold mt-0.5">Live CRM Value Tracking</div>
                     </div>
                   </div>
 
@@ -2204,123 +2572,366 @@ export default function AdminControlCenter() {
                           <th className="py-2.5 px-4">Daily Calling Target</th>
                           <th className="py-2.5 px-4">Completed Calls</th>
                           <th className="py-2.5 px-4">Quota Progress</th>
-                          <th className="py-2.5 px-4 text-right">Status</th>
+                          <th className="py-2.5 px-4 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#EEF0EC]">
-                        <tr className="hover:bg-[#FAFBF9]">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-[#151A1E]">Daniyal Khan</div>
-                            <div className="text-[11px] text-[#8A939B]">Sales Executive &bull; EMP-0021</div>
-                          </td>
-                          <td className="py-3 px-4 text-[#4A535B]">Q4 Enterprise SaaS Outbound Batch A</td>
-                          <td className="py-3 px-4 font-mono font-bold">40 calls / day</td>
-                          <td className="py-3 px-4 font-mono text-[#0F6B5C] font-bold">34 calls</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-32 bg-[#E4E7E1] rounded-full h-2 overflow-hidden">
-                                <div className="bg-[#0F6B5C] h-full rounded-full" style={{ width: '85%' }} />
-                              </div>
-                              <span className="text-[11px] font-mono font-bold text-[#0F6B5C]">85%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
-                              On Pace
-                            </span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-[#FAFBF9]">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-[#151A1E]">Sam Parker</div>
-                            <div className="text-[11px] text-[#8A939B]">Sales Lead &bull; EMP-0022</div>
-                          </td>
-                          <td className="py-3 px-4 text-[#4A535B]">West Coast Logistics &amp; Supply Chain</td>
-                          <td className="py-3 px-4 font-mono font-bold">45 calls / day</td>
-                          <td className="py-3 px-4 font-mono text-[#0F6B5C] font-bold">42 calls</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-32 bg-[#E4E7E1] rounded-full h-2 overflow-hidden">
-                                <div className="bg-[#0F6B5C] h-full rounded-full" style={{ width: '93%' }} />
-                              </div>
-                              <span className="text-[11px] font-mono font-bold text-[#0F6B5C]">93%</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
-                              Target Met
-                            </span>
-                          </td>
-                        </tr>
+                        {callingSheets.map((sheet) => {
+                          const progressPercent = Math.min(
+                            100,
+                            Math.round(((sheet.completedToday || 0) / (sheet.dailyTarget || 1)) * 100)
+                          );
+                          return (
+                            <tr key={sheet.id} className="hover:bg-[#FAFBF9]">
+                              <td className="py-3 px-4">
+                                <div className="font-semibold text-[#151A1E]">{sheet.assignedTo}</div>
+                                <div className="text-[11px] text-[#8A939B]">Sales Executive</div>
+                              </td>
+                              <td className="py-3 px-4 text-[#4A535B] font-medium">{sheet.name}</td>
+                              <td className="py-3 px-4 font-mono font-bold">{sheet.dailyTarget} calls / day</td>
+                              <td className="py-3 px-4 font-mono text-[#0F6B5C] font-bold">
+                                {sheet.completedToday} calls
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-32 bg-[#E4E7E1] rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className="bg-[#0F6B5C] h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${progressPercent}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] font-mono font-bold text-[#0F6B5C]">
+                                    {progressPercent}%
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button
+                                  onClick={() => {
+                                    setReassignSheetId(sheet.id);
+                                    setReassignRepName(sheet.assignedTo);
+                                    setReassignDailyQuota(String(sheet.dailyTarget));
+                                    setReassignWeeklyTarget(String(sheet.weeklyTarget || 200));
+                                    setShowReassignSheetModal(true);
+                                  }}
+                                  className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md text-[11px] font-semibold"
+                                >
+                                  Adjust Target
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 </div>
               )}
 
-              {/* VIEW 6: CALLING SHEETS MANAGER */}
+              {/* VIEW 6: CALLING SHEETS MANAGER & QUOTA DISTRIBUTOR */}
               {crmView === 'sheets' && (
                 <div className="space-y-4">
+                  {/* Top Calling Sheet KPI Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Active Calling Sheets</div>
+                      <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
+                        {callingSheets.length} Batches
+                      </div>
+                      <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
+                        Synchronized with Rep Telephony
+                      </div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Total Leads In Queue</div>
+                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">
+                        {callingSheets.reduce((a, s) => a + (s.totalLeads || 0), 0)} Leads
+                      </div>
+                      <div className="text-[11.5px] text-[#4A535B] mt-0.5">
+                        {leads.length} Verified in Database
+                      </div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged Today</div>
+                      <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
+                        {callingSheets.reduce((a, s) => a + (s.completedToday || 0), 0)} Dials
+                      </div>
+                      <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
+                        Across All Active Calling Sheets
+                      </div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Average Quota Pace</div>
+                      <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">
+                        {Math.round(
+                          (callingSheets.reduce((a, s) => a + (s.completedToday || 0), 0) /
+                            (callingSheets.reduce((a, s) => a + (s.dailyTarget || 0), 0) || 1)) *
+                            100
+                        )}
+                        %
+                      </div>
+                      <div className="text-[11.5px] text-[#8A5200] font-semibold mt-0.5">Target: 100% daily</div>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
                       <span className="font-semibold text-xs text-[#151A1E]">
-                        Mass Calling Lead Sheets ({callingSheets.length})
+                        Mass Calling Lead Sheets ({callingSheets.length} Active Batches)
                       </span>
                     </div>
-                    <button
-                      onClick={() => setShowAssignSheetModal(true)}
-                      className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Assign New Sheet Batch
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowCreateSheetModal(true)}
+                        className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        + Upload / Create New Sheet
+                      </button>
+                      <button
+                        onClick={() => setShowAssignSheetModal(true)}
+                        className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                      >
+                        <UserPlus className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                        Assign Sheet to Rep
+                      </button>
+                    </div>
                   </div>
 
                   <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                          <th className="py-2.5 px-4">Sheet Name</th>
+                          <th className="py-2.5 px-4">Sheet Name &amp; Category</th>
                           <th className="py-2.5 px-4">Total Leads</th>
                           <th className="py-2.5 px-4">Assigned Representative</th>
-                          <th className="py-2.5 px-4">Daily Quota Target</th>
-                          <th className="py-2.5 px-4">Progress Today</th>
+                          <th className="py-2.5 px-4">Daily Target Quota</th>
+                          <th className="py-2.5 px-4">Today Progress</th>
+                          <th className="py-2.5 px-4">Status</th>
                           <th className="py-2.5 px-4 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#EEF0EC]">
-                        {callingSheets.map((sheet) => (
-                          <tr key={sheet.id} className="hover:bg-[#FAFBF9]">
-                            <td className="py-3 px-4">
-                              <div className="font-semibold text-[#151A1E] flex items-center gap-2">
-                                <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                                <span>{sheet.name}</span>
-                              </div>
-                              <div className="text-[10.5px] text-[#8A939B]">Created: {sheet.createdDate}</div>
-                            </td>
-                            <td className="py-3 px-4 font-mono font-bold text-[#151A1E]">{sheet.totalLeads} Leads</td>
-                            <td className="py-3 px-4 text-[#4A535B] font-medium">{sheet.assignedTo}</td>
-                            <td className="py-3 px-4 font-mono text-[#0F6B5C] font-semibold">
-                              {sheet.dailyTarget} calls/day
-                            </td>
-                            <td className="py-3 px-4 font-mono">
-                              {sheet.completedToday} / {sheet.dailyTarget} calls
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => {
-                                  setCrmView('table');
-                                }}
-                                className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md font-semibold text-[11px]"
-                              >
-                                View Sheet
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {callingSheets.map((sheet) => {
+                          const percent = Math.min(
+                            100,
+                            Math.round(((sheet.completedToday || 0) / (sheet.dailyTarget || 1)) * 100)
+                          );
+                          return (
+                            <tr key={sheet.id} className="hover:bg-[#FAFBF9] transition">
+                              <td className="py-3 px-4">
+                                <div className="font-semibold text-[#151A1E] flex items-center gap-2">
+                                  <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                                  <span>{sheet.name}</span>
+                                </div>
+                                <div className="text-[10.5px] text-[#8A939B] flex items-center gap-2 mt-0.5">
+                                  <span className="px-1.5 py-0.2 rounded bg-[#F0F2EE] text-[#5C666E]">
+                                    {sheet.category || 'Outbound'}
+                                  </span>
+                                  <span>Created: {sheet.createdDate}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-[#151A1E]">
+                                {sheet.totalLeads} Leads
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-5 h-5 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-[10px] flex items-center justify-center">
+                                    {sheet.assignedTo ? sheet.assignedTo[0] : 'U'}
+                                  </div>
+                                  <span className="font-semibold text-[#151A1E]">{sheet.assignedTo}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[#0F6B5C] font-semibold">
+                                {sheet.dailyTarget} calls/day
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] font-mono">
+                                    <span>
+                                      {sheet.completedToday} / {sheet.dailyTarget} calls
+                                    </span>
+                                    <span className="font-bold text-[#0F6B5C]">{percent}%</span>
+                                  </div>
+                                  <div className="w-28 bg-[#E4E7E1] rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-[#0F6B5C] h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${percent}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 rounded-full font-semibold text-[10.5px] bg-[#E4F4EB] text-[#14673F]">
+                                  {sheet.status || 'Active'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSheetFilter(sheet.name);
+                                      setCrmView('table');
+                                    }}
+                                    className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md font-semibold text-[11px] shadow-2xs"
+                                    title="View Enrolled Leads"
+                                  >
+                                    View Leads
+                                  </button>
+                                  <button
+                                    onClick={() => handleDialNextLead(sheet.name)}
+                                    className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md font-semibold text-[11px] flex items-center gap-1 shadow-2xs"
+                                    title="Dial Next Available Lead"
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                    Dial Next
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setReassignSheetId(sheet.id);
+                                      setReassignRepName(sheet.assignedTo);
+                                      setReassignDailyQuota(String(sheet.dailyTarget));
+                                      setReassignWeeklyTarget(String(sheet.weeklyTarget || 200));
+                                      setShowReassignSheetModal(true);
+                                    }}
+                                    className="px-2 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#4A535B] rounded-md font-semibold text-[11px]"
+                                    title="Reassign Representative & Targets"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleExportSheetCSV(sheet)}
+                                    className="px-2 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#4A535B] rounded-md font-semibold text-[11px]"
+                                    title="Export Sheet CSV"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSheet(sheet.id, sheet.name)}
+                                    className="px-2 py-1 bg-white border border-[#FBE7E4] hover:bg-[#FBE7E4] text-[#C2362B] rounded-md font-semibold text-[11px]"
+                                    title="Delete Sheet"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 7: BULK CSV LEAD IMPORTER & SHEET DISTRIBUTOR */}
+              {crmView === 'import' && (
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-[#E3F1EE] text-[#0B5548] rounded-lg">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm text-[#151A1E]">
+                          Bulk CSV Lead Importer &amp; Calling Sheet Distributor
+                        </h3>
+                        <p className="text-xs text-[#8A939B]">
+                          Upload and distribute mass lead lists to sales representatives with automated daily calling targets.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const sampleCsv =
+                          'FullName,Company,JobTitle,Phone,Email,DealValue,Industry\n' +
+                          'Sarah Jenkins,Apex Commercial Roofing,VP Operations,+1 (555) 234-8901,s.jenkins@apexroofing.com,48000,Roofing\n' +
+                          'Kevin Vance,Summit Industrial Builders,Director Procurement,+1 (555) 489-3321,kvance@summitbuilders.com,65000,Construction\n' +
+                          'Elena Rostova,Pacific Sky Exterior Group,Head of People,+1 (555) 771-9042,elena@pacificsky.com,92000,Solar';
+                        const blob = new Blob([sampleCsv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.setAttribute('href', url);
+                        link.setAttribute('download', 'workpulse_leads_template.csv');
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showToast('Sample CSV Template downloaded!', 'success');
+                      }}
+                      className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Download className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span>Download Sample CSV Template</span>
+                    </button>
+                  </div>
+
+                  {/* Drag and Drop Zone */}
+                  <div className="border-2 border-dashed border-[#BCE1D9] bg-[#FAFBF9] rounded-[14px] p-8 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-[#E3F1EE] text-[#0B5548] flex items-center justify-center mx-auto">
+                      <FileSpreadsheet className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-xs text-[#151A1E]">
+                        Drag and drop your Lead Sheet CSV or Excel file here
+                      </div>
+                      <div className="text-[11px] text-[#8A939B] mt-0.5">
+                        Supports .csv, .xlsx, and .tsv formats (Up to 10,000 rows per batch)
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          setNewSheetName('Q4 Apollo Outbound High-Intent Batch');
+                          setNewSheetCategory('Commercial Contractors');
+                          setNewSheetAssignee('Daniyal Khan');
+                          setNewSheetDailyQuota('50');
+                          setNewSheetLeadCount('75');
+                          handleCreateSheet();
+                        }}
+                        className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Instant Load 75 Inbound Commercial Roofing Leads</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Import Configuration */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <label className="block font-semibold text-[#4A535B] mb-1">Target Calling Sheet</label>
+                      <input
+                        type="text"
+                        value={newSheetName}
+                        onChange={(e) => setNewSheetName(e.target.value)}
+                        placeholder="e.g. Q4 Apollo Outbound Batch"
+                        className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-[#4A535B] mb-1">Assign to Representative</label>
+                      <select
+                        value={newSheetAssignee}
+                        onChange={(e) => setNewSheetAssignee(e.target.value)}
+                        className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                      >
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.name}>
+                            {emp.name} ({emp.code}) &bull; {emp.department}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-[#4A535B] mb-1">Daily Calling Quota</label>
+                      <input
+                        type="number"
+                        value={newSheetDailyQuota}
+                        onChange={(e) => setNewSheetDailyQuota(e.target.value)}
+                        className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none bg-white"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -3071,36 +3682,164 @@ export default function AdminControlCenter() {
         </div>
       )}
 
-      {/* MODAL: MASS CALLING SHEET & QUOTA DISTRIBUTOR */}
-      {showAssignSheetModal && (
+      {/* MODAL: CREATE & UPLOAD NEW CALLING SHEET BATCH */}
+      {showCreateSheetModal && (
         <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
-          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
-              <span>Assign Mass Calling Sheet to Sales Rep</span>
+          <div className="w-[540px] bg-white rounded-[14px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderPlus className="w-4 h-4 text-[#0F6B5C]" />
+                <span>Create &amp; Distribute New Calling Sheet</span>
+              </div>
+              <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowCreateSheetModal(false)} />
             </div>
 
             <div className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-[#4A535B] mb-1">Select Calling Sheet / Batch</label>
-                <select className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white">
-                  <option>Q4 Enterprise SaaS Outbound Batch A (120 Leads)</option>
-                  <option>West Coast Logistics &amp; Supply Chain (85 Leads)</option>
-                  <option>Healthcare &amp; Medical Practice Leads (60 Leads)</option>
-                  <option>Roofing &amp; Home Services Outbound (200 Leads)</option>
+                <label className="block font-semibold text-[#4A535B] mb-1">Calling Sheet Batch Name</label>
+                <input
+                  type="text"
+                  value={newSheetName}
+                  onChange={(e) => setNewSheetName(e.target.value)}
+                  placeholder="e.g. Commercial Roofing & Siding Outbound Q4"
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Campaign Category</label>
+                  <select
+                    value={newSheetCategory}
+                    onChange={(e) => setNewSheetCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                  >
+                    <option>Outbound Cold</option>
+                    <option>Inbound High-Intent</option>
+                    <option>Google Ads Leads</option>
+                    <option>Commercial Contractors</option>
+                    <option>Enterprise SaaS</option>
+                    <option>Re-engagement List</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Assign to Sales Representative</label>
+                  <select
+                    value={newSheetAssignee}
+                    onChange={(e) => setNewSheetAssignee(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} ({emp.code}) &bull; {emp.department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Total Leads In Batch</label>
+                  <input
+                    type="number"
+                    value={newSheetLeadCount}
+                    onChange={(e) => setNewSheetLeadCount(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Daily Target (Quota)</label>
+                  <input
+                    type="number"
+                    value={newSheetDailyQuota}
+                    onChange={(e) => setNewSheetDailyQuota(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Weekly Target</label>
+                  <input
+                    type="number"
+                    value={newSheetWeeklyTarget}
+                    onChange={(e) => setNewSheetWeeklyTarget(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#FAFBF9] rounded-lg border border-[#EEF0EC] text-[11px] text-[#5C666E]">
+                💡 Creating this sheet batch automatically populates the lead pipeline and assigns real-time call targets to {newSheetAssignee}'s desktop workstation.
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
+              <button
+                onClick={() => setShowCreateSheetModal(false)}
+                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSheet}
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-xs"
+              >
+                Create &amp; Distribute Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ASSIGN / DISTRIBUTE CALLING SHEET */}
+      {showAssignSheetModal && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
+          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
+                <span>Assign Sheet &amp; Daily Quotas</span>
+              </div>
+              <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowAssignSheetModal(false)} />
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Select Calling Sheet Batch</label>
+                <select
+                  value={reassignSheetId}
+                  onChange={(e) => {
+                    setReassignSheetId(e.target.value);
+                    const sheet = callingSheets.find((s) => s.id === e.target.value);
+                    if (sheet) {
+                      setReassignRepName(sheet.assignedTo);
+                      setReassignDailyQuota(String(sheet.dailyTarget));
+                      setReassignWeeklyTarget(String(sheet.weeklyTarget || 200));
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                >
+                  {callingSheets.map((sheet) => (
+                    <option key={sheet.id} value={sheet.id}>
+                      {sheet.name} ({sheet.totalLeads} Leads) &bull; Currently: {sheet.assignedTo}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block font-semibold text-[#4A535B] mb-1">Assign to Sales Representative</label>
-                <select className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white">
-                  {employees
-                    .filter((e) => e.department === 'Sales' || e.role?.includes('Sales') || e.role?.includes('Executive'))
-                    .map((emp) => (
-                      <option key={emp.id} value={emp.name}>
-                        {emp.name} ({emp.code}) &bull; {emp.department}
-                      </option>
-                    ))}
+                <select
+                  value={reassignRepName}
+                  onChange={(e) => setReassignRepName(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name} ({emp.code}) &bull; {emp.department}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -3109,22 +3848,24 @@ export default function AdminControlCenter() {
                   <label className="block font-semibold text-[#4A535B] mb-1">Daily Calling Target (Quota)</label>
                   <input
                     type="number"
-                    defaultValue={40}
+                    value={reassignDailyQuota}
+                    onChange={(e) => setReassignDailyQuota(e.target.value)}
                     className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#4A535B] mb-1">Weekly Demo Booking Target</label>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Weekly Target</label>
                   <input
                     type="number"
-                    defaultValue={5}
+                    value={reassignWeeklyTarget}
+                    onChange={(e) => setReassignWeeklyTarget(e.target.value)}
                     className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
                   />
                 </div>
               </div>
 
               <div className="p-3 bg-[#FAFBF9] rounded-lg border border-[#EEF0EC] text-[11px] text-[#5C666E]">
-                💡 Leads in this sheet will immediately synchronize to the rep's desktop workstation with one-click dialer and live quota tracking.
+                💡 Leads will immediately synchronize to {reassignRepName}'s softphone with live quota progress.
               </div>
             </div>
 
@@ -3137,12 +3878,80 @@ export default function AdminControlCenter() {
               </button>
               <button
                 onClick={() => {
-                  alert('Mass Calling Sheet assigned successfully with daily targets.');
+                  handleReassignSheet();
                   setShowAssignSheetModal(false);
                 }}
-                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-xs"
               >
                 Confirm &amp; Distribute Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REASSIGN SHEET & TARGETS */}
+      {showReassignSheetModal && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
+          <div className="w-[500px] bg-white rounded-[14px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-[#0F6B5C]" />
+                <span>Adjust Calling Quotas &amp; Reassign</span>
+              </div>
+              <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowReassignSheetModal(false)} />
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Representative Assignee</label>
+                <select
+                  value={reassignRepName}
+                  onChange={(e) => setReassignRepName(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name} ({emp.code}) &bull; {emp.department}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Daily Calling Quota (calls/day)</label>
+                  <input
+                    type="number"
+                    value={reassignDailyQuota}
+                    onChange={(e) => setReassignDailyQuota(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Weekly Target</label>
+                  <input
+                    type="number"
+                    value={reassignWeeklyTarget}
+                    onChange={(e) => setReassignWeeklyTarget(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
+              <button
+                onClick={() => setShowReassignSheetModal(false)}
+                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReassignSheet}
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-xs"
+              >
+                Save Quota Changes
               </button>
             </div>
           </div>
@@ -3152,7 +3961,7 @@ export default function AdminControlCenter() {
       {/* MODAL: ONE-CLICK OUTBOUND CALL DIALER */}
       {showDialerModal && activeCallLead && (
         <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
-          <div className="w-[480px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
+          <div className="w-[480px] bg-white rounded-[14px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="px-6 py-4 bg-[#0F6B5C] text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <PhoneCall className="w-4 h-4 animate-bounce" />
@@ -3204,7 +4013,7 @@ export default function AdminControlCenter() {
             </div>
 
             <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-between items-center">
-              <span className="text-[11px] text-[#8A939B]">Counts toward daily rep quota</span>
+              <span className="text-[11px] text-[#8A939B] font-medium">+1 to daily rep quota</span>
               <button
                 onClick={() => {
                   const newLog = {
@@ -3212,24 +4021,49 @@ export default function AdminControlCenter() {
                     outcome: callOutcome,
                     duration: `${Math.floor(callDuration / 60)}m ${callDuration % 60}s`,
                     date: 'Just Now',
-                    notes: callNotes || 'Standard call logged.',
+                    notes: callNotes || 'Standard outbound call logged.',
                   };
+
+                  const nextStage =
+                    callOutcome === 'Meeting Scheduled'
+                      ? 'Meeting Scheduled'
+                      : callOutcome === 'Connected & Interested'
+                      ? 'Qualified'
+                      : activeCallLead.stage;
+
                   const updatedLeads = leads.map((l) =>
                     l.id === activeCallLead.id
                       ? {
                           ...l,
+                          stage: nextStage,
                           lastTouch: 'Just Now',
                           callHistory: [newLog, ...(l.callHistory || [])],
                         }
                       : l
                   );
+
+                  // Increment sheet completedToday
+                  if (activeCallLead.sheet) {
+                    setCallingSheets((prev) =>
+                      prev.map((s) =>
+                        s.name === activeCallLead.sheet
+                          ? { ...s, completedToday: (s.completedToday || 0) + 1 }
+                          : s
+                      )
+                    );
+                  }
+
                   setLeads(updatedLeads);
                   setIsCalling(false);
                   setShowDialerModal(false);
                   setCallNotes('');
-                  alert(`Call logged! Rep daily quota progress incremented.`);
+                  showToast(
+                    `Call logged with outcome "${callOutcome}". Rep daily quota incremented!`,
+                    'success',
+                    'Call Logged'
+                  );
                 }}
-                className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
               >
                 <Check className="w-3.5 h-3.5" />
                 End Call &amp; Save Log
@@ -3242,10 +4076,13 @@ export default function AdminControlCenter() {
       {/* MODAL: QUICK ADD LEAD */}
       {showAddLeadModal && (
         <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
-          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center gap-2">
-              <Plus className="w-4 h-4 text-[#0F6B5C]" />
-              <span>Add New Lead / Deal</span>
+          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-[#0F6B5C]" />
+                <span>Add New Lead / Deal</span>
+              </div>
+              <X className="w-4 h-4 text-[#8A939B] cursor-pointer" onClick={() => setShowAddLeadModal(false)} />
             </div>
 
             <div className="p-6 space-y-4 text-xs">
@@ -3334,19 +4171,36 @@ export default function AdminControlCenter() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-[#4A535B] mb-1">Assigned Sales Owner</label>
-                <select
-                  value={newLeadOwner}
-                  onChange={(e) => setNewLeadOwner(e.target.value)}
-                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
-                >
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.name}>
-                      {emp.name} ({emp.department})
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Assigned Sales Owner</label>
+                  <select
+                    value={newLeadOwner}
+                    onChange={(e) => setNewLeadOwner(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} ({emp.department})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Calling Sheet Batch</label>
+                  <select
+                    value={newLeadSheet}
+                    onChange={(e) => setNewLeadSheet(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                  >
+                    {callingSheets.map((sheet) => (
+                      <option key={sheet.id} value={sheet.name}>
+                        {sheet.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -3393,6 +4247,7 @@ export default function AdminControlCenter() {
                         ownerId: matchedOwner?.id,
                         email: newLeadEmail || 'lead@example.com',
                         phone: newLeadPhone || '+1 (555) 000-0000',
+                        sheet: newLeadSheet,
                         industry: 'Commercial Operations',
                         source: 'Direct Inbound',
                         lastTouch: 'Just Now',
@@ -3406,10 +4261,10 @@ export default function AdminControlCenter() {
                         callHistory: [],
                       };
                       setLeads([newRecord, ...leads]);
-                      alert(`Lead ${newLeadName} created in live PostgreSQL database!`);
+                      showToast(`Lead "${newLeadName}" created in CRM database!`, 'success');
                     } catch (e: any) {
                       console.warn('Create lead DB error:', e);
-                      alert(`Lead created locally: ${e?.message || 'Saved'}`);
+                      showToast(`Lead created locally: ${e?.message || 'Saved'}`, 'info');
                     }
                     setShowAddLeadModal(false);
                     setNewLeadName('');
@@ -3418,7 +4273,7 @@ export default function AdminControlCenter() {
                     setNewLeadEmail('');
                   }
                 }}
-                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-xs"
               >
                 Create Lead in Database
               </button>
@@ -3426,6 +4281,36 @@ export default function AdminControlCenter() {
           </div>
         </div>
       )}
+
+      {/* TOAST NOTIFICATION CONTAINER */}
+      <div className="fixed bottom-5 right-5 z-[9999] space-y-2 pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-[12px] shadow-2xl border text-xs max-w-[380px] animate-in slide-in-from-bottom-3 duration-200 ${
+              toast.type === 'success'
+                ? 'bg-[#151A1E] text-white border-[#0F6B5C]'
+                : toast.type === 'error'
+                ? 'bg-[#151A1E] text-white border-[#EF4444]'
+                : 'bg-[#151A1E] text-white border-[#3B82F6]'
+            }`}
+          >
+            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-[#1E8E5A] shrink-0 mt-0.5" />}
+            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-[#EF4444] shrink-0 mt-0.5" />}
+            {toast.type === 'info' && <Info className="w-4 h-4 text-[#3B82F6] shrink-0 mt-0.5" />}
+            <div className="flex-1">
+              {toast.title && <div className="font-bold text-white mb-0.5">{toast.title}</div>}
+              <div className="text-[#C4C9CE] leading-relaxed">{toast.message}</div>
+            </div>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              className="text-[#8A939B] hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
