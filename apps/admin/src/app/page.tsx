@@ -24,14 +24,22 @@ import {
 
 export default function PublicLandingPage() {
   const [downloadModal, setDownloadModal] = useState<'windows' | 'mac' | null>(null);
-  const [downloading, setDownloading] = useState(false);
 
   const triggerDownload = (os: 'windows' | 'mac') => {
     setDownloadModal(os);
-    setDownloading(true);
-    setTimeout(() => {
-      setDownloading(false);
-    }, 2000);
+    const fileName = os === 'windows' ? 'WorkPulse-Setup-x64.exe' : 'WorkPulse-Mac-Universal.dmg';
+    const downloadUrl = `/downloads/${fileName}`;
+    
+    try {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      window.open(downloadUrl, '_blank');
+    }
   };
 
   return (
@@ -176,15 +184,17 @@ export default function PublicLandingPage() {
               <div className="mt-6 pt-4 border-t border-[#EEF0EC] flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-[#8A939B]">Installer Format</div>
-                  <div className="font-mono font-semibold text-xs text-[#151A1E]">WorkPulse-Setup-x64.exe (68 MB)</div>
+                  <div className="font-mono font-semibold text-xs text-[#151A1E]">WorkPulse-Setup-x64.exe</div>
                 </div>
-                <button
+                <a
+                  href="/downloads/WorkPulse-Setup-x64.exe"
+                  download="WorkPulse-Setup-x64.exe"
                   onClick={() => triggerDownload('windows')}
                   className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs flex items-center gap-2 shadow-sm transition"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download .EXE</span>
-                </button>
+                </a>
               </div>
             </div>
 
@@ -224,15 +234,17 @@ export default function PublicLandingPage() {
               <div className="mt-6 pt-4 border-t border-[#EEF0EC] flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-[#8A939B]">Disk Image Format</div>
-                  <div className="font-mono font-semibold text-xs text-[#151A1E]">WorkPulse-Mac-Universal.dmg (72 MB)</div>
+                  <div className="font-mono font-semibold text-xs text-[#151A1E]">WorkPulse-Mac-Universal.dmg</div>
                 </div>
-                <button
+                <a
+                  href="/downloads/WorkPulse-Mac-Universal.dmg"
+                  download="WorkPulse-Mac-Universal.dmg"
                   onClick={() => triggerDownload('mac')}
                   className="px-4 py-2 bg-[#151A1E] hover:bg-black text-white rounded-lg font-semibold text-xs flex items-center gap-2 shadow-sm transition"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download .DMG</span>
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -285,13 +297,13 @@ export default function PublicLandingPage() {
         </div>
       </section>
 
-      {/* Admin Entry Banner */}
+      {/* Download CTA Banner */}
       <section className="bg-[#0B5548] text-white py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
-            <h2 className="text-2xl font-bold">Ready to manage your enterprise?</h2>
+            <h2 className="text-2xl font-bold">Ready to deploy WorkPulse to your workforce?</h2>
             <p className="text-xs text-white/80 mt-1">
-              Authorized administrators can log in to view the live dashboard, employee rosters, and CRM targets.
+              Download the workstation background agent to start tracking shifts and managing calling leads.
             </p>
           </div>
           <a
@@ -320,7 +332,7 @@ export default function PublicLandingPage() {
         </div>
       </footer>
 
-      {/* Download Modal Simulation */}
+      {/* Download Modal */}
       {downloadModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border border-[#E4E7E1] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
@@ -332,7 +344,7 @@ export default function PublicLandingPage() {
                   <Apple className="w-5 h-5 text-[#151A1E]" />
                 )}
                 <h3 className="font-bold text-sm text-[#151A1E]">
-                  WorkPulse for {downloadModal === 'windows' ? 'Windows' : 'macOS'}
+                  WorkPulse for {downloadModal === 'windows' ? 'Windows (.exe)' : 'macOS (.dmg)'}
                 </h3>
               </div>
               <button
@@ -343,33 +355,49 @@ export default function PublicLandingPage() {
               </button>
             </div>
 
-            {downloading ? (
-              <div className="py-6 text-center space-y-3">
-                <div className="w-8 h-8 border-3 border-[#0F6B5C]/30 border-t-[#0F6B5C] rounded-full animate-spin mx-auto" />
-                <div className="font-semibold text-xs text-[#151A1E]">
-                  Starting download for {downloadModal === 'windows' ? 'WorkPulse-Setup-x64.exe' : 'WorkPulse-Mac-Universal.dmg'}...
-                </div>
-                <p className="text-[11px] text-[#8A939B]">If the download doesn't begin in 5 seconds, click retry.</p>
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-[#E4F4EB] text-[#14673F] rounded-lg font-semibold flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>Download started! Saving {downloadModal === 'windows' ? 'WorkPulse-Setup-x64.exe' : 'WorkPulse-Mac-Universal.dmg'}</span>
               </div>
-            ) : (
-              <div className="space-y-3 text-xs">
-                <div className="p-3 bg-[#E4F4EB] text-[#14673F] rounded-lg font-semibold flex items-center gap-2">
-                  <Check className="w-4 h-4 shrink-0" />
-                  <span>Package generated successfully for {downloadModal === 'windows' ? 'Windows 64-bit' : 'macOS Universal'}!</span>
-                </div>
-                <p className="text-[#5C666E]">
-                  Once installed on the employee workstation, launch the application and enter your company enrollment key to activate real-time telemetry.
-                </p>
-                <div className="pt-2 flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => setDownloadModal(null)}
-                    className="px-4 py-2 bg-[#0F6B5C] text-white rounded-lg font-semibold text-xs"
+
+              <p className="text-[#5C666E]">
+                Once downloaded, open the installer to launch the WorkPulse workstation client on your computer.
+              </p>
+
+              {/* Direct fallback download links */}
+              <div className="pt-2 border-t border-[#EEF0EC] space-y-2">
+                <div className="text-[11px] text-[#8A939B]">If download did not start automatically:</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={downloadModal === 'windows' ? '/downloads/WorkPulse-Setup-x64.exe' : '/downloads/WorkPulse-Mac-Universal.dmg'}
+                    download={downloadModal === 'windows' ? 'WorkPulse-Setup-x64.exe' : 'WorkPulse-Mac-Universal.dmg'}
+                    className="px-3.5 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 transition"
                   >
-                    Done
-                  </button>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Direct Download {downloadModal === 'windows' ? '.EXE' : '.DMG'}</span>
+                  </a>
+
+                  <a
+                    href="/downloads/WorkPulse-Mac-Installer.zip"
+                    download="WorkPulse-Workstation.zip"
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-[#4A535B] font-semibold rounded-lg text-xs flex items-center gap-1.5 transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download .ZIP</span>
+                  </a>
                 </div>
               </div>
-            )}
+
+              <div className="pt-2 flex items-center justify-end">
+                <button
+                  onClick={() => setDownloadModal(null)}
+                  className="px-4 py-1.5 bg-[#151A1E] hover:bg-black text-white rounded-lg font-semibold text-xs"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
