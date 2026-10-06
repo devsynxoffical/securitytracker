@@ -95,7 +95,7 @@ export class AdminApiClient {
   }
 
   static async getEmployees() {
-    return this.request('/org/employees');
+    return this.request('/employees').catch(() => this.request('/org/employees'));
   }
 
   static async createEmployee(data: {
@@ -107,10 +107,15 @@ export class AdminApiClient {
     departmentId?: string;
     temporaryPassword?: string;
   }) {
-    return this.request('/org/employees', {
+    return this.request('/employees', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }).catch(() =>
+      this.request('/org/employees', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+    );
   }
 
   static async getDepartments() {

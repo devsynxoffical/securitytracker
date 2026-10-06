@@ -257,10 +257,10 @@ export class TelemetryEngine {
       this.tick();
     }, 1000);
 
-    // 3-second Active Foreground App Poller
+    // 1-second Active Foreground App Poller
     this.activeAppTimer = setInterval(() => {
       this.detectActiveApplication();
-    }, 3000);
+    }, 1000);
   }
 
   private stopTelemetryLoop() {
@@ -327,31 +327,80 @@ export class TelemetryEngine {
     try {
       if (process.platform === 'darwin') {
         const { stdout } = await execAsync(
-          `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true'`
+          `osascript -l JavaScript -e '
+            try {
+              ObjC.import("AppKit");
+              const app = $.NSWorkspace.sharedWorkspace.frontmostApplication;
+              const name = app.localizedName ? app.localizedName.js : "WorkPulse Workstation";
+              const bundleId = app.bundleIdentifier ? app.bundleIdentifier.js : "";
+              const pid = app.processIdentifier;
+              JSON.stringify({ name, bundleId, pid });
+            } catch(e) {
+              JSON.stringify({ name: "WorkPulse Workstation", bundleId: "", pid: 0 });
+            }
+          '`
         );
-        const appName = stdout.trim();
-        if (appName && appName !== this.currentApp.name) {
+        const data = JSON.parse(stdout.trim());
+        const appName = data.name || 'WorkPulse Workstation';
+        const bundleId = data.bundleId || '';
+
+        // Determine user-friendly process binary name
+        let processName = `${appName}.app`;
+        if (bundleId.includes('chrome')) processName = 'Google Chrome.app';
+        else if (bundleId.includes('vscode') || bundleId.includes('code')) processName = 'Code.app';
+        else if (bundleId.includes('slack')) processName = 'Slack.app';
+        else if (bundleId.includes('terminal')) processName = 'Terminal.app';
+
+        let windowTitle = `${appName} - Active Session`;
+
+        if (appName && (appName !== this.currentApp.name || processName !== this.currentApp.processName)) {
           this.currentApp = {
             name: appName,
-            processName: `${appName}.app`,
-            windowTitle: `${appName} Active Session`,
+            processName,
+            windowTitle,
             activeSeconds: 0,
             category: this.categorizeApp(appName),
           };
+          this.broadcastState();
         }
       } else if (process.platform === 'win32') {
         const { stdout } = await execAsync(
-          `powershell -NoProfile -Command "(Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Sort-Object CPU -Descending | Select-Object -First 1).ProcessName"`
+          `powershell -NoProfile -Command "
+            Add-Type @'
+              using System;
+              using System.Runtime.InteropServices;
+              using System.Text;
+              public class WinUtil {
+                [DllImport(\\"user32.dll\\")] public static extern IntPtr GetForegroundWindow();
+                [DllImport(\\"user32.dll\\")] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+                [DllImport(\\"user32.dll\\", SetLastError=true)] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+              }
+'@
+            $hwnd = [WinUtil]::GetForegroundWindow()
+            $sb = New-Object System.Text.StringBuilder 256
+            [void][WinUtil]::GetWindowText($hwnd, $sb, 256)
+            $pid = 0
+            [void][WinUtil]::GetWindowThreadProcessId($hwnd, [ref]$pid)
+            $p = Get-Process -Id $pid -ErrorAction SilentlyContinue
+            [PSCustomObject]@{
+              ProcessName = if ($p) { $p.ProcessName } else { 'Unknown' }
+              WindowTitle = $sb.ToString()
+            } | ConvertTo-Json -Compress
+          "`
         );
-        const procName = stdout.trim();
+        const data = JSON.parse(stdout.trim());
+        const procName = data.ProcessName || 'WorkPulse';
+        const winTitle = data.WindowTitle || `${procName} Window`;
+
         if (procName && procName !== this.currentApp.name) {
           this.currentApp = {
             name: procName,
             processName: `${procName}.exe`,
-            windowTitle: `${procName} Window`,
+            windowTitle: winTitle,
             activeSeconds: 0,
             category: this.categorizeApp(procName),
           };
+          this.broadcastState();
         }
       }
     } catch {
@@ -361,7 +410,7 @@ export class TelemetryEngine {
 
   private categorizeApp(name: string): 'PRODUCTIVE' | 'NEUTRAL' | 'UNPRODUCTIVE' {
     const lower = name.toLowerCase();
-    const productiveApps = ['code', 'visual studio', 'cursor', 'terminal', 'chrome', 'figma', 'slack', 'teams', 'outlook', 'workpulse', 'notion', 'postman', 'dbeaver'];
+    const productiveApps = ['code', 'visual studio', 'cursor', 'antigravity', 'terminal', 'chrome', 'safari', 'firefox', 'figma', 'slack', 'teams', 'outlook', 'workpulse', 'notion', 'postman', 'dbeaver', 'excel', 'word', 'powerpoint', 'finder', 'explorer'];
     const unproductiveApps = ['steam', 'netflix', 'spotify', 'games', 'discord', 'tiktok', 'youtube'];
 
     if (productiveApps.some((p) => lower.includes(p))) return 'PRODUCTIVE';

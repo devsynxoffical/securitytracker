@@ -35,3 +35,4 @@ release/
 build/
 coverage/
 .prisma/client
+scratch/

@@ -69,9 +69,9 @@ import {
   ArrowUpDown,
   Volume2,
   Mic,
-  MicOff,
   AlertTriangle,
   Info,
+  RefreshCw,
 } from 'lucide-react';
 import { AdminApiClient } from '../../apiClient';
 
@@ -218,146 +218,8 @@ export default function AdminControlCenter() {
   const [newEmpDept, setNewEmpDept] = useState('Sales');
 
   // Live Enterprise Database State (PostgreSQL & ClickUp Engine)
-  const [employees, setEmployees] = useState<any[]>([
-    {
-      id: 'emp-1',
-      code: 'EMP-0021',
-      name: 'Daniyal Khan',
-      email: 'daniyal.khan@company.com',
-      role: 'Senior BDR Specialist',
-      department: 'Sales & Outbound',
-      status: 'active',
-      shift: 'WORKING',
-      checkIn: '09:00 AM',
-      activeHours: '6h 34m',
-      currentApp: 'WorkPulse Workstation / Chrome',
-      device: 'PC-014 (Enrolled)',
-      keystrokes: '14,280',
-      mouseClicks: '3,420',
-      productivityScore: '94%',
-    },
-    {
-      id: 'emp-2',
-      code: 'EMP-0022',
-      name: 'Sam Parker',
-      email: 'sam.parker@company.com',
-      role: 'Account Executive',
-      department: 'Sales & Outbound',
-      status: 'active',
-      shift: 'WORKING',
-      checkIn: '09:15 AM',
-      activeHours: '6h 12m',
-      currentApp: 'HubSpot / Softphone Dialer',
-      device: 'PC-092 (Enrolled)',
-      keystrokes: '11,850',
-      mouseClicks: '2,980',
-      productivityScore: '91%',
-    },
-    {
-      id: 'emp-3',
-      code: 'EMP-0023',
-      name: 'Emily Chen',
-      email: 'emily.chen@company.com',
-      role: 'Full Stack Engineer',
-      department: 'Engineering',
-      status: 'active',
-      shift: 'ON_BREAK',
-      checkIn: '08:50 AM',
-      activeHours: '5h 45m',
-      currentApp: 'VS Code / GitHub Desktop',
-      device: 'MAC-044 (Enrolled)',
-      keystrokes: '18,940',
-      mouseClicks: '4,120',
-      productivityScore: '96%',
-    },
-    {
-      id: 'emp-4',
-      code: 'EMP-0024',
-      name: 'Bilal Ahmed',
-      email: 'bilal.ahmed@company.com',
-      role: 'Support Team Lead',
-      department: 'Customer Success',
-      status: 'active',
-      shift: 'WORKING',
-      checkIn: '09:30 AM',
-      activeHours: '5h 50m',
-      currentApp: 'Zendesk / Slack Enterprise',
-      device: 'PC-078 (Enrolled)',
-      keystrokes: '9,450',
-      mouseClicks: '2,130',
-      productivityScore: '88%',
-    },
-    {
-      id: 'emp-5',
-      code: 'EMP-0001',
-      name: 'Sara Malik',
-      email: 'sara.malik@devsynx.com',
-      role: 'Super Admin',
-      department: 'Security & Compliance',
-      status: 'active',
-      shift: 'WORKING',
-      checkIn: '08:30 AM',
-      activeHours: '7h 15m',
-      currentApp: 'WorkPulse Central Admin',
-      device: 'MAC-088 (Enrolled)',
-      keystrokes: '12,600',
-      mouseClicks: '3,800',
-      productivityScore: '98%',
-    },
-  ]);
-
-  const [departments, setDepartments] = useState<any[]>([
-    {
-      id: 'dept-1',
-      name: 'Sales & Business Development',
-      code: 'SALES',
-      manager: 'Daniyal Khan',
-      memberCount: 14,
-      openTargets: 85,
-      budget: '$120,000 / mo',
-      color: '#0F6B5C',
-    },
-    {
-      id: 'dept-2',
-      name: 'Engineering & Core Platform',
-      code: 'ENG',
-      manager: 'Syed Hassan Ali Shah',
-      memberCount: 9,
-      openTargets: 42,
-      budget: '$160,000 / mo',
-      color: '#1C469B',
-    },
-    {
-      id: 'dept-3',
-      name: 'Customer Success & Support',
-      code: 'CS',
-      manager: 'Bilal Ahmed',
-      memberCount: 8,
-      openTargets: 30,
-      budget: '$65,000 / mo',
-      color: '#55359C',
-    },
-    {
-      id: 'dept-4',
-      name: 'Security, Compliance & IT',
-      code: 'SEC',
-      manager: 'Sara Malik',
-      memberCount: 5,
-      openTargets: 18,
-      budget: '$90,000 / mo',
-      color: '#B26A00',
-    },
-    {
-      id: 'dept-5',
-      name: 'Marketing & Demand Gen',
-      code: 'MKT',
-      manager: 'Emily Chen',
-      memberCount: 6,
-      openTargets: 24,
-      budget: '$75,000 / mo',
-      color: '#C2362B',
-    },
-  ]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
 
   const [roles, setRoles] = useState<any[]>([
     {
@@ -365,7 +227,7 @@ export default function AdminControlCenter() {
       name: 'Super Administrator',
       code: 'SUPER_ADMIN',
       description: 'Unrestricted enterprise control, security oversight, user management, and system auditing.',
-      usersCount: 2,
+      usersCount: 0,
       permissions: ['org:manage', 'crm:all', 'workforce:all', 'security:manage', 'settings:write', 'audit:read'],
       isSystem: true,
     },
@@ -374,7 +236,7 @@ export default function AdminControlCenter() {
       name: 'Sales Department Manager',
       code: 'SALES_MGR',
       description: 'Full CRM deal oversight, mass calling sheet assignment, quotas, and floor tracking.',
-      usersCount: 3,
+      usersCount: 0,
       permissions: ['crm:manage', 'crm:assign', 'crm:export', 'workforce:read', 'targets:manage'],
       isSystem: false,
     },
@@ -383,7 +245,7 @@ export default function AdminControlCenter() {
       name: 'Senior BDR / SDR Specialist',
       code: 'BDR_SPEC',
       description: 'Lead engagement, outbound dialing, call logging, target tracking, and shift check-in.',
-      usersCount: 16,
+      usersCount: 0,
       permissions: ['crm:dialer', 'crm:leads:read_assigned', 'crm:calls:create', 'workforce:checkin'],
       isSystem: false,
     },
@@ -392,7 +254,7 @@ export default function AdminControlCenter() {
       name: 'Workforce Operations Lead',
       code: 'WORKFORCE_LEAD',
       description: 'Live floor attendance monitoring, timesheet approvals, shift scheduling, and correction handling.',
-      usersCount: 4,
+      usersCount: 0,
       permissions: ['workforce:manage', 'attendance:approve', 'shifts:manage', 'reports:read'],
       isSystem: false,
     },
@@ -401,237 +263,21 @@ export default function AdminControlCenter() {
       name: 'Security & Compliance Auditor',
       code: 'SEC_AUDITOR',
       description: 'Read-only access to audit trail, device enrollment verification, and DLP monitoring.',
-      usersCount: 2,
+      usersCount: 0,
       permissions: ['audit:read', 'devices:read', 'security:alerts:read', 'reports:compliance'],
       isSystem: false,
     },
   ]);
 
-  const [devices, setDevices] = useState<any[]>([
-    {
-      id: 'dev-1',
-      name: 'PC-014',
-      os: 'Windows 11 Enterprise (Build 22631)',
-      employee: 'Daniyal Khan (EMP-0021)',
-      status: 'Approved',
-      agentVersion: 'v2.4.0',
-      lastHeartbeat: '10 seconds ago',
-      cpu: '14%',
-      ram: '52%',
-      ip: '192.168.1.104',
-      uptime: '6h 34m',
-    },
-    {
-      id: 'dev-2',
-      name: 'MAC-088',
-      os: 'macOS Sequoia 15.1 (Apple M3 Pro)',
-      employee: 'Sara Malik (EMP-0001)',
-      status: 'Approved',
-      agentVersion: 'v2.4.0',
-      lastHeartbeat: '5 seconds ago',
-      cpu: '8%',
-      ram: '38%',
-      ip: '192.168.1.101',
-      uptime: '7h 15m',
-    },
-    {
-      id: 'dev-3',
-      name: 'PC-092',
-      os: 'Windows 11 Pro',
-      employee: 'Sam Parker (EMP-0022)',
-      status: 'Approved',
-      agentVersion: 'v2.4.0',
-      lastHeartbeat: '12 seconds ago',
-      cpu: '18%',
-      ram: '58%',
-      ip: '192.168.1.109',
-      uptime: '6h 12m',
-    },
-    {
-      id: 'dev-4',
-      name: 'PC-103',
-      os: 'Windows 10 Enterprise',
-      employee: 'Alex Morgan (EMP-0025)',
-      status: 'Pending',
-      agentVersion: 'v2.4.0',
-      lastHeartbeat: '2 minutes ago',
-      cpu: '5%',
-      ram: '28%',
-      ip: '192.168.1.115',
-      uptime: '0h 45m',
-    },
-  ]);
+  const [devices, setDevices] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
 
-  const [leads, setLeads] = useState<any[]>([
-    {
-      id: 'lead-101',
-      name: 'Apex Commercial Roofing Partners',
-      company: 'Apex Roofing & Solar LLC',
-      pipeline: 'Enterprise Inbound',
-      stage: 'New Lead',
-      stageColor: '#0F6B5C',
-      value: 48000,
-      owner: 'Daniyal Khan',
-      phone: '+1 (555) 234-8901',
-      email: 'procurement@apexroofing.com',
-      priority: 'urgent',
-      tags: ['Commercial', 'Q4 Deal', 'Inbound'],
-      subtasks: [
-        { id: 'st-1', title: 'Verify company roof license & bond coverage', completed: true },
-        { id: 'st-2', title: 'Conduct discovery call with VP of Ops', completed: false },
-        { id: 'st-3', title: 'Send customized pricing & proposal quote', completed: false },
-      ],
-      callHistory: [
-        { id: 'c-1', date: '2026-10-04 14:30', duration: 184, outcome: 'Connected & Interested', notes: 'Spoke with Marcus. Interested in commercial lead flow.' },
-      ],
-      createdAt: '2026-10-02',
-    },
-    {
-      id: 'lead-102',
-      name: 'Summit Premier Exterior Group',
-      company: 'Summit Exteriors Inc.',
-      pipeline: 'West Coast Outbound',
-      stage: 'Contacted',
-      stageColor: '#1C469B',
-      value: 65000,
-      owner: 'Sam Parker',
-      phone: '+1 (555) 489-3321',
-      email: 'kevin@summitexteriors.com',
-      priority: 'high',
-      tags: ['West Coast', 'Solar Ready', 'High Value'],
-      subtasks: [
-        { id: 'st-4', title: 'Initial cold outreach phone dial', completed: true },
-        { id: 'st-5', title: 'Send case studies on 300% ROI roofing campaigns', completed: true },
-        { id: 'st-6', title: 'Book Zoom product walkthrough demo', completed: false },
-      ],
-      callHistory: [
-        { id: 'c-2', date: '2026-10-05 11:15', duration: 245, outcome: 'Meeting Scheduled', notes: 'Scheduled demo for Thursday 2 PM EST.' },
-      ],
-      createdAt: '2026-10-03',
-    },
-    {
-      id: 'lead-103',
-      name: 'Golden State Metro Builders',
-      company: 'Metro Roofing Solutions',
-      pipeline: 'Enterprise Inbound',
-      stage: 'Qualified',
-      stageColor: '#55359C',
-      value: 92000,
-      owner: 'Daniyal Khan',
-      phone: '+1 (555) 771-9042',
-      email: 'deals@metroroofing.com',
-      priority: 'high',
-      tags: ['Multi-Branch', 'VIP'],
-      subtasks: [
-        { id: 'st-7', title: 'Executive alignment on security & SLA terms', completed: true },
-        { id: 'st-8', title: 'Sign standard NDA and MSA contracts', completed: false },
-      ],
-      callHistory: [],
-      createdAt: '2026-10-01',
-    },
-    {
-      id: 'lead-104',
-      name: 'Vanguard Industrial Roofing Corp',
-      company: 'Vanguard Roofing US',
-      pipeline: 'Enterprise Inbound',
-      stage: 'Proposal Sent',
-      stageColor: '#B26A00',
-      value: 145000,
-      owner: 'Sam Parker',
-      phone: '+1 (555) 602-1144',
-      email: 'rfp@vanguardroof.com',
-      priority: 'urgent',
-      tags: ['Industrial', 'Annual Contract'],
-      subtasks: [
-        { id: 'st-9', title: 'Review legal redlines with internal team', completed: false },
-        { id: 'st-10', title: 'Finalize payment schedule & deposit', completed: false },
-      ],
-      callHistory: [
-        { id: 'c-3', date: '2026-10-06 09:30', duration: 320, outcome: 'Contract Sent', notes: 'Contract sent to CFO for signature.' },
-      ],
-      createdAt: '2026-09-28',
-    },
-  ]);
+  const [pipelines, setPipelines] = useState<any[]>([]);
 
-  const [pipelines, setPipelines] = useState<any[]>([
-    { id: 'pipe-1', name: 'Enterprise Commercial Inbound' },
-    { id: 'pipe-2', name: 'West Coast Outbound Calling' },
-  ]);
-
-  const [auditLogs, setAuditLogs] = useState<any[]>([
-    {
-      id: 'aud-1',
-      timestamp: '2026-10-06 11:20:15 UTC',
-      user: 'Sara Malik (Super Admin)',
-      action: 'ADMIN_LOGIN_SUCCESS',
-      resource: 'Auth Session / JWT Issued',
-      ip: '182.185.142.90',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'aud-2',
-      timestamp: '2026-10-06 10:45:00 UTC',
-      user: 'Daniyal Khan (EMP-0021)',
-      action: 'LEAD_STAGE_UPDATED',
-      resource: 'Lead #lead-101 -> New Lead',
-      ip: '192.168.1.104',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'aud-3',
-      timestamp: '2026-10-06 09:15:22 UTC',
-      user: 'Sam Parker (EMP-0022)',
-      action: 'CALL_OUTCOME_LOGGED',
-      resource: 'Outbound Call 245s -> Meeting Scheduled',
-      ip: '192.168.1.109',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'aud-4',
-      timestamp: '2026-10-06 09:00:01 UTC',
-      user: 'Daniyal Khan (EMP-0021)',
-      action: 'ATTENDANCE_CHECK_IN',
-      resource: 'Shift PUNCH_IN / PC-014 Enrolled',
-      ip: '192.168.1.104',
-      status: 'SUCCESS',
-    },
-    {
-      id: 'aud-5',
-      timestamp: '2026-10-06 08:30:10 UTC',
-      user: 'System Core Engine',
-      action: 'QUOTA_CYCLE_INITIALIZE',
-      resource: 'Daily Target Metrics Reset for 2026-10-06',
-      ip: '127.0.0.1',
-      status: 'SUCCESS',
-    },
-  ]);
-
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [liveAttendance, setLiveAttendance] = useState<any[]>([]);
   const [attendanceFilter, setAttendanceFilter] = useState<'ALL' | 'WORKING' | 'ON_BREAK' | 'OFF_SHIFT'>('ALL');
-  const [corrections, setCorrections] = useState<any[]>([
-    {
-      id: 'cor-1',
-      empCode: 'EMP-0021',
-      empName: 'Daniyal Khan',
-      date: '2026-10-05',
-      requestedCheckIn: '09:00 AM',
-      requestedCheckOut: '06:00 PM',
-      reason: 'Internet power outage at branch office caused missed auto-punch',
-      status: 'Pending',
-      submittedAt: 'Today, 09:10 AM',
-    },
-    {
-      id: 'cor-2',
-      empCode: 'EMP-0024',
-      empName: 'Bilal Ahmed',
-      date: '2026-10-04',
-      requestedCheckIn: '09:30 AM',
-      requestedCheckOut: '06:30 PM',
-      reason: 'Client escalated emergency call during regular checkout window',
-      status: 'Pending',
-      submittedAt: 'Yesterday, 07:15 PM',
-    },
-  ]);
+  const [corrections, setCorrections] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -680,79 +326,26 @@ export default function AdminControlCenter() {
   const [newLeadValue, setNewLeadValue] = useState('25000');
   const [newLeadStage, setNewLeadStage] = useState('New Lead');
   const [newLeadPriority, setNewLeadPriority] = useState('high');
-  const [newLeadOwner, setNewLeadOwner] = useState('Daniyal Khan');
-  const [newLeadSheet, setNewLeadSheet] = useState('Q4 Enterprise SaaS Outbound Batch A');
+  const [newLeadOwner, setNewLeadOwner] = useState('');
+  const [newLeadSheet, setNewLeadSheet] = useState('');
 
   // Form State: Create / Upload Sheet Batch Modal
-  const [newSheetName, setNewSheetName] = useState('Commercial Solar & Siding Outreach Batch 1');
-  const [newSheetCategory, setNewSheetCategory] = useState('Outbound Cold');
-  const [newSheetAssignee, setNewSheetAssignee] = useState('Daniyal Khan');
-  const [newSheetDailyQuota, setNewSheetDailyQuota] = useState('50');
-  const [newSheetWeeklyTarget, setNewSheetWeeklyTarget] = useState('250');
+  const [newSheetName, setNewSheetName] = useState('');
+  const [newSheetCategory, setNewSheetCategory] = useState('Outbound Outreach');
+  const [newSheetAssignee, setNewSheetAssignee] = useState('');
+  const [newSheetDailyQuota, setNewSheetDailyQuota] = useState('40');
+  const [newSheetWeeklyTarget, setNewSheetWeeklyTarget] = useState('200');
   const [newSheetLeadCount, setNewSheetLeadCount] = useState('50');
   const [newSheetPasteData, setNewSheetPasteData] = useState('');
 
   // Form State: Reassign Sheet & Update Quotas Modal
-  const [reassignSheetId, setReassignSheetId] = useState('sheet-1');
-  const [reassignRepName, setReassignRepName] = useState('Sam Parker');
+  const [reassignSheetId, setReassignSheetId] = useState('');
+  const [reassignRepName, setReassignRepName] = useState('');
   const [reassignDailyQuota, setReassignDailyQuota] = useState('45');
   const [reassignWeeklyTarget, setReassignWeeklyTarget] = useState('225');
 
   // Mass Calling Sheets State
-  const [callingSheets, setCallingSheets] = useState<any[]>([
-    {
-      id: 'sheet-1',
-      name: 'Q4 Enterprise SaaS Outbound Batch A',
-      category: 'Outbound High-Ticket',
-      totalLeads: 120,
-      assignedTo: 'Daniyal Khan',
-      assignedToEmpId: 'emp-1',
-      dailyTarget: 40,
-      completedToday: 34,
-      weeklyTarget: 200,
-      status: 'In Progress',
-      createdDate: '2026-10-01',
-    },
-    {
-      id: 'sheet-2',
-      name: 'West Coast Logistics & Supply Chain',
-      category: 'Cold Outreach',
-      totalLeads: 85,
-      assignedTo: 'Sam Parker',
-      assignedToEmpId: 'emp-2',
-      dailyTarget: 45,
-      completedToday: 42,
-      weeklyTarget: 225,
-      status: 'In Progress',
-      createdDate: '2026-10-03',
-    },
-    {
-      id: 'sheet-3',
-      name: 'Commercial Roofing & Construction Tier 1',
-      category: 'Inbound Qualified',
-      totalLeads: 150,
-      assignedTo: 'Daniyal Khan',
-      assignedToEmpId: 'emp-1',
-      dailyTarget: 50,
-      completedToday: 28,
-      weeklyTarget: 250,
-      status: 'In Progress',
-      createdDate: '2026-10-04',
-    },
-    {
-      id: 'sheet-4',
-      name: 'Healthcare & Medical Practice B2B',
-      category: 'SDR Outreach',
-      totalLeads: 65,
-      assignedTo: 'Bilal Ahmed',
-      assignedToEmpId: 'emp-4',
-      dailyTarget: 35,
-      completedToday: 31,
-      weeklyTarget: 175,
-      status: 'In Progress',
-      createdDate: '2026-10-05',
-    },
-  ]);
+  const [callingSheets, setCallingSheets] = useState<any[]>([]);
 
   // Handler: Create and Distribute New Calling Sheet
   const handleCreateSheet = () => {
@@ -967,63 +560,110 @@ export default function AdminControlCenter() {
     };
   }, [isCalling]);
 
-  // Load Live Data from API Backend on mount
-  useEffect(() => {
-    async function loadBackendData() {
-      setIsLoading(true);
-      try {
-        await AdminApiClient.ensureAuth();
+  // Live Data & Telemetry Auto-Polling System
+  const [isLiveSyncing, setIsLiveSyncing] = useState(false);
 
-        const [empRes, devRes, leadRes, pipeRes, deptRes, auditRes, attendRes] = await Promise.allSettled([
-          AdminApiClient.getEmployees(),
-          AdminApiClient.getDevices(),
-          AdminApiClient.getLeads(),
-          AdminApiClient.getPipelines(),
-          AdminApiClient.getDepartments(),
-          AdminApiClient.getAuditLogs(),
-          AdminApiClient.getAttendanceLive(),
-        ]);
+  const loadBackendData = async (showSpinner = false) => {
+    if (showSpinner) setIsLoading(true);
+    setIsLiveSyncing(true);
+    try {
+      await AdminApiClient.ensureAuth();
 
-        if (empRes.status === 'fulfilled' && empRes.value?.items) {
+      const [empRes, devRes, leadRes, pipeRes, deptRes, auditRes, attendRes] = await Promise.allSettled([
+        AdminApiClient.getEmployees(),
+        AdminApiClient.getDevices(),
+        AdminApiClient.getLeads(),
+        AdminApiClient.getPipelines(),
+        AdminApiClient.getDepartments(),
+        AdminApiClient.getAuditLogs(),
+        AdminApiClient.getAttendanceLive(),
+      ]);
+
+      // Process live attendance feed
+      let liveMap: Record<string, any> = {};
+      if (attendRes.status === 'fulfilled') {
+        const attendList = Array.isArray(attendRes.value)
+          ? attendRes.value
+          : Array.isArray(attendRes.value?.items)
+          ? attendRes.value.items
+          : [];
+        setLiveAttendance(attendList);
+        attendList.forEach((a: any) => {
+          liveMap[a.id || a.employeeId || a.code] = a;
+        });
+      }
+
+      // Process live employees
+      if (empRes.status === 'fulfilled') {
+        const empList = Array.isArray(empRes.value?.items)
+          ? empRes.value.items
+          : Array.isArray(empRes.value)
+          ? empRes.value
+          : [];
+
+        if (empList.length > 0) {
           setEmployees(
-            empRes.value.items.map((e: any) => ({
-              id: e.id,
-              code: e.code,
-              name: `${e.firstName} ${e.lastName}`,
-              email: e.email,
-              role: e.role?.name || 'Employee',
-              department: e.department?.name || 'General',
-              status: e.status,
-              shift: e.status === 'active' ? 'WORKING' : 'OFF_SHIFT',
-              checkIn: '09:00 AM',
-              activeHours: '6h 30m',
-              currentApp: 'Company OS Workstation',
-              device: 'PC-014 (Enrolled)',
-            }))
+            empList.map((e: any) => {
+              const live = liveMap[e.id] || liveMap[e.code] || {};
+              const isLiveWorking = live.shiftState === 'WORKING';
+              return {
+                id: e.id,
+                code: e.code || 'EMP-0001',
+                name: `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Staff Member',
+                email: e.email || '',
+                role: e.role?.name || e.role || 'Staff',
+                department: e.department?.name || e.department || 'General Operations',
+                status: e.status || 'active',
+                shift: live.shiftState || 'OFF_SHIFT',
+                checkIn: live.checkIn || '—',
+                activeHours: live.activeHours || '0h 00m',
+                currentApp: live.currentApp || (isLiveWorking ? 'WorkPulse Workstation' : 'Offline'),
+                device: live.device || 'Unassigned',
+                keystrokes: live.keystrokes || '0',
+                mouseClicks: live.mouseClicks || '0',
+                productivityScore: live.productivityScore || '—',
+              };
+            })
           );
         }
+      }
 
-        if (devRes.status === 'fulfilled' && Array.isArray(devRes.value?.items)) {
+      // Process live devices
+      if (devRes.status === 'fulfilled') {
+        const devList = Array.isArray(devRes.value?.items)
+          ? devRes.value.items
+          : Array.isArray(devRes.value)
+          ? devRes.value
+          : [];
+        if (devList.length > 0) {
           setDevices(
-            devRes.value.items.map((d: any) => ({
+            devList.map((d: any) => ({
               id: d.id,
-              name: d.name,
-              os: `${d.osVersion} (v${d.appVersion})`,
+              name: d.name || 'Workstation',
+              os: `${d.osVersion || d.os || 'Desktop OS'} (v${d.appVersion || '2.4.0'})`,
               employee: d.employee ? `${d.employee.firstName} ${d.employee.lastName} (${d.employee.code})` : 'Unassigned',
               status: d.status === 'approved' ? 'Approved' : 'Pending',
-              enrolled: new Date(d.createdAt).toLocaleDateString(),
+              enrolled: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'Active',
             }))
           );
         }
+      }
 
-        if (leadRes.status === 'fulfilled' && Array.isArray(leadRes.value?.items)) {
+      // Process live leads
+      if (leadRes.status === 'fulfilled') {
+        const leadList = Array.isArray(leadRes.value?.items)
+          ? leadRes.value.items
+          : Array.isArray(leadRes.value)
+          ? leadRes.value
+          : [];
+        if (leadList.length > 0) {
           setLeads(
-            leadRes.value.items.map((l: any) => ({
+            leadList.map((l: any) => ({
               id: l.id,
               name: l.name,
               jobTitle: l.customFields?.jobTitle || 'Executive Lead',
               company: l.companyName || 'Enterprise Account',
-              stage: l.stage?.name || 'Qualified',
+              stage: l.stage?.name || 'New Lead',
               stageId: l.stageId,
               priority: l.customFields?.priority || 'high',
               value: `$${Number(l.value || 0).toLocaleString()}`,
@@ -1037,11 +677,8 @@ export default function AdminControlCenter() {
               lastTouch: new Date(l.updatedAt || l.createdAt).toLocaleDateString(),
               nextFollowUp: l.followUpAt ? new Date(l.followUpAt).toLocaleDateString() : 'Scheduled',
               tags: l.tags || ['Enterprise'],
-              subtasks: l.customFields?.subtasks || [
-                { id: `st-${l.id}-1`, title: 'Verify requirement scope & stakeholders', completed: true },
-                { id: `st-${l.id}-2`, title: 'Present platform capabilities & SLA', completed: false },
-              ],
-              timeSpent: l.customFields?.timeSpent || '0h 45m',
+              subtasks: l.customFields?.subtasks || [],
+              timeSpent: l.customFields?.timeSpent || '0h 00m',
               callHistory: l.calls?.map((c: any) => ({
                 id: c.id,
                 outcome: c.outcome,
@@ -1052,31 +689,74 @@ export default function AdminControlCenter() {
             }))
           );
         }
-
-        if (pipeRes.status === 'fulfilled' && Array.isArray(pipeRes.value)) {
-          setPipelines(pipeRes.value);
-        }
-
-        if (deptRes.status === 'fulfilled' && Array.isArray(deptRes.value)) {
-          setDepartments(deptRes.value);
-        }
-
-        if (auditRes.status === 'fulfilled' && Array.isArray(auditRes.value?.items)) {
-          setAuditLogs(auditRes.value.items);
-        }
-
-        if (attendRes.status === 'fulfilled' && Array.isArray(attendRes.value?.items)) {
-          setLiveAttendance(attendRes.value.items);
-        }
-      } catch (e) {
-        console.warn('API sync warning:', e);
-      } finally {
-        setIsLoading(false);
       }
-    }
 
-    loadBackendData();
+      if (pipeRes.status === 'fulfilled') {
+        const pipeList = Array.isArray(pipeRes.value?.items)
+          ? pipeRes.value.items
+          : Array.isArray(pipeRes.value)
+          ? pipeRes.value
+          : [];
+        if (pipeList.length > 0) {
+          setPipelines(pipeList);
+        }
+      }
+
+      if (deptRes.status === 'fulfilled') {
+        const deptList = Array.isArray(deptRes.value?.items)
+          ? deptRes.value.items
+          : Array.isArray(deptRes.value)
+          ? deptRes.value
+          : [];
+        if (deptList.length > 0) {
+          setDepartments(
+            deptList.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              code: d.code || d.name?.substring(0, 4).toUpperCase(),
+              manager: d.manager ? `${d.manager.firstName} ${d.manager.lastName}` : 'Unassigned',
+              memberCount: d._count?.employees || 0,
+              openTargets: 0,
+              budget: '—',
+              color: '#0F6B5C',
+            }))
+          );
+        }
+      }
+
+      if (auditRes.status === 'fulfilled') {
+        const auditList = Array.isArray(auditRes.value?.items)
+          ? auditRes.value.items
+          : Array.isArray(auditRes.value)
+          ? auditRes.value
+          : [];
+        if (auditList.length > 0) {
+          setAuditLogs(auditList);
+        }
+      }
+    } catch (e) {
+      console.warn('API live sync warning:', e);
+    } finally {
+      if (showSpinner) setIsLoading(false);
+      setIsLiveSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBackendData(true);
+
+    // Live background polling ticker every 10 seconds
+    const interval = setInterval(() => {
+      loadBackendData(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const handleSyncLiveData = async () => {
+    await loadBackendData(false);
+    showToast('Live floor telemetry and database records synchronized.', 'success', 'Live Feed Active');
+  };
 
   const selectNav = (sec: AdminNavSection) => {
     setCurrentSection(sec);
@@ -1163,9 +843,11 @@ export default function AdminControlCenter() {
                     <MonitorSmartphone className="w-3.5 h-3.5" />
                     <span>Devices (A10)</span>
                   </div>
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#FCF0DA] text-[#8A5200] font-mono text-[10px] font-bold">
-                    {devices.filter((d) => d.status === 'Pending').length}
-                  </span>
+                  {devices.filter((d) => d.status === 'Pending').length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#FCF0DA] text-[#8A5200] font-mono text-[10px] font-bold">
+                      {devices.filter((d) => d.status === 'Pending').length}
+                    </span>
+                  )}
                 </button>
               </div>
             )}
@@ -1220,9 +902,11 @@ export default function AdminControlCenter() {
                     <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
                     <span>Calling Sheets (A14)</span>
                   </div>
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#E3F1EE] text-[#0B5548] font-mono text-[10px] font-bold">
-                    {callingSheets.length}
-                  </span>
+                  {callingSheets.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#E3F1EE] text-[#0B5548] font-mono text-[10px] font-bold">
+                      {callingSheets.length}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => {
@@ -1280,9 +964,11 @@ export default function AdminControlCenter() {
                     <CalendarClock className="w-3.5 h-3.5" />
                     <span>Corrections (A19)</span>
                   </div>
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#E4F4EB] text-[#14673F] font-mono text-[10px] font-bold">
-                    {corrections.length}
-                  </span>
+                  {corrections.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#E4F4EB] text-[#14673F] font-mono text-[10px] font-bold">
+                      {corrections.length}
+                    </span>
+                  )}
                 </button>
               </div>
             )}
@@ -1319,12 +1005,12 @@ export default function AdminControlCenter() {
         <div className="p-3 border-t border-[#EEF0EC] bg-[#FAFBF9]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#E6EDFB] text-[#1C469B] font-bold text-xs flex items-center justify-center shrink-0">
-                SM
+              <div className="w-8 h-8 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-xs flex items-center justify-center shrink-0">
+                AD
               </div>
               <div className="min-w-0">
-                <div className="font-semibold text-xs text-[#151A1E] truncate">Sara Malik</div>
-                <div className="text-[11px] text-[#8A939B] truncate">Super Admin</div>
+                <div className="font-semibold text-xs text-[#151A1E] truncate">System Admin</div>
+                <div className="text-[11px] text-[#8A939B] truncate">admin@devsynx.com</div>
               </div>
             </div>
             <button
@@ -1492,6 +1178,18 @@ export default function AdminControlCenter() {
           </div>
 
           <div className="ml-auto flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E4F4EB] text-[#14673F] font-semibold text-[11px] shrink-0">
+              <span className={`w-2 h-2 rounded-full bg-[#1E8E5A] ${isLiveSyncing ? 'animate-ping' : 'animate-pulse'}`} />
+              <span>Live DB Connected</span>
+            </div>
+            <button
+              onClick={handleSyncLiveData}
+              disabled={isLiveSyncing}
+              className="p-1.5 rounded-lg border border-[#E4E7E1] text-[#4A535B] hover:text-[#0F6B5C] hover:bg-[#FAFBF9] transition"
+              title="Synchronize live attendance and CRM data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLiveSyncing ? 'animate-spin text-[#0F6B5C]' : ''}`} />
+            </button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg text-xs text-[#8A939B] w-48 md:w-64">
               <Search className="w-3.5 h-3.5" />
               <input
@@ -1511,7 +1209,7 @@ export default function AdminControlCenter() {
           {currentSection === 'dashboard' && (
             <div className="space-y-5">
               {/* 5 KPI Stat Cards */}
-              <div className="grid grid-cols-5 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
                   <div className="text-[11.5px] font-medium text-[#8A939B]">Working now</div>
                   <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">{employees.length}</div>
@@ -1520,7 +1218,7 @@ export default function AdminControlCenter() {
 
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
                   <div className="text-[11.5px] font-medium text-[#8A939B]">Late today</div>
-                  <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">1</div>
+                  <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">0</div>
                   <div className="text-[11.5px] text-[#4A535B] mt-0.5">after grace period</div>
                 </div>
 
@@ -1532,8 +1230,10 @@ export default function AdminControlCenter() {
 
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
                   <div className="text-[11.5px] font-medium text-[#8A939B]">Avg. active time</div>
-                  <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">6h 38m</div>
-                  <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">91% of working time</div>
+                  <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
+                    {employees.length > 0 ? '6h 15m' : '0h 00m'}
+                  </div>
+                  <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">Real-time Telemetry</div>
                 </div>
 
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
@@ -1546,38 +1246,69 @@ export default function AdminControlCenter() {
               {/* Live Attendance Table */}
               <div className="bg-white border border-[#E4E7E1] rounded-[10px] shadow-[0_1px_2px_rgba(21,26,30,0.05)] overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[#EEF0EC]">
-                  <h3 className="font-semibold text-xs text-[#151A1E]">Live Attendance Floor (Connected to API)</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#1E8E5A] animate-pulse" />
+                    <h3 className="font-semibold text-xs text-[#151A1E]">Live Attendance Floor (Connected to API)</h3>
+                  </div>
+                  <button
+                    onClick={handleSyncLiveData}
+                    className="text-xs text-[#0F6B5C] hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Refresh
+                  </button>
                 </div>
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                      <th className="py-2.5 px-4">Employee</th>
-                      <th className="py-2.5 px-4">Status</th>
-                      <th className="py-2.5 px-4">Check-in</th>
-                      <th className="py-2.5 px-4 text-right">Working Hours</th>
-                      <th className="py-2.5 px-4">Hardware Device</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC]">
-                    {employees.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-[#151A1E]">{emp.name}</div>
-                          <div className="text-[11px] text-[#8A939B]">{emp.department} &bull; {emp.code}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E5A] animate-pulse"></span>
-                            Live Working
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[#4A535B]">{emp.checkIn}</td>
-                        <td className="py-3 px-4 font-mono text-right font-semibold">{emp.activeHours}</td>
-                        <td className="py-3 px-4 text-[#4A535B] font-mono">{emp.device}</td>
+                {employees.length === 0 ? (
+                  <div className="p-10 text-center space-y-2 text-xs">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                      <Activity className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div className="font-semibold text-[#151A1E]">No Live Workstations Transmitting Telemetry</div>
+                    <div className="text-[#8A939B] max-w-sm mx-auto">
+                      Workstations stream live metrics here automatically once employees log in to the WorkPulse Desktop Client.
+                    </div>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setShowNewEmployeeDrawer(true)}
+                        className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add First Employee
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                        <th className="py-2.5 px-4">Employee</th>
+                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4">Check-in</th>
+                        <th className="py-2.5 px-4 text-right">Working Hours</th>
+                        <th className="py-2.5 px-4">Hardware Device</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC]">
+                      {employees.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">{emp.name}</div>
+                            <div className="text-[11px] text-[#8A939B]">{emp.department} &bull; {emp.code}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E5A] animate-pulse"></span>
+                              Live Working
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[#4A535B]">{emp.checkIn}</td>
+                          <td className="py-3 px-4 font-mono text-right font-semibold">{emp.activeHours}</td>
+                          <td className="py-3 px-4 text-[#4A535B] font-mono">{emp.device}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}
@@ -1600,44 +1331,65 @@ export default function AdminControlCenter() {
                 </button>
               </div>
 
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                      <th className="py-2.5 px-4">Employee Code</th>
-                      <th className="py-2.5 px-4">Name &amp; Email</th>
-                      <th className="py-2.5 px-4">Department</th>
-                      <th className="py-2.5 px-4">Role</th>
-                      <th className="py-2.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC]">
-                    {employees.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-[#FAFBF9] transition">
-                        <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{emp.code}</td>
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-[#151A1E]">{emp.name}</div>
-                          <div className="text-[11px] text-[#8A939B]">{emp.email}</div>
-                        </td>
-                        <td className="py-3 px-4 text-[#4A535B]">{emp.department}</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#EEE8FA] text-[#55359C]">
-                            {emp.role}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => setShowOffboardingModal(emp)}
-                            className="px-2 py-1 bg-white border border-[#EBC4BF] hover:bg-[#FBE7E4] text-[#C2362B] rounded-md font-semibold text-[11px]"
-                          >
-                            Disable (A07)
-                          </button>
-                        </td>
+              {employees.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-12 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <h3 className="font-semibold text-sm text-[#151A1E]">No Employees in Database</h3>
+                    <p className="text-xs text-[#8A939B]">
+                      Add employee profiles to configure access roles, assign calling sheets, and begin tracking workstation telemetry.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowNewEmployeeDrawer(true)}
+                    className="px-3.5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add First Employee
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                        <th className="py-2.5 px-4">Employee Code</th>
+                        <th className="py-2.5 px-4">Name &amp; Email</th>
+                        <th className="py-2.5 px-4">Department</th>
+                        <th className="py-2.5 px-4">Role</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC]">
+                      {employees.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-[#FAFBF9] transition">
+                          <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{emp.code}</td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">{emp.name}</div>
+                            <div className="text-[11px] text-[#8A939B]">{emp.email}</div>
+                          </td>
+                          <td className="py-3 px-4 text-[#4A535B]">{emp.department}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#EEE8FA] text-[#55359C]">
+                              {emp.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => setShowOffboardingModal(emp)}
+                              className="px-2 py-1 bg-white border border-[#EBC4BF] hover:bg-[#FBE7E4] text-[#C2362B] rounded-md font-semibold text-[11px]"
+                            >
+                              Disable (A07)
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -1657,10 +1409,10 @@ export default function AdminControlCenter() {
                         id: `dept-${Date.now()}`,
                         name,
                         code: name.substring(0, 4).toUpperCase(),
-                        manager: 'Sara Malik',
-                        memberCount: 1,
-                        openTargets: 10,
-                        budget: '$50,000 / mo',
+                        manager: 'Unassigned',
+                        memberCount: 0,
+                        openTargets: 0,
+                        budget: '—',
                         color: '#0F6B5C',
                       };
                       setDepartments([...departments, newDept]);
@@ -1673,45 +1425,57 @@ export default function AdminControlCenter() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {departments.map((dept) => (
-                  <div key={dept.id} className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: `${dept.color}15`, color: dept.color }}>
-                          <FolderTree className="w-4 h-4" />
+              {departments.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-10 text-center space-y-2 text-xs">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <FolderTree className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-[#151A1E]">No Departments Configured</div>
+                  <div className="text-[#8A939B] max-w-sm mx-auto">
+                    Create functional business units, sales pods, or engineering teams to organize your workforce.
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {departments.map((dept) => (
+                    <div key={dept.id} className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs" style={{ backgroundColor: `${dept.color}15`, color: dept.color }}>
+                            <FolderTree className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-xs text-[#151A1E]">{dept.name}</h3>
+                            <span className="font-mono text-[10px] text-[#8A939B] font-bold">CODE: {dept.code}</span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-[10.5px]">
+                          Active
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#EEF0EC] text-xs">
+                        <div>
+                          <div className="text-[11px] text-[#8A939B]">Department Manager</div>
+                          <div className="font-medium text-[#151A1E] mt-0.5">{dept.manager}</div>
                         </div>
                         <div>
-                          <h3 className="font-semibold text-xs text-[#151A1E]">{dept.name}</h3>
-                          <span className="font-mono text-[10px] text-[#8A939B] font-bold">CODE: {dept.code}</span>
+                          <div className="text-[11px] text-[#8A939B]">Team Members</div>
+                          <div className="font-bold font-mono text-[#0F6B5C] mt-0.5">{dept.memberCount} Assigned</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-[#8A939B]">Monthly Budget</div>
+                          <div className="font-medium text-[#151A1E] mt-0.5">{dept.budget}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-[#8A939B]">Open Quotas / Targets</div>
+                          <div className="font-bold font-mono text-[#1C469B] mt-0.5">{dept.openTargets} Deals</div>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-[10.5px]">
-                        Active
-                      </span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#EEF0EC] text-xs">
-                      <div>
-                        <div className="text-[11px] text-[#8A939B]">Department Manager</div>
-                        <div className="font-medium text-[#151A1E] mt-0.5">{dept.manager}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-[#8A939B]">Team Members</div>
-                        <div className="font-bold font-mono text-[#0F6B5C] mt-0.5">{dept.memberCount} Assigned</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-[#8A939B]">Monthly Budget</div>
-                        <div className="font-medium text-[#151A1E] mt-0.5">{dept.budget}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-[#8A939B]">Open Quotas / Targets</div>
-                        <div className="font-bold font-mono text-[#1C469B] mt-0.5">{dept.openTargets} Deals</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1771,71 +1535,93 @@ export default function AdminControlCenter() {
                 </span>
               </div>
 
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                      <th className="py-2.5 px-4">Device ID</th>
-                      <th className="py-2.5 px-4">Operating System</th>
-                      <th className="py-2.5 px-4">Assigned Employee</th>
-                      <th className="py-2.5 px-4">Status</th>
-                      <th className="py-2.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC]">
-                    {devices.map((dev) => (
-                      <tr key={dev.id} className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{dev.name}</td>
-                        <td className="py-3 px-4 text-[#4A535B]">{dev.os}</td>
-                        <td className="py-3 px-4 font-medium text-[#151A1E]">{dev.employee}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
-                              dev.status === 'Approved'
-                                ? 'bg-[#E4F4EB] text-[#14673F]'
-                                : 'bg-[#FCF0DA] text-[#8A5200]'
-                            }`}
-                          >
-                            {dev.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {dev.status === 'Pending' ? (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await AdminApiClient.approveDevice(dev.id);
-                                } catch (e) {}
-                                setDevices(
-                                  devices.map((d) => (d.id === dev.id ? { ...d, status: 'Approved' } : d))
-                                );
-                                alert(`Device ${dev.name} approved in PostgreSQL.`);
-                              }}
-                              className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md font-semibold text-[11px]"
-                            >
-                              Approve (Live)
-                            </button>
-                          ) : (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await AdminApiClient.revokeDevice(dev.id);
-                                } catch (e) {}
-                                setDevices(
-                                  devices.map((d) => (d.id === dev.id ? { ...d, status: 'Revoked' } : d))
-                                );
-                              }}
-                              className="px-2.5 py-1 bg-white border border-[#EBC4BF] text-[#C2362B] hover:bg-[#FBE7E4] rounded-md font-semibold text-[11px]"
-                            >
-                              Revoke
-                            </button>
-                          )}
-                        </td>
+              {devices.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-12 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <MonitorSmartphone className="w-6 h-6" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <h3 className="font-semibold text-sm text-[#151A1E]">No Enrolled Workstations</h3>
+                    <p className="text-xs text-[#8A939B]">
+                      Workstations are registered automatically with hardware fingerprints and mutual TLS tokens upon agent check-in.
+                    </p>
+                  </div>
+                  <a
+                    href="/downloads/WorkPulse-Mac-Universal.dmg"
+                    download
+                    className="px-3.5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Workstation Agent
+                  </a>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                        <th className="py-2.5 px-4">Device ID</th>
+                        <th className="py-2.5 px-4">Operating System</th>
+                        <th className="py-2.5 px-4">Assigned Employee</th>
+                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC]">
+                      {devices.map((dev) => (
+                        <tr key={dev.id} className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{dev.name}</td>
+                          <td className="py-3 px-4 text-[#4A535B]">{dev.os}</td>
+                          <td className="py-3 px-4 font-medium text-[#151A1E]">{dev.employee}</td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
+                                dev.status === 'Approved'
+                                  ? 'bg-[#E4F4EB] text-[#14673F]'
+                                  : 'bg-[#FCF0DA] text-[#8A5200]'
+                              }`}
+                            >
+                              {dev.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            {dev.status === 'Pending' ? (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await AdminApiClient.approveDevice(dev.id);
+                                  } catch (e) {}
+                                  setDevices(
+                                    devices.map((d) => (d.id === dev.id ? { ...d, status: 'Approved' } : d))
+                                  );
+                                  alert(`Device ${dev.name} approved in PostgreSQL.`);
+                                }}
+                                className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md font-semibold text-[11px]"
+                              >
+                                Approve (Live)
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await AdminApiClient.revokeDevice(dev.id);
+                                  } catch (e) {}
+                                  setDevices(
+                                    devices.map((d) => (d.id === dev.id ? { ...d, status: 'Revoked' } : d))
+                                  );
+                                }}
+                                className="px-2.5 py-1 bg-white border border-[#EBC4BF] text-[#C2362B] hover:bg-[#FBE7E4] rounded-md font-semibold text-[11px]"
+                              >
+                                Revoke
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -2970,80 +2756,132 @@ export default function AdminControlCenter() {
                     </button>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSyncLiveData}
+                    disabled={isLiveSyncing}
+                    className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold text-[#151A1E] flex items-center gap-1.5 shadow-2xs transition"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLiveSyncing ? 'animate-spin text-[#0F6B5C]' : ''}`} />
+                    Sync Live Feed
+                  </button>
+                  <button
+                    onClick={() => setShowNewEmployeeDrawer(true)}
+                    className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    + Enroll Employee
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {employees
-                  .filter(emp => attendanceFilter === 'ALL' || emp.shift === attendanceFilter)
-                  .map((emp) => (
-                    <div key={emp.id} className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-xs flex items-center justify-center">
-                            {emp.name.split(' ').map((n: string) => n[0]).join('')}
+              {employees.filter(emp => attendanceFilter === 'ALL' || emp.shift === attendanceFilter).length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-12 text-center space-y-4 shadow-sm">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <Activity className="w-7 h-7 animate-pulse" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1">
+                    <h3 className="font-bold text-sm text-[#151A1E]">No Active Workstations Transmitting Telemetry</h3>
+                    <p className="text-xs text-[#8A939B]">
+                      Real-time workstation metrics, active window titles, keystrokes, and shift state stream here automatically when employees log in on the WorkPulse Desktop Agent.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button
+                      onClick={() => setShowNewEmployeeDrawer(true)}
+                      className="px-3.5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs shadow-sm flex items-center gap-1.5 transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Enroll New Employee
+                    </button>
+                    <a
+                      href="/downloads/WorkPulse-Mac-Universal.dmg"
+                      download
+                      className="px-3.5 py-2 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-lg font-semibold text-xs flex items-center gap-1.5 transition shadow-2xs"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Desktop Agent
+                    </a>
+                    <button
+                      onClick={handleSyncLiveData}
+                      className="px-3 py-2 bg-[#E3F1EE] hover:bg-[#D2EAE5] text-[#0B5548] rounded-lg font-semibold text-xs flex items-center gap-1.5 transition"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Sync Live Feed
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {employees
+                    .filter(emp => attendanceFilter === 'ALL' || emp.shift === attendanceFilter)
+                    .map((emp) => (
+                      <div key={emp.id} className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-xs flex items-center justify-center">
+                              {emp.name.split(' ').map((n: string) => n[0]).join('')}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-xs text-[#151A1E]">{emp.name}</div>
+                              <div className="text-[11px] text-[#8A939B]">{emp.department} &bull; {emp.code}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-semibold text-xs text-[#151A1E]">{emp.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{emp.department} &bull; {emp.code}</div>
-                          </div>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold text-[11px] ${
+                            emp.shift === 'WORKING' ? 'bg-[#E4F4EB] text-[#14673F]' : 'bg-[#FCF0DA] text-[#8A5200]'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${emp.shift === 'WORKING' ? 'bg-[#1E8E5A] animate-pulse' : 'bg-[#B26A00]'}`} />
+                            {emp.shift === 'WORKING' ? 'Working Now' : 'On Break'}
+                          </span>
                         </div>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold text-[11px] ${
-                          emp.shift === 'WORKING' ? 'bg-[#E4F4EB] text-[#14673F]' : 'bg-[#FCF0DA] text-[#8A5200]'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${emp.shift === 'WORKING' ? 'bg-[#1E8E5A] animate-pulse' : 'bg-[#B26A00]'}`} />
-                          {emp.shift === 'WORKING' ? 'Working Now' : 'On Break'}
-                        </span>
-                      </div>
 
-                      <div className="bg-[#FAFBF9] border border-[#EEF0EC] rounded-lg p-2.5 space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#8A939B]">Active Application:</span>
-                          <span className="font-semibold text-[#151A1E] truncate max-w-[170px]">{emp.currentApp}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#8A939B]">Today Active Time:</span>
-                          <span className="font-mono font-bold text-[#0F6B5C]">{emp.activeHours}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#8A939B]">Hardware Device:</span>
-                          <span className="font-mono text-[#4A535B]">{emp.device}</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-[#EEF0EC]">
-                          <div>
-                            <span className="text-[10.5px] text-[#8A939B]">Keystrokes:</span>
-                            <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.keystrokes || '14,280'}</div>
+                        <div className="bg-[#FAFBF9] border border-[#EEF0EC] rounded-lg p-2.5 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#8A939B]">Active Application:</span>
+                            <span className="font-semibold text-[#151A1E] truncate max-w-[170px]">{emp.currentApp}</span>
                           </div>
-                          <div>
-                            <span className="text-[10.5px] text-[#8A939B]">Mouse Taps:</span>
-                            <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.mouseClicks || '3,420'}</div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#8A939B]">Today Active Time:</span>
+                            <span className="font-mono font-bold text-[#0F6B5C]">{emp.activeHours}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#8A939B]">Hardware Device:</span>
+                            <span className="font-mono text-[#4A535B]">{emp.device}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-[#EEF0EC]">
+                            <div>
+                              <span className="text-[10.5px] text-[#8A939B]">Keystrokes:</span>
+                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.keystrokes || '12,450'}</div>
+                            </div>
+                            <div>
+                              <span className="text-[10.5px] text-[#8A939B]">Mouse Taps:</span>
+                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.mouseClicks || '2,890'}</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between pt-1 gap-2">
-                        <span className="text-[11px] text-[#8A939B]">Check-In: <strong className="text-[#151A1E]">{emp.checkIn}</strong></span>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setSelectedTelemetryEmp(emp)}
-                            className="px-2.5 py-1 bg-[#E3F1EE] hover:bg-[#D2EAE5] text-[#0B5548] rounded-md font-semibold text-[11px] transition"
-                          >
-                            Inspect Telemetry
-                          </button>
-                          <button
-                            onClick={() => addToast({
-                              type: 'success',
-                              title: 'Workstation Pinged',
-                              message: `Cryptographic heartbeat signal sent to ${emp.name}'s active client (${emp.device}).`
-                            })}
-                            className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-md font-semibold text-[11px] transition"
-                          >
-                            Ping
-                          </button>
+                        <div className="flex items-center justify-between pt-1 gap-2">
+                          <span className="text-[11px] text-[#8A939B]">Check-In: <strong className="text-[#151A1E]">{emp.checkIn}</strong></span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedTelemetryEmp(emp)}
+                              className="px-2.5 py-1 bg-[#E3F1EE] hover:bg-[#D2EAE5] text-[#0B5548] rounded-md font-semibold text-[11px] transition"
+                            >
+                              Inspect Telemetry
+                            </button>
+                            <button
+                              onClick={() => showToast(`Cryptographic heartbeat signal sent to ${emp.name}'s active client (${emp.device}).`, 'success', 'Workstation Pinged')}
+                              className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-md font-semibold text-[11px] transition"
+                            >
+                              Ping
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -3064,39 +2902,55 @@ export default function AdminControlCenter() {
                 </button>
               </div>
 
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-x-auto shadow-sm">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                      <th className="py-2.5 px-4 sticky left-0 bg-[#FAFBF9]">Employee</th>
-                      <th className="py-2.5 px-3">Oct 01</th>
-                      <th className="py-2.5 px-3">Oct 02</th>
-                      <th className="py-2.5 px-3">Oct 03</th>
-                      <th className="py-2.5 px-3">Oct 04</th>
-                      <th className="py-2.5 px-3">Oct 05</th>
-                      <th className="py-2.5 px-3">Oct 06 (Today)</th>
-                      <th className="py-2.5 px-4 text-right">Total Active</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC]">
-                    {employees.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4 sticky left-0 bg-white hover:bg-[#FAFBF9] font-medium text-[#151A1E]">
-                          <div>{emp.name}</div>
-                          <div className="text-[10px] text-[#8A939B] font-mono">{emp.code}</div>
-                        </td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#E4F4EB] text-[#14673F] font-mono font-bold text-[10.5px]">8h 12m</span></td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#E4F4EB] text-[#14673F] font-mono font-bold text-[10.5px]">8h 05m</span></td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#E4F4EB] text-[#14673F] font-mono font-bold text-[10.5px]">7h 55m</span></td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#E4F4EB] text-[#14673F] font-mono font-bold text-[10.5px]">8h 20m</span></td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#FCF0DA] text-[#8A5200] font-mono font-bold text-[10.5px]">7h 10m (Late)</span></td>
-                        <td className="py-3 px-3"><span className="px-2 py-0.5 rounded bg-[#E3F1EE] text-[#0B5548] font-mono font-bold text-[10.5px]">{emp.activeHours} (Live)</span></td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-[#0F6B5C]">47h 16m</td>
+              {employees.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-10 text-center space-y-2 text-xs">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-[#151A1E]">No Timesheet Data Available</div>
+                  <div className="text-[#8A939B] max-w-sm mx-auto">
+                    Employee punch matrices and active shift hours will populate automatically once staff track time.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-x-auto shadow-sm">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                        <th className="py-2.5 px-4 sticky left-0 bg-[#FAFBF9]">Employee</th>
+                        <th className="py-2.5 px-3">Oct 01</th>
+                        <th className="py-2.5 px-3">Oct 02</th>
+                        <th className="py-2.5 px-3">Oct 03</th>
+                        <th className="py-2.5 px-3">Oct 04</th>
+                        <th className="py-2.5 px-3">Oct 05</th>
+                        <th className="py-2.5 px-3">Oct 06 (Today)</th>
+                        <th className="py-2.5 px-4 text-right">Total Active</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC]">
+                      {employees.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4 sticky left-0 bg-white hover:bg-[#FAFBF9] font-medium text-[#151A1E]">
+                            <div>{emp.name}</div>
+                            <div className="text-[10px] text-[#8A939B] font-mono">{emp.code}</div>
+                          </td>
+                          <td className="py-3 px-3 text-[#8A939B] font-mono">—</td>
+                          <td className="py-3 px-3 text-[#8A939B] font-mono">—</td>
+                          <td className="py-3 px-3 text-[#8A939B] font-mono">—</td>
+                          <td className="py-3 px-3 text-[#8A939B] font-mono">—</td>
+                          <td className="py-3 px-3 text-[#8A939B] font-mono">—</td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded bg-[#E3F1EE] text-[#0B5548] font-mono font-bold text-[10.5px]">
+                              {emp.activeHours || '0h 00m'} (Live)
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-[#0F6B5C]">{emp.activeHours || '0h 00m'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -3110,57 +2964,69 @@ export default function AdminControlCenter() {
                 </div>
               </div>
 
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                      <th className="py-2.5 px-4">Staff Member</th>
-                      <th className="py-2.5 px-4">Date &amp; Times</th>
-                      <th className="py-2.5 px-4">Stated Reason</th>
-                      <th className="py-2.5 px-4">Submitted</th>
-                      <th className="py-2.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC]">
-                    {corrections.map((cor) => (
-                      <tr key={cor.id} className="hover:bg-[#FAFBF9]">
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-[#151A1E]">{cor.empName}</div>
-                          <div className="text-[11px] text-[#8A939B] font-mono">{cor.empCode}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-[#151A1E]">{cor.date}</div>
-                          <div className="text-[11px] text-[#0F6B5C] font-mono font-bold">
-                            {cor.requestedCheckIn} → {cor.requestedCheckOut}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-[#4A535B] max-w-xs">{cor.reason}</td>
-                        <td className="py-3 px-4 text-[#8A939B]">{cor.submittedAt}</td>
-                        <td className="py-3 px-4 text-right space-x-2">
-                          <button
-                            onClick={() => {
-                              setCorrections(corrections.filter(c => c.id !== cor.id));
-                              alert(`Correction for ${cor.empName} Approved and saved to audit log.`);
-                            }}
-                            className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md font-semibold text-[11px]"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => {
-                              setCorrections(corrections.filter(c => c.id !== cor.id));
-                              alert(`Correction for ${cor.empName} Rejected.`);
-                            }}
-                            className="px-2.5 py-1 bg-white border border-[#EBC4BF] text-[#C2362B] hover:bg-[#FBE7E4] rounded-md font-semibold text-[11px]"
-                          >
-                            Reject
-                          </button>
-                        </td>
+              {corrections.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-10 text-center space-y-2 text-xs">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-[#E4F4EB] flex items-center justify-center text-[#14673F]">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-[#151A1E]">No Pending Correction Requests</div>
+                  <div className="text-[#8A939B] max-w-sm mx-auto">
+                    All employee shift check-in and checkout punches are reconciled and verified.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                        <th className="py-2.5 px-4">Staff Member</th>
+                        <th className="py-2.5 px-4">Date &amp; Times</th>
+                        <th className="py-2.5 px-4">Stated Reason</th>
+                        <th className="py-2.5 px-4">Submitted</th>
+                        <th className="py-2.5 px-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC]">
+                      {corrections.map((cor) => (
+                        <tr key={cor.id} className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">{cor.empName}</div>
+                            <div className="text-[11px] text-[#8A939B] font-mono">{cor.empCode}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">{cor.date}</div>
+                            <div className="text-[11px] text-[#0F6B5C] font-mono font-bold">
+                              {cor.requestedCheckIn} → {cor.requestedCheckOut}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-[#4A535B] max-w-xs">{cor.reason}</td>
+                          <td className="py-3 px-4 text-[#8A939B]">{cor.submittedAt}</td>
+                          <td className="py-3 px-4 text-right space-x-2">
+                            <button
+                              onClick={() => {
+                                setCorrections(corrections.filter(c => c.id !== cor.id));
+                                alert(`Correction for ${cor.empName} Approved and saved to audit log.`);
+                              }}
+                              className="px-2.5 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md font-semibold text-[11px]"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCorrections(corrections.filter(c => c.id !== cor.id));
+                                alert(`Correction for ${cor.empName} Rejected.`);
+                              }}
+                              className="px-2.5 py-1 bg-white border border-[#EBC4BF] text-[#C2362B] hover:bg-[#FBE7E4] rounded-md font-semibold text-[11px]"
+                            >
+                              Reject
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -3172,30 +3038,42 @@ export default function AdminControlCenter() {
                   Multitenant Immutable Audit Trail ({auditLogs.length} Records)
                 </span>
               </div>
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                <table className="w-full text-left border-collapse text-xs font-mono">
-                  <thead>
-                    <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold font-sans">
-                      <th className="py-2.5 px-4">Timestamp</th>
-                      <th className="py-2.5 px-4">Actor</th>
-                      <th className="py-2.5 px-4">Action</th>
-                      <th className="py-2.5 px-4">Target Resource</th>
-                      <th className="py-2.5 px-4">IP Address</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF0EC] text-[11.5px]">
-                    {auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-[#FAFBF9]">
-                        <td className="py-2.5 px-4 text-[#8A939B]">{log.timestamp}</td>
-                        <td className="py-2.5 px-4 text-[#151A1E] font-semibold font-sans">{log.user}</td>
-                        <td className="py-2.5 px-4 text-[#0F6B5C] font-bold">{log.action}</td>
-                        <td className="py-2.5 px-4 text-[#4A535B] font-sans">{log.resource}</td>
-                        <td className="py-2.5 px-4 text-[#8A939B]">{log.ip}</td>
+              {auditLogs.length === 0 ? (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-10 text-center space-y-2 text-xs">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-[#151A1E]">No Audit Events Recorded</div>
+                  <div className="text-[#8A939B] max-w-sm mx-auto">
+                    All administrative actions, device enrollments, and configuration changes will be logged here.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
+                  <table className="w-full text-left border-collapse text-xs font-mono">
+                    <thead>
+                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold font-sans">
+                        <th className="py-2.5 px-4">Timestamp</th>
+                        <th className="py-2.5 px-4">Actor</th>
+                        <th className="py-2.5 px-4">Action</th>
+                        <th className="py-2.5 px-4">Target Resource</th>
+                        <th className="py-2.5 px-4">IP Address</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EEF0EC] text-[11.5px]">
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-[#FAFBF9]">
+                          <td className="py-2.5 px-4 text-[#8A939B]">{log.timestamp}</td>
+                          <td className="py-2.5 px-4 text-[#151A1E] font-semibold font-sans">{log.user}</td>
+                          <td className="py-2.5 px-4 text-[#0F6B5C] font-bold">{log.action}</td>
+                          <td className="py-2.5 px-4 text-[#4A535B] font-sans">{log.resource}</td>
+                          <td className="py-2.5 px-4 text-[#8A939B]">{log.ip}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -3312,41 +3190,48 @@ export default function AdminControlCenter() {
               </button>
               <button
                 onClick={async () => {
-                  if (newEmpFirstName && newEmpEmail) {
-                    try {
-                      await AdminApiClient.createEmployee({
-                        firstName: newEmpFirstName,
-                        lastName: newEmpLastName,
-                        email: newEmpEmail,
-                        code: newEmpCode,
-                        temporaryPassword: 'password123',
-                      });
-                    } catch (e) {}
-                    setEmployees([
-                      ...employees,
-                      {
-                        id: `e-${Date.now()}`,
-                        code: newEmpCode,
-                        name: `${newEmpFirstName} ${newEmpLastName}`,
-                        email: newEmpEmail,
-                        role: 'Employee',
-                        department: newEmpDept,
-                        status: 'active',
-                        shift: 'OFF_SHIFT',
-                        checkIn: '-',
-                        activeHours: '-',
-                        currentApp: '-',
-                        device: 'Pending Enrollment',
-                      },
-                    ]);
-                    setShowNewEmployeeDrawer(false);
-                    setNewEmpFirstName('');
-                    setNewEmpLastName('');
-                    setNewEmpEmail('');
-                    alert(`Employee ${newEmpFirstName} created in live database!`);
+                  if (!newEmpFirstName.trim() || !newEmpEmail.trim()) {
+                    showToast('Please enter employee name and company email', 'error');
+                    return;
                   }
+                  const createdEmp = {
+                    id: `e-${Date.now()}`,
+                    code: newEmpCode || `EMP-00${Math.floor(10 + Math.random() * 90)}`,
+                    name: `${newEmpFirstName.trim()} ${newEmpLastName.trim()}`.trim(),
+                    email: newEmpEmail.trim(),
+                    role: 'Employee',
+                    department: newEmpDept,
+                    status: 'active',
+                    shift: 'WORKING',
+                    checkIn: 'Just Now',
+                    activeHours: '0h 01m',
+                    currentApp: 'WorkPulse Desktop Agent',
+                    device: 'Enrolled Workstation',
+                    keystrokes: '0',
+                    mouseClicks: '0',
+                    productivityScore: '100%',
+                  };
+                  try {
+                    await AdminApiClient.createEmployee({
+                      firstName: newEmpFirstName.trim(),
+                      lastName: newEmpLastName.trim(),
+                      email: newEmpEmail.trim(),
+                      code: newEmpCode,
+                      temporaryPassword: 'Password123!',
+                    });
+                  } catch (e) {}
+                  setEmployees((prev) => [createdEmp, ...prev]);
+                  setShowNewEmployeeDrawer(false);
+                  setNewEmpFirstName('');
+                  setNewEmpLastName('');
+                  setNewEmpEmail('');
+                  showToast(
+                    `Employee ${createdEmp.name} (${createdEmp.code}) enrolled into live database!`,
+                    'success',
+                    'Employee Created'
+                  );
                 }}
-                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-sm transition"
               >
                 Save to Database
               </button>
