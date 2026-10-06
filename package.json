@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Company OS - Employee Management + Security + CRM Platform",
+  "main": "server.js",
   "scripts": {
-    "build": "turbo run build",
-
+    "build": "turbo run build && node scripts/postbuild.js",
+    "postbuild": "node scripts/postbuild.js",
+    "start": "node server.js",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",

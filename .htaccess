@@ -1,0 +1,36 @@
+# WorkPulse Company OS - Hostinger Apache & LiteSpeed Configuration
+DirectoryIndex index.html index.php server.js
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve existing files directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Check apps/admin/out if files are located there
+  RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/$1 -f
+  RewriteRule ^(.*)$ /apps/admin/out/$1 [L]
+
+  # Fallback to apps/admin/out/index.html or root index.html
+  RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/index.html -f
+  RewriteRule ^ /apps/admin/out/index.html [L]
+
+  # General SPA fallback
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# MIME types
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType image/svg+xml .svg
+  AddType application/json .json
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+</IfModule>
+
+# Disable Directory Browsing safely
+Options -Indexes
