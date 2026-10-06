@@ -684,7 +684,7 @@ export default function App() {
       <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B] shrink-0">
         <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
         <span className="font-semibold text-[#151A1E]">WorkPulse Workstation</span>
-        <span className="text-[11px] text-[#8A939B] ml-2">Live Backend (Port 4000)</span>
+        <span className="text-[11px] text-[#0F6B5C] bg-[#E3F1EE] px-2 py-0.5 rounded font-mono ml-2">API: https://roofingclients.us/api/v1</span>
 
         {/* Quick Debug Screen Selector */}
         <div className="ml-auto flex items-center gap-3">

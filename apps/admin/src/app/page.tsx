@@ -333,7 +333,7 @@ export default function PublicLandingPage() {
           <div className="flex items-center gap-6">
             <a href="/admin" className="text-[#0B5548] font-semibold hover:underline">Administrator Login</a>
             <a href="#downloads" className="hover:underline">Windows &amp; Mac Client</a>
-            <span>Port 4000 Central API Gateway</span>
+            <span className="font-mono text-[#0F6B5C]">https://roofingclients.us/api/v1</span>
           </div>
         </div>
       </footer>

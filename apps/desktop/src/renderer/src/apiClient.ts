@@ -1,4 +1,18 @@
-const API_BASE = 'http://localhost:4000/api/v1';
+export const DEFAULT_DESKTOP_API_URL = 'https://roofingclients.us/api/v1';
+
+export function getDesktopApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const customUrl = localStorage.getItem('companyos_api_url');
+    if (customUrl) return customUrl;
+  }
+  return (import.meta as any).env?.VITE_API_URL || DEFAULT_DESKTOP_API_URL;
+}
+
+export function setDesktopApiBaseUrl(url: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('companyos_api_url', url);
+  }
+}
 
 export class ApiClient {
   private static token: string | null = null;
@@ -28,7 +42,8 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const apiBase = getDesktopApiBaseUrl();
+    const response = await fetch(`${apiBase}${endpoint}`, {
       ...options,
       headers,
     });
