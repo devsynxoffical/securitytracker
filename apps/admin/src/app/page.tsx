@@ -56,6 +56,7 @@ import {
   DollarSign,
   PhoneForwarded,
   Timer,
+  Menu,
 } from 'lucide-react';
 import { AdminApiClient } from '../apiClient';
 
@@ -93,6 +94,7 @@ export default function AdminControlCenter() {
   // Navigation & Screen Control
   const [currentSection, setCurrentSection] = useState<AdminNavSection>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Expandable Sidebar Groups
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -321,23 +323,32 @@ export default function AdminControlCenter() {
     loadBackendData();
   }, []);
 
-  return (
-    <div className="flex h-screen w-screen bg-[#F5F6F3] overflow-hidden select-none font-sans text-xs text-[#151A1E]">
-      {/* 232px Expandable Admin Sidebar */}
-      <div className="w-[232px] bg-white border-r border-[#E4E7E1] flex flex-col shrink-0 justify-between">
-        <div className="overflow-y-auto p-3 space-y-1">
-          {/* Brand Header */}
-          <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-            <img src="/logo.jpg" alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
-            <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
-            <span className="ml-auto px-2 py-0.5 rounded-full bg-[#ECEEEB] text-[#5C666E] font-semibold text-[10px]">
-              Admin Live
-            </span>
-          </div>
+  const selectNav = (sec: AdminNavSection) => {
+    setCurrentSection(sec);
+    setMobileMenuOpen(false);
+  };
 
-          {/* Nav: Dashboard (A03) */}
+  const renderSidebarNav = () => (
+    <div className="flex flex-col h-full justify-between">
+      <div className="overflow-y-auto p-3 space-y-1">
+        {/* Brand Header */}
+        <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
+          <img src="/logo.jpg" alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
+          <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-[#ECEEEB] text-[#5C666E] font-semibold text-[10px]">
+            Admin Live
+          </span>
           <button
-            onClick={() => setCurrentSection('dashboard')}
+            onClick={() => setMobileMenuOpen(false)}
+            className="md:hidden ml-1 p-1 rounded-md text-[#8A939B] hover:text-[#151A1E] hover:bg-[#FAFBF9]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Nav: Dashboard (A03) */}
+        <button
+          onClick={() => selectNav('dashboard')}
             className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-medium transition ${
               currentSection === 'dashboard'
                 ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
@@ -526,24 +537,53 @@ export default function AdminControlCenter() {
         {/* Bottom Pinned User Profile */}
         <div className="p-3 border-t border-[#EEF0EC] bg-[#FAFBF9]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#E6EDFB] text-[#1C469B] font-bold text-xs flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#E6EDFB] text-[#1C469B] font-bold text-xs flex items-center justify-center shrink-0">
               SM
             </div>
-            <div>
-              <div className="font-semibold text-xs text-[#151A1E]">Sara Malik</div>
-              <div className="text-[11px] text-[#8A939B]">Super Admin</div>
+            <div className="min-w-0">
+              <div className="font-semibold text-xs text-[#151A1E] truncate">Sara Malik</div>
+              <div className="text-[11px] text-[#8A939B] truncate">Super Admin</div>
             </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen w-screen bg-[#F5F6F3] overflow-hidden select-none font-sans text-xs text-[#151A1E]">
+      {/* Mobile Drawer Backdrop & Sidebar */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="relative w-[260px] max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between z-10">
+            {renderSidebarNav()}
           </div>
         </div>
+      )}
+
+      {/* Desktop 232px Expandable Admin Sidebar */}
+      <div className="hidden md:flex w-[232px] bg-white border-r border-[#E4E7E1] flex-col shrink-0 justify-between">
+        {renderSidebarNav()}
       </div>
 
       {/* Main Admin Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#F5F6F3] overflow-hidden">
         {/* 56px Top Bar */}
-        <div className="h-[56px] bg-white border-b border-[#E4E7E1] flex items-center px-6 gap-3 shrink-0">
-          <div>
-            <div className="text-[11px] text-[#8A939B]">WorkPulse &bull; Connected to PostgreSQL (Port 4000)</div>
-            <h1 className="text-base font-semibold text-[#151A1E]">
+        <div className="h-[56px] bg-white border-b border-[#E4E7E1] flex items-center px-4 md:px-6 gap-3 shrink-0">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden p-2 rounded-lg border border-[#E4E7E1] text-[#151A1E] hover:bg-[#FAFBF9] shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+
+          <div className="min-w-0">
+            <div className="text-[11px] text-[#0B5548] font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0B5548] shrink-0 animate-pulse" />
+              <span>WorkPulse Enterprise Platform</span>
+            </div>
+            <h1 className="text-sm md:text-base font-semibold text-[#151A1E] truncate">
               {currentSection === 'dashboard' && 'Executive Dashboard'}
               {currentSection === 'employees' && 'Employee Directory (Live Database)'}
               {currentSection === 'departments' && 'Departments & Teams'}
@@ -560,8 +600,8 @@ export default function AdminControlCenter() {
             </h1>
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg text-xs text-[#8A939B] w-64">
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg text-xs text-[#8A939B] w-48 md:w-64">
               <Search className="w-3.5 h-3.5" />
               <input
                 type="text"

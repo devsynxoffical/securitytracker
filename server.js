@@ -84,6 +84,41 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Handle API requests: Proxy to NestJS Backend on port 4000 if available, or return clean JSON
+  if (req.url.startsWith('/api/')) {
+    const apiTargetPort = process.env.API_PORT || 4000;
+    const apiTargetHost = process.env.API_HOST || '127.0.0.1';
+
+    const proxyReq = http.request(
+      {
+        host: apiTargetHost,
+        port: apiTargetPort,
+        path: req.url,
+        method: req.method,
+        headers: req.headers,
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+      }
+    );
+
+    proxyReq.on('error', () => {
+      res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          error: {
+            code: 'API_BACKEND_OFFLINE',
+            message: 'Central backend API service on port 4000 is not running.',
+          },
+        })
+      );
+    });
+
+    req.pipe(proxyReq, { end: true });
+    return;
+  }
+
   const filePath = getFilePath(req.url);
 
   if (!filePath) {

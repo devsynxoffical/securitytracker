@@ -35,12 +35,21 @@ export class AdminApiClient {
       headers,
     });
 
+    const contentType = response.headers.get('content-type') || '';
+
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new Error(errorBody?.error?.message || errorBody?.message || `HTTP ${response.status}`);
+      if (contentType.includes('application/json')) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody?.error?.message || errorBody?.message || `HTTP ${response.status}`);
+      }
+      throw new Error(`HTTP ${response.status}: API route unavailable`);
     }
 
-    return response.json();
+    if (contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    return {} as T;
   }
 
   // Auto-authenticate as Admin if not already authenticated
@@ -52,7 +61,7 @@ export class AdminApiClient {
           this.setAuth(res.tokens.accessToken);
         }
       } catch (e) {
-        console.warn('Auto-auth warning:', e);
+        // API backend is offline or running on separate instance
       }
     }
   }
