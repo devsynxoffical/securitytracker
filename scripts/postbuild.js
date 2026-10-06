@@ -20,6 +20,21 @@ if (fs.existsSync(adminOutDir)) {
     console.log(`[postbuild] Copied ${srcIndex} -> ${rootIndexHtml}`);
   }
 
+  // Copy admin.html / admin folder to root for direct routing
+  const srcAdminHtml = path.join(adminOutDir, 'admin.html');
+  const rootAdminHtml = path.join(__dirname, '..', 'admin.html');
+  if (fs.existsSync(srcAdminHtml)) {
+    fs.copyFileSync(srcAdminHtml, rootAdminHtml);
+    console.log(`[postbuild] Copied ${srcAdminHtml} -> ${rootAdminHtml}`);
+  }
+
+  const srcAdminDir = path.join(adminOutDir, 'admin');
+  const rootAdminDir = path.join(__dirname, '..', 'admin');
+  if (fs.existsSync(srcAdminDir)) {
+    copyRecursive(srcAdminDir, rootAdminDir);
+    console.log(`[postbuild] Copied ${srcAdminDir} -> ${rootAdminDir}`);
+  }
+
   // Copy all assets to public/
   function copyRecursive(src, dest) {
     if (!fs.existsSync(dest)) {

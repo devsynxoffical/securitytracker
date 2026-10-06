@@ -10,9 +10,16 @@ DirectoryIndex index.html index.php server.js
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
+  # Match direct html file (e.g. /admin -> /admin.html)
+  RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+  RewriteRule ^(.*)$ /$1.html [L]
+
   # Check apps/admin/out if files are located there
   RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/$1 -f
   RewriteRule ^(.*)$ /apps/admin/out/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/$1.html -f
+  RewriteRule ^(.*)$ /apps/admin/out/$1.html [L]
 
   # Fallback to apps/admin/out/index.html or root index.html
   RewriteCond %{DOCUMENT_ROOT}/apps/admin/out/index.html -f
