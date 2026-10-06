@@ -29,6 +29,33 @@ import {
   Mail,
   Target,
   Sparkles,
+  List,
+  Kanban,
+  Table,
+  PhoneCall,
+  Phone,
+  Play,
+  Square,
+  Pause,
+  Flag,
+  Tag,
+  CheckSquare,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  BarChart2,
+  Filter,
+  Layers,
+  FileText,
+  ArrowRight,
+  Check,
+  MoreHorizontal,
+  Flame,
+  UserPlus,
+  Briefcase,
+  DollarSign,
+  PhoneForwarded,
+  Timer,
 } from 'lucide-react';
 import { AdminApiClient } from '../apiClient';
 
@@ -158,10 +185,205 @@ export default function AdminControlCenter() {
     { id: 'd-3', name: 'PC-044', os: 'Windows 11 Pro', employee: 'Zainab Qazi (EMP-0044)', status: 'Pending', enrolled: '2026-10-03' },
   ]);
 
-  // Live CRM Leads State (A11 & A12)
+  // ClickUp Multi-View CRM State
+  const [crmView, setCrmView] = useState<'list' | 'board' | 'table' | 'calendar' | 'targets' | 'sheets'>('list');
+  const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>({});
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [showLeadDrawer, setShowLeadDrawer] = useState(false);
+  const [showAssignSheetModal, setShowAssignSheetModal] = useState(false);
+  const [showDialerModal, setShowDialerModal] = useState(false);
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [activeCallLead, setActiveCallLead] = useState<any | null>(null);
+  const [callDuration, setCallDuration] = useState(0);
+  const [isCalling, setIsCalling] = useState(false);
+  const [callOutcome, setCallOutcome] = useState('Connected & Interested');
+  const [callNotes, setCallNotes] = useState('');
+  const [activeTimerLeadId, setActiveTimerLeadId] = useState<string | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  // Form State: Add Lead Modal
+  const [newLeadName, setNewLeadName] = useState('');
+  const [newLeadCompany, setNewLeadCompany] = useState('');
+  const [newLeadEmail, setNewLeadEmail] = useState('');
+  const [newLeadPhone, setNewLeadPhone] = useState('');
+  const [newLeadValue, setNewLeadValue] = useState('25000');
+  const [newLeadStage, setNewLeadStage] = useState('New Lead');
+  const [newLeadPriority, setNewLeadPriority] = useState('high');
+  const [newLeadOwner, setNewLeadOwner] = useState('Daniyal Khan');
+
+  // Mass Calling Sheets State
+  const [callingSheets, setCallingSheets] = useState([
+    {
+      id: 'sheet-1',
+      name: 'Q4 Enterprise SaaS Outbound Batch A',
+      totalLeads: 120,
+      assignedTo: 'Daniyal Khan (EMP-0021)',
+      dailyTarget: 40,
+      completedToday: 34,
+      status: 'In Progress',
+      createdDate: '2026-10-01',
+    },
+    {
+      id: 'sheet-2',
+      name: 'West Coast Logistics & Supply Chain',
+      totalLeads: 85,
+      assignedTo: 'Sam Parker (EMP-0022)',
+      dailyTarget: 45,
+      completedToday: 42,
+      status: 'In Progress',
+      createdDate: '2026-10-03',
+    },
+    {
+      id: 'sheet-3',
+      name: 'Healthcare & Medical Practice Leads',
+      totalLeads: 60,
+      assignedTo: 'Unassigned',
+      dailyTarget: 30,
+      completedToday: 0,
+      status: 'Pending Assignment',
+      createdDate: '2026-10-05',
+    },
+  ]);
+
+  // ClickUp Extended Leads Database
   const [leads, setLeads] = useState<any[]>([
-    { id: 'LD-1092', name: 'Sarah Jenkins', company: 'Apex Logistics Inc', stage: 'Qualified', value: '$28,000', owner: 'Daniyal Khan', lastTouch: 'Today, 2:15 PM' },
-    { id: 'LD-1093', name: 'Michael Chang', company: 'Nexus Health Systems', stage: 'Contacted', value: '$45,000', owner: 'Sam Parker', lastTouch: 'Yesterday' },
+    {
+      id: 'LD-1092',
+      name: 'Sarah Jenkins',
+      jobTitle: 'VP of Operations',
+      company: 'Apex Logistics Inc',
+      stage: 'Qualified',
+      priority: 'urgent',
+      value: '$28,000',
+      numericValue: 28000,
+      owner: 'Daniyal Khan',
+      email: 'sarah.jenkins@apexlogistics.com',
+      phone: '+1 (555) 234-8901',
+      industry: 'Logistics / Supply Chain',
+      source: 'Outbound Calling Sheet #1',
+      lastTouch: 'Today, 2:15 PM',
+      nextFollowUp: 'Tomorrow, 10:00 AM',
+      tags: ['Enterprise', 'Hot Deal', 'Q4 Close'],
+      subtasks: [
+        { id: 'st-1', title: 'Verify budget authority & decision makers', completed: true },
+        { id: 'st-2', title: 'Conduct live platform demonstration', completed: true },
+        { id: 'st-3', title: 'Deliver custom security compliance paperwork', completed: true },
+        { id: 'st-4', title: 'Finalize master services agreement & pricing', completed: false },
+      ],
+      timeSpent: '2h 15m',
+      callHistory: [
+        { id: 'c-1', outcome: 'Connected & Interested', duration: '14m 20s', date: 'Today, 2:15 PM', notes: 'Discussed employee workstation telemetry and attendance integration. Wants contract draft tomorrow.' },
+        { id: 'c-2', outcome: 'Connected', duration: '8m 45s', date: 'Yesterday, 11:30 AM', notes: 'Initial qualifying call completed with COO.' },
+      ],
+    },
+    {
+      id: 'LD-1093',
+      name: 'Michael Chang',
+      jobTitle: 'Chief Technology Officer',
+      company: 'Nexus Health Systems',
+      stage: 'Contacted',
+      priority: 'high',
+      value: '$45,000',
+      numericValue: 45000,
+      owner: 'Sam Parker',
+      email: 'm.chang@nexushealth.org',
+      phone: '+1 (555) 876-5432',
+      industry: 'Healthcare Technology',
+      source: 'Inbound Web Demo',
+      lastTouch: 'Yesterday',
+      nextFollowUp: 'Thursday, 3:00 PM',
+      tags: ['HIPAA Compliant', 'Healthcare'],
+      subtasks: [
+        { id: 'st-5', title: 'Initial intro call & scope requirement', completed: true },
+        { id: 'st-6', title: 'Send HIPAA BAA documentation', completed: false },
+        { id: 'st-7', title: 'Schedule security architectural review', completed: false },
+      ],
+      timeSpent: '1h 05m',
+      callHistory: [
+        { id: 'c-3', outcome: 'Connected', duration: '11m 10s', date: 'Yesterday, 4:00 PM', notes: 'CTO interested in agent tracking without network dependency.' },
+      ],
+    },
+    {
+      id: 'LD-1094',
+      name: 'Elena Rostova',
+      jobTitle: 'Head of People & Ops',
+      company: 'Vanguard FinTech Global',
+      stage: 'Meeting Scheduled',
+      priority: 'urgent',
+      value: '$72,000',
+      numericValue: 72000,
+      owner: 'Daniyal Khan',
+      email: 'elena@vanguardfin.io',
+      phone: '+1 (555) 349-1122',
+      industry: 'Financial Services',
+      source: 'Referral',
+      lastTouch: 'Today, 9:30 AM',
+      nextFollowUp: 'Oct 8, 2:00 PM',
+      tags: ['SaaS', 'High Value', 'Fintech'],
+      subtasks: [
+        { id: 'st-8', title: 'Review workstation tracking specs', completed: true },
+        { id: 'st-9', title: 'Executive demo with VP HR', completed: false },
+      ],
+      timeSpent: '3h 40m',
+      callHistory: [
+        { id: 'c-4', outcome: 'Meeting Scheduled', duration: '6m 30s', date: 'Today, 9:30 AM', notes: 'Scheduled executive demo for 150 workstation rollout.' },
+      ],
+    },
+    {
+      id: 'LD-1095',
+      name: 'David Miller',
+      jobTitle: 'Managing Partner',
+      company: 'Miller & Associates Legal',
+      stage: 'Proposal Sent',
+      priority: 'normal',
+      value: '$19,500',
+      numericValue: 19500,
+      owner: 'Sam Parker',
+      email: 'dmiller@millerlegal.com',
+      phone: '+1 (555) 901-4455',
+      industry: 'Legal / Professional Services',
+      source: 'Cold Outreach Sheet #2',
+      lastTouch: 'Oct 02',
+      nextFollowUp: 'Friday, 11:00 AM',
+      tags: ['Legal', 'Timesheet Audit'],
+      subtasks: [
+        { id: 'st-10', title: 'Audit legal billing timesheets', completed: true },
+        { id: 'st-11', title: 'Deliver custom SLA proposal', completed: true },
+        { id: 'st-12', title: 'Follow-up on partner signoff', completed: false },
+      ],
+      timeSpent: '4h 10m',
+      callHistory: [
+        { id: 'c-5', outcome: 'Connected', duration: '9m 12s', date: 'Oct 02, 3:00 PM', notes: 'Sent final contract for signature.' },
+      ],
+    },
+    {
+      id: 'LD-1096',
+      name: 'Rachel Adams',
+      jobTitle: 'Director of Security Operations',
+      company: 'CloudMatrix Security',
+      stage: 'Won',
+      priority: 'high',
+      value: '$54,000',
+      numericValue: 54000,
+      owner: 'Daniyal Khan',
+      email: 'radams@cloudmatrix.com',
+      phone: '+1 (555) 777-9988',
+      industry: 'Cybersecurity',
+      source: 'Outbound Calling Sheet #1',
+      lastTouch: 'Today, 10:00 AM',
+      nextFollowUp: 'Completed',
+      tags: ['Closed Won', 'Annual Contract'],
+      subtasks: [
+        { id: 'st-13', title: 'Contract signed via DocuSign', completed: true },
+        { id: 'st-14', title: 'Workstation agent deployment initiated', completed: true },
+      ],
+      timeSpent: '8h 20m',
+      callHistory: [
+        { id: 'c-6', outcome: 'Connected', duration: '15m 00s', date: 'Today, 10:00 AM', notes: 'Deal closed! Kickoff scheduled for next Monday.' },
+      ],
+    },
   ]);
 
   // Attendance Corrections Queue (A19)
@@ -169,6 +391,32 @@ export default function AdminControlCenter() {
     { id: 'CORR-101', employee: 'Daniyal Khan (EMP-0021)', date: '2026-10-01', proposed: '09:00 AM - 05:30 PM', reason: 'Power outage at branch workstation', status: 'Pending' },
     { id: 'CORR-102', employee: 'Ahmed Raza (EMP-0031)', date: '2026-09-30', proposed: '09:30 AM - 06:00 PM', reason: 'Client offsite network setup', status: 'Pending' },
   ]);
+
+  // Active ClickUp Time Tracking Timer
+  useEffect(() => {
+    let interval: any = null;
+    if (activeTimerLeadId) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTimerLeadId]);
+
+  // Active Call Stopwatch Timer
+  useEffect(() => {
+    let interval: any = null;
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCalling]);
 
   // Load Live Data from API Backend on mount
   useEffect(() => {
@@ -699,42 +947,785 @@ export default function AdminControlCenter() {
             </div>
           )}
 
-          {/* SCREEN A12: CRM BOARD */}
-          {currentSection === 'crm-board' && (
+          {/* SCREEN: CLICKUP MULTI-VIEW CRM & PIPELINE SUITE */}
+          {(currentSection === 'crm-leads' || currentSection === 'crm-board' || currentSection === 'crm-import') && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-[#151A1E]">Live CRM Deals Board</span>
+              {/* ClickUp Top Control & View Switcher Bar */}
+              <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-3.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 p-1 bg-[#F5F6F3] rounded-lg border border-[#E4E7E1]">
+                    <button
+                      onClick={() => setCrmView('list')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'list'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span>List View</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('board')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'board'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Kanban className="w-3.5 h-3.5" />
+                      <span>Board (Kanban)</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('table')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'table'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Table className="w-3.5 h-3.5" />
+                      <span>Table / Sheet</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('calendar')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'calendar'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Calendar</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('targets')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'targets'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <Target className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                      <span>Daily Targets &amp; Quotas</span>
+                    </button>
+                    <button
+                      onClick={() => setCrmView('sheets')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                        crmView === 'sheets'
+                          ? 'bg-white text-[#0B5548] shadow-sm'
+                          : 'text-[#5C666E] hover:text-[#151A1E]'
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#8A5200]" />
+                      <span>Calling Sheets</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Action Bar */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAssignSheetModal(true)}
+                    className="px-3 py-1.5 bg-[#FAFBF9] border border-[#D5DAD3] hover:bg-[#EEF0EC] text-[#151A1E] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                    <span>Assign Sheet &amp; Quotas</span>
+                  </button>
+                  <button
+                    onClick={() => setShowAddLeadModal(true)}
+                    className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ New Lead / Deal</span>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-5 gap-3.5">
-                {['New Lead', 'Contacted', 'Qualified', 'Proposal Sent', 'Won'].map((stage) => {
-                  const stageLeads = leads.filter((l) => l.stage === stage);
-                  return (
-                    <div key={stage} className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3 space-y-3">
-                      <div className="flex items-center justify-between font-semibold text-xs text-[#151A1E]">
-                        <span>{stage}</span>
-                        <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-white border border-[#E4E7E1]">
-                          {stageLeads.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2.5">
-                        {stageLeads.map((l) => (
+
+              {/* VIEW 1: CLICKUP LIST VIEW (Grouped by Stage with collapsible headers) */}
+              {crmView === 'list' && (
+                <div className="space-y-4">
+                  {['New Lead', 'Attempted', 'Contacted', 'Qualified', 'Meeting Scheduled', 'Proposal Sent', 'Won'].map(
+                    (stageName) => {
+                      const stageLeads = leads.filter((l) => l.stage === stageName);
+                      const isCollapsed = collapsedStages[stageName] || false;
+                      const stageTotalValue = stageLeads.reduce((acc, l) => acc + (l.numericValue || 0), 0);
+
+                      const getStageBadgeColor = (stage: string) => {
+                        switch (stage) {
+                          case 'New Lead':
+                            return 'bg-[#F0EEFC] text-[#55359C] border-[#DED7F9]';
+                          case 'Attempted':
+                            return 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]';
+                          case 'Contacted':
+                            return 'bg-[#ECFEFF] text-[#0E7490] border-[#A5F3FC]';
+                          case 'Qualified':
+                            return 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]';
+                          case 'Meeting Scheduled':
+                            return 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]';
+                          case 'Proposal Sent':
+                            return 'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]';
+                          case 'Won':
+                            return 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]';
+                          default:
+                            return 'bg-[#F3F4F6] text-[#374151] border-[#E5E7EB]';
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={stageName}
+                          className="bg-white border border-[#E4E7E1] rounded-[10px] shadow-sm overflow-hidden"
+                        >
+                          {/* Collapsible Stage Header */}
                           <div
-                            key={l.id}
-                            className="bg-white border border-[#E4E7E1] rounded-lg p-3 shadow-sm space-y-2"
+                            onClick={() =>
+                              setCollapsedStages((prev) => ({ ...prev, [stageName]: !prev[stageName] }))
+                            }
+                            className="px-4 py-2.5 bg-[#FAFBF9] border-b border-[#E4E7E1] flex items-center justify-between cursor-pointer hover:bg-[#F3F5F1] transition select-none"
                           >
-                            <div className="font-semibold text-xs text-[#151A1E]">{l.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{l.company}</div>
-                            <div className="flex items-center justify-between border-t border-[#EEF0EC] pt-2 text-xs">
-                              <span className="font-mono font-bold text-[#0F6B5C]">{l.value}</span>
-                              <span className="text-[10.5px] text-[#4A535B]">{l.owner}</span>
+                            <div className="flex items-center gap-2.5">
+                              {isCollapsed ? (
+                                <ChevronRight className="w-4 h-4 text-[#8A939B]" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-[#8A939B]" />
+                              )}
+                              <span
+                                className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border uppercase tracking-wider ${getStageBadgeColor(
+                                  stageName
+                                )}`}
+                              >
+                                {stageName}
+                              </span>
+                              <span className="text-xs text-[#8A939B] font-mono">
+                                ({stageLeads.length} {stageLeads.length === 1 ? 'deal' : 'deals'})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs font-mono font-semibold text-[#0F6B5C]">
+                                Pipeline: ${stageTotalValue.toLocaleString()}
+                              </span>
                             </div>
                           </div>
-                        ))}
+
+                          {/* Stage Items List */}
+                          {!isCollapsed && (
+                            <div className="divide-y divide-[#EEF0EC]">
+                              {stageLeads.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-[#8A939B] italic">
+                                  No leads currently in {stageName} stage. Click "+ Add Lead" to place records here.
+                                </div>
+                              ) : (
+                                stageLeads.map((lead) => {
+                                  const completedTasks =
+                                    lead.subtasks?.filter((t: any) => t.completed).length || 0;
+                                  const totalTasks = lead.subtasks?.length || 0;
+                                  const taskProgressPercent =
+                                    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+                                  return (
+                                    <div
+                                      key={lead.id}
+                                      onClick={() => {
+                                        setSelectedLead(lead);
+                                        setShowLeadDrawer(true);
+                                      }}
+                                      className="px-4 py-3 hover:bg-[#FAFBF9] transition flex items-center justify-between gap-3 cursor-pointer group"
+                                    >
+                                      {/* Left: Lead Identity */}
+                                      <div className="flex items-center gap-3 min-w-[280px]">
+                                        <div
+                                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                            lead.priority === 'urgent'
+                                              ? 'bg-[#EF4444]'
+                                              : lead.priority === 'high'
+                                              ? 'bg-[#F97316]'
+                                              : lead.priority === 'normal'
+                                              ? 'bg-[#3B82F6]'
+                                              : 'bg-[#9CA3AF]'
+                                          }`}
+                                          title={`Priority: ${lead.priority}`}
+                                        />
+                                        <div>
+                                          <div className="font-semibold text-xs text-[#151A1E] group-hover:text-[#0F6B5C] transition flex items-center gap-2">
+                                            <span>{lead.name}</span>
+                                            {lead.tags?.slice(0, 2).map((tag: string) => (
+                                              <span
+                                                key={tag}
+                                                className="px-1.5 py-0.2 rounded bg-[#F0F2EE] text-[#5C666E] text-[10px] font-normal"
+                                              >
+                                                {tag}
+                                              </span>
+                                            ))}
+                                          </div>
+                                          <div className="text-[11px] text-[#8A939B]">
+                                            {lead.jobTitle || 'Executive'} &bull;{' '}
+                                            <span className="font-medium text-[#4A535B]">{lead.company}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Middle: Subtask Checklist Progress */}
+                                      <div className="flex items-center gap-2 min-w-[140px]">
+                                        <CheckSquare className="w-3.5 h-3.5 text-[#8A939B]" />
+                                        <div className="w-20 bg-[#E4E7E1] rounded-full h-1.5 overflow-hidden">
+                                          <div
+                                            className="bg-[#0F6B5C] h-full rounded-full transition-all duration-300"
+                                            style={{ width: `${taskProgressPercent}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-[10.5px] font-mono text-[#5C666E]">
+                                          {completedTasks}/{totalTasks}
+                                        </span>
+                                      </div>
+
+                                      {/* Phone & Next Step */}
+                                      <div className="hidden lg:flex flex-col text-right min-w-[140px]">
+                                        <span className="text-[11px] font-mono text-[#151A1E]">
+                                          {lead.phone || '+1 555-0199'}
+                                        </span>
+                                        <span className="text-[10px] text-[#8A939B]">Next: {lead.nextFollowUp}</span>
+                                      </div>
+
+                                      {/* Owner */}
+                                      <div className="flex items-center gap-1.5 min-w-[120px]">
+                                        <div className="w-5 h-5 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-[10px] flex items-center justify-center">
+                                          {lead.owner ? lead.owner.split(' ')[0][0] : 'U'}
+                                        </div>
+                                        <span className="text-xs text-[#4A535B] truncate">{lead.owner}</span>
+                                      </div>
+
+                                      {/* Value */}
+                                      <div className="text-right min-w-[90px]">
+                                        <span className="font-mono font-bold text-xs text-[#0F6B5C]">
+                                          {lead.value}
+                                        </span>
+                                      </div>
+
+                                      {/* Quick Actions */}
+                                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          onClick={() => {
+                                            setActiveCallLead(lead);
+                                            setShowDialerModal(true);
+                                            setIsCalling(true);
+                                            setCallDuration(0);
+                                          }}
+                                          className="p-1.5 bg-[#FAFBF9] border border-[#E4E7E1] hover:bg-[#E3F1EE] hover:text-[#0B5548] text-[#4A535B] rounded-md transition shadow-xs"
+                                          title="Quick Call (Auto-logs to Quota)"
+                                        >
+                                          <PhoneCall className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedLead(lead);
+                                            setShowLeadDrawer(true);
+                                          }}
+                                          className="px-2 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#151A1E] rounded-md text-[11px] font-semibold transition"
+                                        >
+                                          Open Drawer
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              )}
+
+              {/* VIEW 2: CLICKUP KANBAN BOARD */}
+              {crmView === 'board' && (
+                <div className="grid grid-cols-5 gap-3.5">
+                  {['New Lead', 'Contacted', 'Qualified', 'Proposal Sent', 'Won'].map((stage) => {
+                    const stageLeads = leads.filter((l) => l.stage === stage);
+                    const stageTotalValue = stageLeads.reduce((acc, l) => acc + (l.numericValue || 0), 0);
+
+                    return (
+                      <div
+                        key={stage}
+                        className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3 space-y-3 flex flex-col h-[680px]"
+                      >
+                        {/* Column Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-[#151A1E]">{stage}</span>
+                            <span className="font-mono text-[10.5px] px-1.5 py-0.2 rounded-full bg-white border border-[#E4E7E1] font-bold">
+                              {stageLeads.length}
+                            </span>
+                          </div>
+                          <span className="font-mono text-[10.5px] font-bold text-[#0F6B5C]">
+                            ${stageTotalValue.toLocaleString()}
+                          </span>
+                        </div>
+
+                        {/* Cards List */}
+                        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                          {stageLeads.map((l) => {
+                            const completedTasks = l.subtasks?.filter((t: any) => t.completed).length || 0;
+                            const totalTasks = l.subtasks?.length || 0;
+
+                            return (
+                              <div
+                                key={l.id}
+                                onClick={() => {
+                                  setSelectedLead(l);
+                                  setShowLeadDrawer(true);
+                                }}
+                                className="bg-white border border-[#E4E7E1] hover:border-[#0F6B5C] rounded-lg p-3 shadow-sm space-y-2.5 cursor-pointer transition"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                                      l.priority === 'urgent'
+                                        ? 'bg-[#FEE2E2] text-[#DC2626]'
+                                        : l.priority === 'high'
+                                        ? 'bg-[#FFEDD5] text-[#EA580C]'
+                                        : 'bg-[#EFF6FF] text-[#2563EB]'
+                                    }`}
+                                  >
+                                    <Flag className="w-2.5 h-2.5" />
+                                    {l.priority}
+                                  </span>
+                                  <span className="font-mono font-bold text-xs text-[#0F6B5C]">{l.value}</span>
+                                </div>
+
+                                <div>
+                                  <div className="font-semibold text-xs text-[#151A1E]">{l.name}</div>
+                                  <div className="text-[11px] text-[#8A939B]">{l.company}</div>
+                                </div>
+
+                                {/* ClickUp Checklist preview */}
+                                {totalTasks > 0 && (
+                                  <div className="flex items-center gap-1.5 text-[10.5px] text-[#5C666E] bg-[#FAFBF9] p-1.5 rounded border border-[#EEF0EC]">
+                                    <CheckSquare className="w-3 h-3 text-[#0F6B5C]" />
+                                    <span>
+                                      Subtasks: {completedTasks}/{totalTasks}
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between border-t border-[#EEF0EC] pt-2 text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-4 h-4 rounded-full bg-[#E3F1EE] text-[#0B5548] text-[9px] font-bold flex items-center justify-center">
+                                      {l.owner ? l.owner[0] : 'U'}
+                                    </div>
+                                    <span className="text-[10.5px] text-[#4A535B]">{l.owner}</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveCallLead(l);
+                                      setShowDialerModal(true);
+                                      setIsCalling(true);
+                                      setCallDuration(0);
+                                    }}
+                                    className="p-1 hover:bg-[#E3F1EE] hover:text-[#0B5548] rounded text-[#8A939B] transition"
+                                  >
+                                    <PhoneCall className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* VIEW 3: CLICKUP TABLE / SHEET MATRIX */}
+              {crmView === 'table' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-white px-4 py-2.5 rounded-[10px] border border-[#E4E7E1]">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-[#151A1E]">
+                        Selected: {selectedLeadIds.length} of {leads.length} Leads
+                      </span>
+                      {selectedLeadIds.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowAssignSheetModal(true)}
+                            className="px-2.5 py-1 bg-[#0F6B5C] text-white rounded-md text-[11px] font-semibold flex items-center gap-1"
+                          >
+                            <UserPlus className="w-3 h-3" />
+                            Bulk Assign Sheet to Rep
+                          </button>
+                          <button
+                            onClick={() => {
+                              alert(`Exporting ${selectedLeadIds.length} leads to CSV.`);
+                            }}
+                            className="px-2.5 py-1 bg-white border border-[#E4E7E1] text-[#151A1E] rounded-md text-[11px] font-semibold flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" />
+                            Export Selected
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const csvContent =
+                            'ID,Name,Company,Stage,Priority,Value,Owner,Phone,Email\n' +
+                            leads
+                              .map(
+                                (l) =>
+                                  `"${l.id}","${l.name}","${l.company}","${l.stage}","${l.priority}","${l.value}","${l.owner}","${l.phone}","${l.email}"`
+                              )
+                              .join('\n');
+                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.setAttribute('href', url);
+                          link.setAttribute('download', `workpulse_crm_sheet_${Date.now()}.csv`);
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                        <span>Export Full Table (CSV)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                          <th className="py-2.5 px-3 w-8">
+                            <input
+                              type="checkbox"
+                              checked={selectedLeadIds.length === leads.length && leads.length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedLeadIds(leads.map((l) => l.id));
+                                } else {
+                                  setSelectedLeadIds([]);
+                                }
+                              }}
+                              className="rounded border-[#E4E7E1]"
+                            />
+                          </th>
+                          <th className="py-2.5 px-3">Lead Name &amp; Title</th>
+                          <th className="py-2.5 px-3">Company</th>
+                          <th className="py-2.5 px-3">Stage</th>
+                          <th className="py-2.5 px-3">Priority</th>
+                          <th className="py-2.5 px-3">Deal Value</th>
+                          <th className="py-2.5 px-3">Owner</th>
+                          <th className="py-2.5 px-3">Phone</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EEF0EC]">
+                        {leads.map((l) => {
+                          const isSelected = selectedLeadIds.includes(l.id);
+                          return (
+                            <tr
+                              key={l.id}
+                              onClick={() => {
+                                setSelectedLead(l);
+                                setShowLeadDrawer(true);
+                              }}
+                              className={`cursor-pointer transition ${
+                                isSelected ? 'bg-[#E3F1EE]' : 'hover:bg-[#FAFBF9]'
+                              }`}
+                            >
+                              <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedLeadIds([...selectedLeadIds, l.id]);
+                                    } else {
+                                      setSelectedLeadIds(selectedLeadIds.filter((id) => id !== l.id));
+                                    }
+                                  }}
+                                  className="rounded border-[#E4E7E1]"
+                                />
+                              </td>
+                              <td className="py-3 px-3 font-medium text-[#151A1E]">
+                                <div>{l.name}</div>
+                                <div className="text-[10.5px] text-[#8A939B]">{l.jobTitle}</div>
+                              </td>
+                              <td className="py-3 px-3 text-[#4A535B]">{l.company}</td>
+                              <td className="py-3 px-3">
+                                <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E3F1EE] text-[#0B5548]">
+                                  {l.stage}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded font-semibold text-[10.5px] uppercase ${
+                                    l.priority === 'urgent'
+                                      ? 'bg-[#FEE2E2] text-[#DC2626]'
+                                      : l.priority === 'high'
+                                      ? 'bg-[#FFEDD5] text-[#EA580C]'
+                                      : 'bg-[#EFF6FF] text-[#2563EB]'
+                                  }`}
+                                >
+                                  {l.priority}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 font-mono font-bold text-[#0F6B5C]">{l.value}</td>
+                              <td className="py-3 px-3 text-[#4A535B]">{l.owner}</td>
+                              <td className="py-3 px-3 font-mono text-[#151A1E]">{l.phone}</td>
+                              <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => {
+                                    setActiveCallLead(l);
+                                    setShowDialerModal(true);
+                                    setIsCalling(true);
+                                    setCallDuration(0);
+                                  }}
+                                  className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md text-[11px] font-semibold inline-flex items-center gap-1 shadow-xs"
+                                >
+                                  <PhoneCall className="w-3 h-3" />
+                                  Call
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 4: CLICKUP CALENDAR VIEW */}
+              {crmView === 'calendar' && (
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#EEF0EC]">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#0F6B5C]" />
+                      <h3 className="font-semibold text-sm text-[#151A1E]">Scheduled Sales Meetings &amp; Callbacks</h3>
+                    </div>
+                    <span className="text-xs font-semibold text-[#8A939B]">October 2026</span>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2">
+                    {['Mon (Oct 5)', 'Tue (Oct 6)', 'Wed (Oct 7)', 'Thu (Oct 8)', 'Fri (Oct 9)', 'Sat', 'Sun'].map(
+                      (day, idx) => (
+                        <div
+                          key={day}
+                          className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-2.5 min-h-[220px] space-y-2"
+                        >
+                          <div className="font-semibold text-xs text-[#5C666E] border-b border-[#EEF0EC] pb-1">
+                            {day}
+                          </div>
+                          {idx === 0 && (
+                            <div
+                              onClick={() => {
+                                setSelectedLead(leads[0]);
+                                setShowLeadDrawer(true);
+                              }}
+                              className="bg-white border border-[#A7F3D0] p-2 rounded shadow-xs text-[11px] cursor-pointer hover:border-[#0F6B5C]"
+                            >
+                              <div className="font-semibold text-[#047857]">2:15 PM &bull; Sarah Jenkins</div>
+                              <div className="text-[10px] text-[#8A939B]">Contract Review &amp; Tech SLA</div>
+                            </div>
+                          )}
+                          {idx === 1 && (
+                            <div
+                              onClick={() => {
+                                setSelectedLead(leads[2]);
+                                setShowLeadDrawer(true);
+                              }}
+                              className="bg-white border border-[#FED7AA] p-2 rounded shadow-xs text-[11px] cursor-pointer hover:border-[#F97316]"
+                            >
+                              <div className="font-semibold text-[#C2410C]">9:30 AM &bull; Elena Rostova</div>
+                              <div className="text-[10px] text-[#8A939B]">Executive Live Demo (150 Seats)</div>
+                            </div>
+                          )}
+                          {idx === 3 && (
+                            <div
+                              onClick={() => {
+                                setSelectedLead(leads[1]);
+                                setShowLeadDrawer(true);
+                              }}
+                              className="bg-white border border-[#BFDBFE] p-2 rounded shadow-xs text-[11px] cursor-pointer hover:border-[#3B82F6]"
+                            >
+                              <div className="font-semibold text-[#1D4ED8]">3:00 PM &bull; Michael Chang</div>
+                              <div className="text-[10px] text-[#8A939B]">HIPAA Compliance Architecture</div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 5: DAILY TARGETS & QUOTAS DASHBOARD */}
+              {crmView === 'targets' && (
+                <div className="space-y-4">
+                  {/* Top Quota Summary Cards */}
+                  <div className="grid grid-cols-4 gap-3.5">
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged Today</div>
+                      <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">76 / 85</div>
+                      <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">89% of Daily Quota Reached</div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Total Talk Time</div>
+                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">4h 18m</div>
+                      <div className="text-[11.5px] text-[#4A535B] mt-0.5">Avg: 9m 12s per connected call</div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Demos Booked Today</div>
+                      <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">4 Deals</div>
+                      <div className="text-[11.5px] text-[#8A5200] font-semibold mt-0.5">Target: 3/day (Exceeded)</div>
+                    </div>
+                    <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm">
+                      <div className="text-[11.5px] font-medium text-[#8A939B]">Pipeline Generated</div>
+                      <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">$218,500</div>
+                      <div className="text-[11.5px] text-[#0F6B5C] font-semibold mt-0.5">5 active proposals pending</div>
+                    </div>
+                  </div>
+
+                  {/* Rep Leaderboard & Quotas */}
+                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-[#EEF0EC] flex items-center justify-between">
+                      <h3 className="font-semibold text-xs text-[#151A1E]">Rep Real-Time Daily Quota Tracker</h3>
+                    </div>
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                          <th className="py-2.5 px-4">Sales Representative</th>
+                          <th className="py-2.5 px-4">Assigned Calling Sheet</th>
+                          <th className="py-2.5 px-4">Daily Calling Target</th>
+                          <th className="py-2.5 px-4">Completed Calls</th>
+                          <th className="py-2.5 px-4">Quota Progress</th>
+                          <th className="py-2.5 px-4 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EEF0EC]">
+                        <tr className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">Daniyal Khan</div>
+                            <div className="text-[11px] text-[#8A939B]">Sales Executive &bull; EMP-0021</div>
+                          </td>
+                          <td className="py-3 px-4 text-[#4A535B]">Q4 Enterprise SaaS Outbound Batch A</td>
+                          <td className="py-3 px-4 font-mono font-bold">40 calls / day</td>
+                          <td className="py-3 px-4 font-mono text-[#0F6B5C] font-bold">34 calls</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-32 bg-[#E4E7E1] rounded-full h-2 overflow-hidden">
+                                <div className="bg-[#0F6B5C] h-full rounded-full" style={{ width: '85%' }} />
+                              </div>
+                              <span className="text-[11px] font-mono font-bold text-[#0F6B5C]">85%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
+                              On Pace
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="hover:bg-[#FAFBF9]">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#151A1E]">Sam Parker</div>
+                            <div className="text-[11px] text-[#8A939B]">Sales Lead &bull; EMP-0022</div>
+                          </td>
+                          <td className="py-3 px-4 text-[#4A535B]">West Coast Logistics &amp; Supply Chain</td>
+                          <td className="py-3 px-4 font-mono font-bold">45 calls / day</td>
+                          <td className="py-3 px-4 font-mono text-[#0F6B5C] font-bold">42 calls</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-32 bg-[#E4E7E1] rounded-full h-2 overflow-hidden">
+                                <div className="bg-[#0F6B5C] h-full rounded-full" style={{ width: '93%' }} />
+                              </div>
+                              <span className="text-[11px] font-mono font-bold text-[#0F6B5C]">93%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
+                              Target Met
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 6: CALLING SHEETS MANAGER */}
+              {crmView === 'sheets' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="font-semibold text-xs text-[#151A1E]">
+                        Mass Calling Lead Sheets ({callingSheets.length})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowAssignSheetModal(true)}
+                      className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Assign New Sheet Batch
+                    </button>
+                  </div>
+
+                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-sm">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
+                          <th className="py-2.5 px-4">Sheet Name</th>
+                          <th className="py-2.5 px-4">Total Leads</th>
+                          <th className="py-2.5 px-4">Assigned Representative</th>
+                          <th className="py-2.5 px-4">Daily Quota Target</th>
+                          <th className="py-2.5 px-4">Progress Today</th>
+                          <th className="py-2.5 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EEF0EC]">
+                        {callingSheets.map((sheet) => (
+                          <tr key={sheet.id} className="hover:bg-[#FAFBF9]">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-[#151A1E] flex items-center gap-2">
+                                <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                                <span>{sheet.name}</span>
+                              </div>
+                              <div className="text-[10.5px] text-[#8A939B]">Created: {sheet.createdDate}</div>
+                            </td>
+                            <td className="py-3 px-4 font-mono font-bold text-[#151A1E]">{sheet.totalLeads} Leads</td>
+                            <td className="py-3 px-4 text-[#4A535B] font-medium">{sheet.assignedTo}</td>
+                            <td className="py-3 px-4 font-mono text-[#0F6B5C] font-semibold">
+                              {sheet.dailyTarget} calls/day
+                            </td>
+                            <td className="py-3 px-4 font-mono">
+                              {sheet.completedToday} / {sheet.dailyTarget} calls
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <button
+                                onClick={() => {
+                                  setCrmView('table');
+                                }}
+                                className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#0F6B5C] rounded-md font-semibold text-[11px]"
+                              >
+                                View Sheet
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -958,6 +1949,641 @@ export default function AdminControlCenter() {
                 className="px-4 py-1.5 bg-[#C2362B] hover:bg-[#9E2A21] text-white rounded-lg text-xs font-semibold"
               >
                 Confirm Disable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CLICKUP DRAWER: LEAD & DEAL DETAILS */}
+      {showLeadDrawer && selectedLead && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex justify-end z-50 backdrop-blur-xs">
+          <div className="w-[620px] bg-white h-full shadow-[-10px_0_40px_rgba(0,0,0,0.2)] flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div className="p-6 space-y-5">
+              {/* Header with Breadcrumb & Close */}
+              <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-4">
+                <div className="flex items-center gap-2 text-xs text-[#8A939B]">
+                  <span>CRM</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span>Pipeline</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span className="font-mono text-[#151A1E] font-semibold">{selectedLead.id}</span>
+                </div>
+                <X
+                  className="w-5 h-5 text-[#8A939B] hover:text-[#151A1E] cursor-pointer"
+                  onClick={() => setShowLeadDrawer(false)}
+                />
+              </div>
+
+              {/* Lead Title & Stage Pill Selector */}
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-[#151A1E]">{selectedLead.name}</h2>
+                    <p className="text-xs text-[#5C666E]">
+                      {selectedLead.jobTitle} &bull;{' '}
+                      <span className="font-semibold text-[#151A1E]">{selectedLead.company}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Stage Select */}
+                    <select
+                      value={selectedLead.stage}
+                      onChange={(e) => {
+                        const newStage = e.target.value;
+                        setSelectedLead({ ...selectedLead, stage: newStage });
+                        setLeads(leads.map((l) => (l.id === selectedLead.id ? { ...l, stage: newStage } : l)));
+                      }}
+                      className="px-2.5 py-1 bg-[#E3F1EE] text-[#0B5548] border border-[#B3DCD4] rounded-lg text-xs font-semibold outline-none cursor-pointer"
+                    >
+                      <option>New Lead</option>
+                      <option>Attempted</option>
+                      <option>Contacted</option>
+                      <option>Qualified</option>
+                      <option>Meeting Scheduled</option>
+                      <option>Proposal Sent</option>
+                      <option>Won</option>
+                      <option>Lost</option>
+                    </select>
+
+                    {/* Priority Flag */}
+                    <select
+                      value={selectedLead.priority}
+                      onChange={(e) => {
+                        const newPriority = e.target.value;
+                        setSelectedLead({ ...selectedLead, priority: newPriority });
+                        setLeads(leads.map((l) => (l.id === selectedLead.id ? { ...l, priority: newPriority } : l)));
+                      }}
+                      className="px-2.5 py-1 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold outline-none cursor-pointer"
+                    >
+                      <option value="urgent">🔴 Urgent</option>
+                      <option value="high">🟠 High</option>
+                      <option value="normal">🔵 Normal</option>
+                      <option value="low">⚪ Low</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ClickUp Live Time Tracker Bar */}
+                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-[#0F6B5C]" />
+                    <div>
+                      <div className="text-[11px] text-[#8A939B]">ClickUp Time Logged on Deal</div>
+                      <div className="text-xs font-mono font-bold text-[#151A1E]">
+                        {selectedLead.timeSpent || '1h 30m'}
+                        {activeTimerLeadId === selectedLead.id && (
+                          <span className="text-[#0F6B5C] ml-2 animate-pulse">
+                            +{Math.floor(timerSeconds / 60)}m {timerSeconds % 60}s (Live Tracking)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    {activeTimerLeadId === selectedLead.id ? (
+                      <button
+                        onClick={() => {
+                          setActiveTimerLeadId(null);
+                          alert(`Timer stopped. Logged session saved to database.`);
+                        }}
+                        className="px-3 py-1.5 bg-[#C2362B] hover:bg-[#A8281F] text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Square className="w-3 h-3" />
+                        Stop Timer
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setActiveTimerLeadId(selectedLead.id);
+                          setTimerSeconds(0);
+                        }}
+                        className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Play className="w-3 h-3" />
+                        Start Timer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Deal Key Fields Matrix */}
+              <div className="grid grid-cols-2 gap-3 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-3 text-xs">
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Deal Estimated Value:</span>
+                  <span className="font-mono font-bold text-sm text-[#0F6B5C]">{selectedLead.value}</span>
+                </div>
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Assigned Owner:</span>
+                  <span className="font-semibold text-[#151A1E]">{selectedLead.owner}</span>
+                </div>
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Phone:</span>
+                  <span className="font-mono font-semibold text-[#151A1E]">{selectedLead.phone}</span>
+                </div>
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Email:</span>
+                  <span className="text-[#0F6B5C] truncate block">{selectedLead.email}</span>
+                </div>
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Source Batch:</span>
+                  <span className="text-[#4A535B]">{selectedLead.source}</span>
+                </div>
+                <div>
+                  <span className="text-[#8A939B] block text-[11px]">Next Follow-Up:</span>
+                  <span className="font-semibold text-[#B26A00]">{selectedLead.nextFollowUp}</span>
+                </div>
+              </div>
+
+              {/* CLICKUP SUBTASKS & CHECKLIST SECTION */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 text-[#0F6B5C]" />
+                    <h3 className="font-semibold text-xs text-[#151A1E]">Deal Progression Checklist &amp; Subtasks</h3>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#8A939B]">
+                    {selectedLead.subtasks?.filter((t: any) => t.completed).length || 0} of{' '}
+                    {selectedLead.subtasks?.length || 0} completed
+                  </span>
+                </div>
+
+                {/* Subtasks Progress Bar */}
+                <div className="w-full bg-[#E4E7E1] rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-[#0F6B5C] h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${
+                        selectedLead.subtasks?.length > 0
+                          ? Math.round(
+                              (selectedLead.subtasks.filter((t: any) => t.completed).length /
+                                selectedLead.subtasks.length) *
+                                100
+                            )
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+
+                {/* Checklist items */}
+                <div className="space-y-2">
+                  {selectedLead.subtasks?.map((task: any) => (
+                    <div
+                      key={task.id}
+                      onClick={() => {
+                        const updatedSubtasks = selectedLead.subtasks.map((t: any) =>
+                          t.id === task.id ? { ...t, completed: !t.completed } : t
+                        );
+                        setSelectedLead({ ...selectedLead, subtasks: updatedSubtasks });
+                        setLeads(
+                          leads.map((l) => (l.id === selectedLead.id ? { ...l, subtasks: updatedSubtasks } : l))
+                        );
+                      }}
+                      className="flex items-center gap-2.5 p-2 bg-[#FAFBF9] hover:bg-[#F3F5F1] rounded-lg border border-[#E4E7E1] cursor-pointer transition text-xs"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => {}}
+                        className="rounded border-[#E4E7E1] text-[#0F6B5C] cursor-pointer"
+                      />
+                      <span
+                        className={`flex-1 ${
+                          task.completed ? 'line-through text-[#8A939B]' : 'text-[#151A1E] font-medium'
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Subtask Row */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    placeholder="+ Add next step or qualification subtask..."
+                    className="flex-1 px-3 py-1.5 border border-[#E4E7E1] rounded-lg text-xs outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                        const newTask = {
+                          id: `st-${Date.now()}`,
+                          title: newSubtaskTitle.trim(),
+                          completed: false,
+                        };
+                        const updated = [...(selectedLead.subtasks || []), newTask];
+                        setSelectedLead({ ...selectedLead, subtasks: updated });
+                        setLeads(leads.map((l) => (l.id === selectedLead.id ? { ...l, subtasks: updated } : l)));
+                        setNewSubtaskTitle('');
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newSubtaskTitle.trim()) {
+                        const newTask = {
+                          id: `st-${Date.now()}`,
+                          title: newSubtaskTitle.trim(),
+                          completed: false,
+                        };
+                        const updated = [...(selectedLead.subtasks || []), newTask];
+                        setSelectedLead({ ...selectedLead, subtasks: updated });
+                        setLeads(leads.map((l) => (l.id === selectedLead.id ? { ...l, subtasks: updated } : l)));
+                        setNewSubtaskTitle('');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold text-[#151A1E]"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* CALL & ACTIVITY HISTORY */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-[#0F6B5C]" />
+                    <h3 className="font-semibold text-xs text-[#151A1E]">Calling Logs &amp; Audit Trail</h3>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {selectedLead.callHistory?.map((call: any) => (
+                    <div key={call.id} className="p-3 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-[#0B5548] flex items-center gap-1.5">
+                          <PhoneCall className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                          {call.outcome}
+                        </span>
+                        <span className="text-[11px] text-[#8A939B] font-mono">
+                          Duration: {call.duration} &bull; {call.date}
+                        </span>
+                      </div>
+                      <p className="text-[11.5px] text-[#4A535B]">{call.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Bottom Bar: Quick Action Buttons */}
+            <div className="p-4 bg-[#FAFBF9] border-t border-[#EEF0EC] flex items-center justify-between">
+              <button
+                onClick={() => setShowLeadDrawer(false)}
+                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+              >
+                Close
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveCallLead(selectedLead);
+                    setShowDialerModal(true);
+                    setIsCalling(true);
+                    setCallDuration(0);
+                  }}
+                  className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  Launch One-Click Call
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MASS CALLING SHEET & QUOTA DISTRIBUTOR */}
+      {showAssignSheetModal && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
+          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
+              <span>Assign Mass Calling Sheet to Sales Rep</span>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Select Calling Sheet / Batch</label>
+                <select className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white">
+                  <option>Q4 Enterprise SaaS Outbound Batch A (120 Leads)</option>
+                  <option>West Coast Logistics &amp; Supply Chain (85 Leads)</option>
+                  <option>Healthcare &amp; Medical Practice Leads (60 Leads)</option>
+                  <option>Roofing &amp; Home Services Outbound (200 Leads)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Assign to Sales Representative</label>
+                <select className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white">
+                  {employees
+                    .filter((e) => e.department === 'Sales' || e.role?.includes('Sales') || e.role?.includes('Executive'))
+                    .map((emp) => (
+                      <option key={emp.id} value={emp.name}>
+                        {emp.name} ({emp.code}) &bull; {emp.department}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Daily Calling Target (Quota)</label>
+                  <input
+                    type="number"
+                    defaultValue={40}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Weekly Demo Booking Target</label>
+                  <input
+                    type="number"
+                    defaultValue={5}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#FAFBF9] rounded-lg border border-[#EEF0EC] text-[11px] text-[#5C666E]">
+                💡 Leads in this sheet will immediately synchronize to the rep's desktop workstation with one-click dialer and live quota tracking.
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
+              <button
+                onClick={() => setShowAssignSheetModal(false)}
+                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  alert('Mass Calling Sheet assigned successfully with daily targets.');
+                  setShowAssignSheetModal(false);
+                }}
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
+              >
+                Confirm &amp; Distribute Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ONE-CLICK OUTBOUND CALL DIALER */}
+      {showDialerModal && activeCallLead && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
+          <div className="w-[480px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 bg-[#0F6B5C] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <PhoneCall className="w-4 h-4 animate-bounce" />
+                <span className="font-semibold text-sm">Active Call: {activeCallLead.name}</span>
+              </div>
+              <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-white/20">
+                {Math.floor(callDuration / 60)}:{String(callDuration % 60).padStart(2, '0')}
+              </span>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="flex items-center justify-between bg-[#FAFBF9] p-3 rounded-lg border border-[#E4E7E1]">
+                <div>
+                  <div className="font-semibold text-sm text-[#151A1E]">{activeCallLead.company}</div>
+                  <div className="text-[#8A939B] font-mono">{activeCallLead.phone}</div>
+                </div>
+                <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-[#E3F1EE] text-[#0B5548]">
+                  {activeCallLead.stage}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Call Outcome (Auto-updates Pipeline)</label>
+                <select
+                  value={callOutcome}
+                  onChange={(e) => setCallOutcome(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white font-medium"
+                >
+                  <option>Connected &amp; Interested</option>
+                  <option>Meeting Scheduled</option>
+                  <option>Connected &bull; Follow-Up Requested</option>
+                  <option>Left Voicemail</option>
+                  <option>Busy / No Answer</option>
+                  <option>Gatekeeper Refusal</option>
+                  <option>Wrong Number</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Call Notes &amp; Action Items</label>
+                <textarea
+                  rows={3}
+                  value={callNotes}
+                  onChange={(e) => setCallNotes(e.target.value)}
+                  placeholder="Record key conversation notes, budget discussion, decision maker feedback..."
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-between items-center">
+              <span className="text-[11px] text-[#8A939B]">Counts toward daily rep quota</span>
+              <button
+                onClick={() => {
+                  const newLog = {
+                    id: `c-${Date.now()}`,
+                    outcome: callOutcome,
+                    duration: `${Math.floor(callDuration / 60)}m ${callDuration % 60}s`,
+                    date: 'Just Now',
+                    notes: callNotes || 'Standard call logged.',
+                  };
+                  const updatedLeads = leads.map((l) =>
+                    l.id === activeCallLead.id
+                      ? {
+                          ...l,
+                          lastTouch: 'Just Now',
+                          callHistory: [newLog, ...(l.callHistory || [])],
+                        }
+                      : l
+                  );
+                  setLeads(updatedLeads);
+                  setIsCalling(false);
+                  setShowDialerModal(false);
+                  setCallNotes('');
+                  alert(`Call logged! Rep daily quota progress incremented.`);
+                }}
+                className="px-4 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                End Call &amp; Save Log
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: QUICK ADD LEAD */}
+      {showAddLeadModal && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.4)] flex items-center justify-center z-50 backdrop-blur-xs">
+          <div className="w-[520px] bg-white rounded-[14px] shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#EEF0EC] font-semibold text-sm text-[#151A1E] flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[#0F6B5C]" />
+              <span>Add New Lead / Deal</span>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Contact Name</label>
+                  <input
+                    type="text"
+                    value={newLeadName}
+                    onChange={(e) => setNewLeadName(e.target.value)}
+                    placeholder="e.g. Robert Fox"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Company Name</label>
+                  <input
+                    type="text"
+                    value={newLeadCompany}
+                    onChange={(e) => setNewLeadCompany(e.target.value)}
+                    placeholder="e.g. Apex Global Corp"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={newLeadPhone}
+                    onChange={(e) => setNewLeadPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={newLeadEmail}
+                    onChange={(e) => setNewLeadEmail(e.target.value)}
+                    placeholder="contact@company.com"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Est. Deal Value ($)</label>
+                  <input
+                    type="number"
+                    value={newLeadValue}
+                    onChange={(e) => setNewLeadValue(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Initial Stage</label>
+                  <select
+                    value={newLeadStage}
+                    onChange={(e) => setNewLeadStage(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                  >
+                    <option>New Lead</option>
+                    <option>Contacted</option>
+                    <option>Qualified</option>
+                    <option>Meeting Scheduled</option>
+                    <option>Proposal Sent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Priority</label>
+                  <select
+                    value={newLeadPriority}
+                    onChange={(e) => setNewLeadPriority(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                  >
+                    <option value="urgent">🔴 Urgent</option>
+                    <option value="high">🟠 High</option>
+                    <option value="normal">🔵 Normal</option>
+                    <option value="low">⚪ Low</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#4A535B] mb-1">Assigned Sales Owner</label>
+                <select
+                  value={newLeadOwner}
+                  onChange={(e) => setNewLeadOwner(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name} ({emp.department})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
+              <button
+                onClick={() => setShowAddLeadModal(false)}
+                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newLeadName && newLeadCompany) {
+                    const newRecord = {
+                      id: `LD-${Math.floor(1000 + Math.random() * 9000)}`,
+                      name: newLeadName,
+                      jobTitle: 'Executive',
+                      company: newLeadCompany,
+                      stage: newLeadStage,
+                      priority: newLeadPriority,
+                      value: `$${Number(newLeadValue).toLocaleString()}`,
+                      numericValue: Number(newLeadValue),
+                      owner: newLeadOwner,
+                      email: newLeadEmail || 'lead@company.com',
+                      phone: newLeadPhone || '+1 (555) 000-0000',
+                      industry: 'Commercial Operations',
+                      source: 'Direct Admin Creation',
+                      lastTouch: 'Just Now',
+                      nextFollowUp: 'Tomorrow, 10:00 AM',
+                      tags: ['New Inbound'],
+                      subtasks: [
+                        { id: `st-${Date.now()}-1`, title: 'Initial discovery & qualification', completed: false },
+                        { id: `st-${Date.now()}-2`, title: 'Schedule product demonstration', completed: false },
+                      ],
+                      timeSpent: '0h 00m',
+                      callHistory: [],
+                    };
+                    setLeads([newRecord, ...leads]);
+                    setShowAddLeadModal(false);
+                    setNewLeadName('');
+                    setNewLeadCompany('');
+                    setNewLeadPhone('');
+                    setNewLeadEmail('');
+                    alert(`Lead ${newLeadName} created and added to CRM pipeline!`);
+                  }
+                }}
+                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold"
+              >
+                Create Lead
               </button>
             </div>
           </div>

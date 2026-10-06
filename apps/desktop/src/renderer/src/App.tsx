@@ -13,7 +13,6 @@ import {
   Play,
   Square,
   PhoneCall,
-  Search,
   Shield,
   ShieldAlert,
   AlertCircle,
@@ -27,7 +26,6 @@ import {
   Lock,
   Minus,
   X,
-  Filter,
   Cpu,
   HardDrive,
   MousePointer,
@@ -36,6 +34,12 @@ import {
   Gauge,
   Zap,
   RefreshCw,
+  List,
+  Kanban,
+  Table,
+  Timer,
+  FileSpreadsheet,
+  Flame,
 } from 'lucide-react';
 import { ShiftState, CallOutcome } from '@company-os/contracts';
 import { ApiClient } from './apiClient';
@@ -99,7 +103,15 @@ export default function App() {
   const [correctionPunchOut, setCorrectionPunchOut] = useState<string>('05:30 PM');
   const [correctionReason, setCorrectionReason] = useState<string>('');
 
-  // Live Leads Data
+  // ClickUp Desktop CRM State
+  const [desktopCrmView, setDesktopCrmView] = useState<'list' | 'board' | 'table' | 'targets'>('list');
+  const [desktopActiveTimerId, setDesktopActiveTimerId] = useState<string | null>(null);
+  const [desktopTimerSeconds, setDesktopTimerSeconds] = useState<number>(0);
+  const [desktopNewSubtaskTitle, setDesktopNewSubtaskTitle] = useState<string>('');
+  const [dailyCallsLogged, setDailyCallsLogged] = useState<number>(34);
+  const [dailyCallsTarget] = useState<number>(40);
+
+  // ClickUp Live Leads Data (Assigned to Employee Daniyal Khan)
   const [leads, setLeads] = useState<any[]>([
     {
       id: '00000000-0000-0000-0000-000000000101',
@@ -110,8 +122,19 @@ export default function App() {
       phones: ['+1 (555) 234-8901'],
       stage: 'Qualified',
       value: '$28,000',
+      numericValue: 28000,
+      priority: 'urgent',
       lastContact: 'Today, 2:15 PM',
-      priority: 'High',
+      nextFollowUp: 'Tomorrow, 10:00 AM',
+      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
+      tags: ['Enterprise', 'Hot Deal'],
+      timeSpent: '2h 15m',
+      subtasks: [
+        { id: 'st-1', title: 'Verify budget authority & decision makers', completed: true },
+        { id: 'st-2', title: 'Conduct live platform demonstration', completed: true },
+        { id: 'st-3', title: 'Deliver custom security compliance paperwork', completed: true },
+        { id: 'st-4', title: 'Finalize master services agreement & pricing', completed: false },
+      ],
       notes: 'Interested in 50 workstation deployment. Requested enterprise SLA details.',
     },
     {
@@ -123,11 +146,78 @@ export default function App() {
       phones: ['+1 (555) 872-1140'],
       stage: 'Contacted',
       value: '$45,000',
+      numericValue: 45000,
+      priority: 'high',
       lastContact: 'Yesterday',
-      priority: 'High',
+      nextFollowUp: 'Thursday, 3:00 PM',
+      sheet: 'Healthcare & Medical Practice Leads',
+      tags: ['HIPAA', 'Healthcare'],
+      timeSpent: '1h 05m',
+      subtasks: [
+        { id: 'st-5', title: 'Initial intro call & scope requirement', completed: true },
+        { id: 'st-6', title: 'Send HIPAA BAA documentation', completed: false },
+        { id: 'st-7', title: 'Schedule security architectural review', completed: false },
+      ],
       notes: 'HIPAA compliance audit in progress. Callback scheduled.',
     },
+    {
+      id: '00000000-0000-0000-0000-000000000103',
+      name: 'Elena Rostova',
+      companyName: 'Vanguard FinTech Global',
+      jobTitle: 'Head of People & Ops',
+      email: 'elena@vanguardfin.io',
+      phones: ['+1 (555) 349-1122'],
+      stage: 'Meeting Scheduled',
+      value: '$72,000',
+      numericValue: 72000,
+      priority: 'urgent',
+      lastContact: 'Today, 9:30 AM',
+      nextFollowUp: 'Oct 8, 2:00 PM',
+      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
+      tags: ['SaaS', 'High Value'],
+      timeSpent: '3h 40m',
+      subtasks: [
+        { id: 'st-8', title: 'Review workstation tracking specs', completed: true },
+        { id: 'st-9', title: 'Executive demo with VP HR', completed: false },
+      ],
+      notes: 'Scheduled executive demo for 150 workstation rollout.',
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000104',
+      name: 'Rachel Adams',
+      companyName: 'CloudMatrix Security',
+      jobTitle: 'Director of Security Operations',
+      email: 'radams@cloudmatrix.com',
+      phones: ['+1 (555) 777-9988'],
+      stage: 'Won',
+      value: '$54,000',
+      numericValue: 54000,
+      priority: 'high',
+      lastContact: 'Today, 10:00 AM',
+      nextFollowUp: 'Completed',
+      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
+      tags: ['Closed Won'],
+      timeSpent: '8h 20m',
+      subtasks: [
+        { id: 'st-13', title: 'Contract signed via DocuSign', completed: true },
+        { id: 'st-14', title: 'Workstation agent deployment initiated', completed: true },
+      ],
+      notes: 'Deal closed! Kickoff scheduled for next Monday.',
+    },
   ]);
+
+  // Desktop ClickUp Timer Hook
+  useEffect(() => {
+    let interval: any = null;
+    if (desktopActiveTimerId) {
+      interval = setInterval(() => {
+        setDesktopTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [desktopActiveTimerId]);
 
   // Live Tasks Data
   const [tasks, setTasks] = useState<any[]>([
@@ -1151,78 +1241,464 @@ export default function App() {
               </div>
             )}
 
-            {/* SCREEN D12 & D13: CRM LEADS & DETAIL */}
+            {/* SCREEN D12 & D13: CLICKUP DESKTOP CRM SUITE */}
             {currentScreen === 'D12-crm-leads' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs text-[#8A939B] w-64">
-                      <Search className="w-3.5 h-3.5" />
-                      <input
-                        type="text"
-                        placeholder="Search lead name or company..."
-                        className="w-full outline-none text-xs text-[#151A1E]"
-                      />
+                {/* ClickUp Desktop View Switcher & Action Bar */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 p-1 bg-[#F5F6F3] rounded-lg border border-[#E4E7E1]">
+                      <button
+                        onClick={() => setDesktopCrmView('list')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                          desktopCrmView === 'list'
+                            ? 'bg-white text-[#0B5548] shadow-xs'
+                            : 'text-[#5C666E] hover:text-[#151A1E]'
+                        }`}
+                      >
+                        <List className="w-3.5 h-3.5" />
+                        <span>List View</span>
+                      </button>
+                      <button
+                        onClick={() => setDesktopCrmView('board')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                          desktopCrmView === 'board'
+                            ? 'bg-white text-[#0B5548] shadow-xs'
+                            : 'text-[#5C666E] hover:text-[#151A1E]'
+                        }`}
+                      >
+                        <Kanban className="w-3.5 h-3.5" />
+                        <span>Board (Kanban)</span>
+                      </button>
+                      <button
+                        onClick={() => setDesktopCrmView('table')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                          desktopCrmView === 'table'
+                            ? 'bg-white text-[#0B5548] shadow-xs'
+                            : 'text-[#5C666E] hover:text-[#151A1E]'
+                        }`}
+                      >
+                        <Table className="w-3.5 h-3.5" />
+                        <span>Calling Sheet</span>
+                      </button>
+                      <button
+                        onClick={() => setDesktopCrmView('targets')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
+                          desktopCrmView === 'targets'
+                            ? 'bg-white text-[#0B5548] shadow-xs'
+                            : 'text-[#5C666E] hover:text-[#151A1E]'
+                        }`}
+                      >
+                        <Target className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                        <span>My Quotas ({dailyCallsLogged}/{dailyCallsTarget})</span>
+                      </button>
                     </div>
-                    <span className="px-2.5 py-1 bg-white border border-[#E4E7E1] rounded-lg text-xs font-medium text-[#4A535B] flex items-center gap-1.5">
-                      <Filter className="w-3 h-3" />
-                      Stage: All Stages
-                    </span>
+                  </div>
+
+                  {/* Daily Target Fast Metric Strip */}
+                  <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2 bg-[#FAFBF9] px-3 py-1 rounded-lg border border-[#E4E7E1] text-xs">
+                      <Flame className="w-3.5 h-3.5 text-[#EA580C]" />
+                      <span className="text-[#5C666E]">Daily Quota:</span>
+                      <span className="font-mono font-bold text-[#0F6B5C]">
+                        {dailyCallsLogged} / {dailyCallsTarget} Calls
+                      </span>
+                      <div className="w-16 bg-[#E4E7E1] rounded-full h-1.5 overflow-hidden ml-1">
+                        <div
+                          className="bg-[#0F6B5C] h-full rounded-full"
+                          style={{ width: `${Math.min(100, Math.round((dailyCallsLogged / dailyCallsTarget) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-4">
-                  {/* Leads Table (8 cols) */}
-                  <div className="col-span-8 bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
+                {/* VIEW: LIST VIEW */}
+                {desktopCrmView === 'list' && (
+                  <div className="grid grid-cols-12 gap-4">
+                    {/* Leads List by Stages (8 cols) */}
+                    <div className="col-span-8 space-y-3">
+                      {['Qualified', 'Contacted', 'Meeting Scheduled', 'Won'].map((stageName) => {
+                        const stageLeads = leads.filter((l) => l.stage === stageName);
+                        if (stageLeads.length === 0) return null;
+
+                        return (
+                          <div
+                            key={stageName}
+                            className="bg-white border border-[#E4E7E1] rounded-[10px] shadow-xs overflow-hidden"
+                          >
+                            <div className="px-3.5 py-2 bg-[#FAFBF9] border-b border-[#E4E7E1] flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-[#151A1E]">{stageName}</span>
+                                <span className="font-mono text-[10.5px] px-1.5 py-0.2 rounded-full bg-white border border-[#E4E7E1] text-[#5C666E]">
+                                  {stageLeads.length}
+                                </span>
+                              </div>
+                              <span className="text-xs font-mono font-bold text-[#0F6B5C]">
+                                ${stageLeads.reduce((acc, l) => acc + (l.numericValue || 0), 0).toLocaleString()}
+                              </span>
+                            </div>
+
+                            <div className="divide-y divide-[#EEF0EC]">
+                              {stageLeads.map((lead) => {
+                                const completedTasks = lead.subtasks?.filter((t: any) => t.completed).length || 0;
+                                const totalTasks = lead.subtasks?.length || 0;
+
+                                return (
+                                  <div
+                                    key={lead.id}
+                                    onClick={() => setSelectedLead(lead)}
+                                    className={`p-3 cursor-pointer transition flex items-center justify-between gap-3 ${
+                                      selectedLead?.id === lead.id ? 'bg-[#E3F1EE]' : 'hover:bg-[#FAFBF9]'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-[200px]">
+                                      <div
+                                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                          lead.priority === 'urgent'
+                                            ? 'bg-[#EF4444]'
+                                            : lead.priority === 'high'
+                                            ? 'bg-[#F97316]'
+                                            : 'bg-[#3B82F6]'
+                                        }`}
+                                      />
+                                      <div>
+                                        <div className="font-semibold text-xs text-[#151A1E] flex items-center gap-1.5">
+                                          <span>{lead.name}</span>
+                                          {lead.tags?.map((t: string) => (
+                                            <span
+                                              key={t}
+                                              className="px-1.5 py-0.2 rounded bg-[#F0F2EE] text-[#5C666E] text-[9.5px]"
+                                            >
+                                              {t}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        <div className="text-[11px] text-[#8A939B]">
+                                          {lead.jobTitle} &bull; <span className="text-[#4A535B]">{lead.companyName}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Subtasks pill */}
+                                    <div className="flex items-center gap-1.5 text-[10.5px] text-[#5C666E]">
+                                      <CheckSquare className="w-3 h-3 text-[#0F6B5C]" />
+                                      <span>
+                                        {completedTasks}/{totalTasks}
+                                      </span>
+                                    </div>
+
+                                    {/* Value */}
+                                    <div className="font-mono font-bold text-xs text-[#0F6B5C]">{lead.value}</div>
+
+                                    {/* Call Button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedLead(lead);
+                                        setShowLogCallModal(true);
+                                      }}
+                                      className="px-2.5 py-1 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#0F6B5C] rounded-md font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
+                                    >
+                                      <PhoneCall className="w-3 h-3" />
+                                      Call
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Lead Detail Drawer / Card (4 cols) (D13) */}
+                    <div className="col-span-4 bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-sm space-y-4">
+                      {selectedLead ? (
+                        <>
+                          <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-3">
+                            <div>
+                              <h3 className="font-semibold text-sm text-[#151A1E]">{selectedLead.name}</h3>
+                              <p className="text-xs text-[#8A939B]">
+                                {selectedLead.jobTitle} &bull; {selectedLead.companyName}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10.5px] font-bold uppercase ${
+                                selectedLead.priority === 'urgent'
+                                  ? 'bg-[#FEE2E2] text-[#DC2626]'
+                                  : 'bg-[#FFEDD5] text-[#EA580C]'
+                              }`}
+                            >
+                              {selectedLead.priority}
+                            </span>
+                          </div>
+
+                          {/* ClickUp Desktop Live Timer Widget */}
+                          <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-[#0F6B5C]" />
+                              <div>
+                                <div className="text-[10.5px] text-[#8A939B]">Time Logged on Deal</div>
+                                <div className="text-xs font-mono font-bold text-[#151A1E]">
+                                  {selectedLead.timeSpent || '1h 00m'}
+                                  {desktopActiveTimerId === selectedLead.id && (
+                                    <span className="text-[#0F6B5C] ml-1.5 animate-pulse">
+                                      +{Math.floor(desktopTimerSeconds / 60)}m {desktopTimerSeconds % 60}s
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              {desktopActiveTimerId === selectedLead.id ? (
+                                <button
+                                  onClick={() => {
+                                    setDesktopActiveTimerId(null);
+                                    alert('Time logged to task.');
+                                  }}
+                                  className="px-2.5 py-1 bg-[#C2362B] text-white rounded text-xs font-semibold flex items-center gap-1"
+                                >
+                                  <Square className="w-3 h-3" />
+                                  Stop
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setDesktopActiveTimerId(selectedLead.id);
+                                    setDesktopTimerSeconds(0);
+                                  }}
+                                  className="px-2.5 py-1 bg-[#0F6B5C] text-white rounded text-xs font-semibold flex items-center gap-1"
+                                >
+                                  <Play className="w-3 h-3" />
+                                  Timer
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Contact Info */}
+                          <div className="space-y-1.5 text-xs bg-[#FAFBF9] p-3 rounded-lg border border-[#EEF0EC]">
+                            <div className="flex justify-between">
+                              <span className="text-[#8A939B]">Phone:</span>
+                              <span className="font-mono text-[#151A1E] font-semibold">
+                                {selectedLead.phones?.[0] || '+1 555-234-8901'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[#8A939B]">Email:</span>
+                              <span className="text-[#0F6B5C]">{selectedLead.email}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[#8A939B]">Deal Stage:</span>
+                              <span className="font-semibold text-[#151A1E]">{selectedLead.stage}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[#8A939B]">Est. Value:</span>
+                              <span className="font-mono font-bold text-[#1E8E5A]">{selectedLead.value}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[#8A939B]">Assigned Sheet:</span>
+                              <span className="text-[#4A535B] truncate max-w-[150px]">{selectedLead.sheet}</span>
+                            </div>
+                          </div>
+
+                          {/* CLICKUP SUBTASKS & CHECKLIST */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 font-semibold text-xs text-[#151A1E]">
+                                <CheckSquare className="w-3.5 h-3.5 text-[#0F6B5C]" />
+                                <span>Subtasks Checklist</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-[#8A939B]">
+                                {selectedLead.subtasks?.filter((t: any) => t.completed).length || 0}/
+                                {selectedLead.subtasks?.length || 0}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                              {selectedLead.subtasks?.map((task: any) => (
+                                <div
+                                  key={task.id}
+                                  onClick={() => {
+                                    const updated = selectedLead.subtasks.map((t: any) =>
+                                      t.id === task.id ? { ...t, completed: !t.completed } : t
+                                    );
+                                    setSelectedLead({ ...selectedLead, subtasks: updated });
+                                    setLeads(
+                                      leads.map((l) => (l.id === selectedLead.id ? { ...l, subtasks: updated } : l))
+                                    );
+                                  }}
+                                  className="flex items-center gap-2 p-1.5 bg-[#FAFBF9] rounded border border-[#E4E7E1] text-[11px] cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={task.completed}
+                                    onChange={() => {}}
+                                    className="rounded border-[#E4E7E1] text-[#0F6B5C]"
+                                  />
+                                  <span
+                                    className={`flex-1 ${
+                                      task.completed ? 'line-through text-[#8A939B]' : 'text-[#151A1E]'
+                                    }`}
+                                  >
+                                    {task.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Add subtask */}
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <input
+                                type="text"
+                                value={desktopNewSubtaskTitle}
+                                onChange={(e) => setDesktopNewSubtaskTitle(e.target.value)}
+                                placeholder="+ Add qualification step..."
+                                className="flex-1 px-2.5 py-1 border border-[#E4E7E1] rounded text-[11px] outline-none"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && desktopNewSubtaskTitle.trim()) {
+                                    const newTask = {
+                                      id: `st-${Date.now()}`,
+                                      title: desktopNewSubtaskTitle.trim(),
+                                      completed: false,
+                                    };
+                                    const updated = [...(selectedLead.subtasks || []), newTask];
+                                    setSelectedLead({ ...selectedLead, subtasks: updated });
+                                    setLeads(
+                                      leads.map((l) => (l.id === selectedLead.id ? { ...l, subtasks: updated } : l))
+                                    );
+                                    setDesktopNewSubtaskTitle('');
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                            <button
+                              onClick={() => {
+                                setShowLogCallModal(true);
+                              }}
+                              className="py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                            >
+                              <PhoneCall className="w-3.5 h-3.5" />
+                              Log Call (D14)
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEmailTo(selectedLead.email);
+                                setEmailSubject(`Follow up with ${selectedLead.companyName}`);
+                                setShowComposeModal(true);
+                              }}
+                              className="py-2 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              Send Email
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-12 text-xs text-[#8A939B]">
+                          <Users className="w-8 h-8 text-[#8A939B] mx-auto mb-2 opacity-50" />
+                          Select a lead from the list to view full profile &amp; activity timeline
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* VIEW: KANBAN BOARD */}
+                {desktopCrmView === 'board' && (
+                  <div className="grid grid-cols-4 gap-3.5">
+                    {['Qualified', 'Contacted', 'Meeting Scheduled', 'Won'].map((stage) => {
+                      const stageLeads = leads.filter((l) => l.stage === stage);
+                      return (
+                        <div key={stage} className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3 space-y-2.5">
+                          <div className="flex items-center justify-between font-semibold text-xs text-[#151A1E]">
+                            <span>{stage}</span>
+                            <span className="font-mono text-[10.5px] px-1.5 py-0.2 rounded-full bg-white border border-[#E4E7E1]">
+                              {stageLeads.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {stageLeads.map((l) => (
+                              <div
+                                key={l.id}
+                                onClick={() => setSelectedLead(l)}
+                                className="bg-white border border-[#E4E7E1] hover:border-[#0F6B5C] rounded-lg p-3 shadow-xs space-y-2 cursor-pointer transition"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-xs text-[#151A1E]">{l.name}</span>
+                                  <span className="font-mono font-bold text-xs text-[#0F6B5C]">{l.value}</span>
+                                </div>
+                                <div className="text-[11px] text-[#8A939B]">{l.companyName}</div>
+                                <div className="flex items-center justify-between border-t border-[#EEF0EC] pt-2 text-[10.5px]">
+                                  <span className="font-mono text-[#5C666E]">{l.phones?.[0]}</span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedLead(l);
+                                      setShowLogCallModal(true);
+                                    }}
+                                    className="p-1 hover:bg-[#E3F1EE] rounded text-[#0F6B5C]"
+                                  >
+                                    <PhoneCall className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* VIEW: TABLE / CALLING SHEET */}
+                {desktopCrmView === 'table' && (
+                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] overflow-hidden shadow-xs">
+                    <div className="px-4 py-3 border-b border-[#EEF0EC] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-[#0F6B5C]" />
+                        <span className="font-semibold text-xs text-[#151A1E]">
+                          Assigned Calling Sheet: Q4 Enterprise SaaS Outbound Batch A
+                        </span>
+                      </div>
+                    </div>
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
                           <th className="py-2.5 px-4">Contact</th>
                           <th className="py-2.5 px-4">Company</th>
+                          <th className="py-2.5 px-4">Phone Number</th>
                           <th className="py-2.5 px-4">Stage</th>
-                          <th className="py-2.5 px-4">Est. Value</th>
-                          <th className="py-2.5 px-4 text-right">Actions</th>
+                          <th className="py-2.5 px-4">Deal Value</th>
+                          <th className="py-2.5 px-4 text-right">Instant Call</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#EEF0EC]">
-                        {leads.map((lead) => (
-                          <tr
-                            key={lead.id}
-                            onClick={() => setSelectedLead(lead)}
-                            className={`cursor-pointer transition ${
-                              selectedLead?.id === lead.id ? 'bg-[#E3F1EE]' : 'hover:bg-[#FAFBF9]'
-                            }`}
-                          >
+                        {leads.map((l) => (
+                          <tr key={l.id} className="hover:bg-[#FAFBF9]">
+                            <td className="py-3 px-4 font-semibold text-[#151A1E]">{l.name}</td>
+                            <td className="py-3 px-4 text-[#4A535B]">{l.companyName}</td>
+                            <td className="py-3 px-4 font-mono font-bold text-[#151A1E]">{l.phones?.[0]}</td>
                             <td className="py-3 px-4">
-                              <div className="font-semibold text-[#151A1E]">{lead.name}</div>
-                              <div className="text-[11px] text-[#8A939B]">{lead.jobTitle}</div>
-                            </td>
-                            <td className="py-3 px-4 text-[#4A535B]">{lead.companyName}</td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
-                                  lead.stage === 'Qualified'
-                                    ? 'bg-[#E4F4EB] text-[#14673F]'
-                                    : lead.stage === 'Proposal Sent'
-                                    ? 'bg-[#E6EDFB] text-[#1C469B]'
-                                    : 'bg-[#FCF0DA] text-[#8A5200]'
-                                }`}
-                              >
-                                {lead.stage}
+                              <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E3F1EE] text-[#0B5548]">
+                                {l.stage}
                               </span>
                             </td>
-                            <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{lead.value}</td>
+                            <td className="py-3 px-4 font-mono font-bold text-[#0F6B5C]">{l.value}</td>
                             <td className="py-3 px-4 text-right">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedLead(lead);
+                                onClick={() => {
+                                  setSelectedLead(l);
                                   setShowLogCallModal(true);
                                 }}
-                                className="px-2 py-1 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#0F6B5C] rounded-md font-semibold text-[11px] inline-flex items-center gap-1 shadow-sm"
+                                className="px-3 py-1 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1 shadow-xs"
                               >
                                 <PhoneCall className="w-3 h-3" />
-                                Call (D14)
+                                Call Now
                               </button>
                             </td>
                           </tr>
@@ -1230,66 +1706,34 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
+                )}
 
-                  {/* Lead Detail Drawer / Card (4 cols) (D13) */}
-                  <div className="col-span-4 bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
-                    {selectedLead ? (
-                      <>
-                        <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-3">
-                          <div>
-                            <h3 className="font-semibold text-sm text-[#151A1E]">{selectedLead.name}</h3>
-                            <p className="text-xs text-[#8A939B]">{selectedLead.jobTitle} &bull; {selectedLead.companyName}</p>
-                          </div>
+                {/* VIEW: MY DAILY TARGETS & QUOTAS */}
+                {desktopCrmView === 'targets' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3.5">
+                      <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-xs">
+                        <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged Today</div>
+                        <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
+                          {dailyCallsLogged} / {dailyCallsTarget}
                         </div>
-
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-[#8A939B]">Phone:</span>
-                            <span className="font-mono text-[#151A1E] font-semibold">{selectedLead.phones?.[0] || '+1 555-234-8901'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#8A939B]">Email:</span>
-                            <span className="text-[#0F6B5C]">{selectedLead.email}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#8A939B]">Deal Stage:</span>
-                            <span className="font-semibold text-[#151A1E]">{selectedLead.stage}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#8A939B]">Est. Value:</span>
-                            <span className="font-mono font-bold text-[#1E8E5A]">{selectedLead.value}</span>
-                          </div>
+                        <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
+                          {Math.round((dailyCallsLogged / dailyCallsTarget) * 100)}% of Daily Target
                         </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2">
-                          <button
-                            onClick={() => setShowLogCallModal(true)}
-                            className="py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
-                          >
-                            <PhoneCall className="w-3.5 h-3.5" />
-                            Log Call
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEmailTo(selectedLead.email);
-                              setEmailSubject(`Follow up with ${selectedLead.companyName}`);
-                              setShowComposeModal(true);
-                            }}
-                            className="py-2 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            Send Email
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-12 text-xs text-[#8A939B]">
-                        <Users className="w-8 h-8 text-[#8A939B] mx-auto mb-2 opacity-50" />
-                        Select a lead from the list to view full profile &amp; activity timeline
                       </div>
-                    )}
+                      <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-xs">
+                        <div className="text-[11.5px] font-medium text-[#8A939B]">Talk Time Logged</div>
+                        <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">2h 15m</div>
+                        <div className="text-[11.5px] text-[#4A535B] mt-0.5">8 calls connected</div>
+                      </div>
+                      <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-xs">
+                        <div className="text-[11.5px] font-medium text-[#8A939B]">Demos Booked Today</div>
+                        <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">2 Deals</div>
+                        <div className="text-[11.5px] text-[#8A5200] font-semibold mt-0.5">Target: 2/day (Achieved)</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -2019,7 +2463,19 @@ export default function App() {
                       notes: callNotes,
                     });
                   } catch (e) {}
-                  alert(`Live call logged to PostgreSQL for ${selectedLead.name} (${callOutcome})`);
+                  setDailyCallsLogged((prev) => prev + 1);
+                  setLeads(
+                    leads.map((l) =>
+                      l.id === selectedLead.id
+                        ? {
+                            ...l,
+                            lastContact: 'Just Now',
+                            notes: callNotes ? `${callNotes} (${callOutcome})` : l.notes,
+                          }
+                        : l
+                    )
+                  );
+                  alert(`Live call logged to PostgreSQL for ${selectedLead.name} (${callOutcome}). Daily quota progress updated!`);
                   setShowLogCallModal(false);
                   setCallNotes('');
                 }}
