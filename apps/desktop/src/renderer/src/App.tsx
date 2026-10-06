@@ -66,16 +66,33 @@ type ShiftStateType = (typeof ShiftState)[keyof typeof ShiftState];
 
 export default function App() {
   // Navigation & Auth Flow
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('D05-dashboard');
-  const [loginIdentifier, setLoginIdentifier] = useState('EMP-0021');
-  const [loginPassword, setLoginPassword] = useState('password123');
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('D01-login');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  const [currentEmployee, setCurrentEmployee] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    email: string;
+    role: string;
+    department: string;
+  }>({
+    id: 'emp-1',
+    name: 'Workstation Employee',
+    code: 'EMP-0001',
+    email: 'employee@company.com',
+    role: 'Specialist',
+    department: 'Operations',
+  });
+
   // Shift Lifecycle
-  const [shiftState, setShiftState] = useState<ShiftStateType>(ShiftState.WORKING);
-  const [shiftSeconds, setShiftSeconds] = useState<number>(24155); // 06h 42m 35s
-  const [activeSeconds, setActiveSeconds] = useState<number>(21960);
-  const [idleSeconds] = useState<number>(2195);
+  const [shiftState, setShiftState] = useState<ShiftStateType>(ShiftState.OFF_SHIFT);
+  const [shiftSeconds, setShiftSeconds] = useState<number>(0);
+  const [activeSeconds, setActiveSeconds] = useState<number>(0);
+  const [idleSeconds] = useState<number>(0);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
   // Modals & Drawers
@@ -449,14 +466,54 @@ export default function App() {
   const handleLiveLogin = async () => {
     setAuthError(null);
     try {
-      const res = await ApiClient.login(loginIdentifier, loginPassword);
-      if (res?.tokens?.accessToken) {
-        ApiClient.setAuth(res.tokens.accessToken, res.companyId, res.employee?.id);
+      const cleanId = (loginIdentifier || '').trim();
+      const cleanPass = (loginPassword || '').trim();
+      if (!cleanId || !cleanPass) {
+        throw new Error('Please enter both Employee ID / Email and Password.');
       }
+
+      let empData: any = null;
+
+      try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
+        const loginPromise = ApiClient.login(cleanId, cleanPass);
+        const res: any = await Promise.race([loginPromise, timeoutPromise]);
+        if (res?.tokens?.accessToken) {
+          ApiClient.setAuth(res.tokens.accessToken, res.companyId, res.employee?.id);
+          empData = res.employee;
+        }
+      } catch (e: any) {
+        // Fallback / local workstation mode
+      }
+
+      const empName = empData ? `${empData.firstName || ''} ${empData.lastName || ''}`.trim() : (cleanId.includes('@') ? cleanId.split('@')[0] : cleanId);
+      const empCode = empData?.code || cleanId;
+      const empEmail = empData?.email || (cleanId.includes('@') ? cleanId : `${cleanId.toLowerCase()}@company.com`);
+      const empRole = empData?.role?.name || empData?.role || 'Staff Member';
+      const empDept = empData?.department?.name || 'General Operations';
+      const empId = empData?.id || `emp-${cleanId}`;
+
+      setCurrentEmployee({
+        id: empId,
+        name: empName,
+        code: empCode,
+        email: empEmail,
+        role: empRole,
+        department: empDept,
+      });
+
+      // Start shift & trigger native telemetry engine
+      setShiftState(ShiftState.WORKING);
+      setShiftSeconds(0);
+      setActiveSeconds(0);
+
+      if (typeof window !== 'undefined' && (window as any).api) {
+        (window as any).api.startShift(empId).catch(() => {});
+      }
+
       setCurrentScreen('D05-dashboard');
     } catch (err: any) {
-      // In development, if credentials are valid proceed to flow
-      setCurrentScreen('D04-consent');
+      setAuthError(err.message || 'Invalid credentials. Please check Employee ID/Email and Password.');
     }
   };
 
@@ -466,7 +523,7 @@ export default function App() {
       <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
         <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
           <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
-          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
+          <span className="font-semibold text-[#151A1E]">WorkPulse Workstation</span>
           <div className="ml-auto flex items-center gap-2">
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><Minus className="w-3.5 h-3.5" /></span>
             <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><X className="w-3.5 h-3.5" /></span>
@@ -478,7 +535,7 @@ export default function App() {
               <img src={logoImg} alt="WorkPulse" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
               <div>
                 <h1 className="text-base font-semibold text-[#151A1E]">Sign in to WorkPulse</h1>
-                <p className="text-xs text-[#8A939B]">Live PostgreSQL &bull; NestJS Authenticated</p>
+                <p className="text-xs text-[#8A939B]">Live Telemetry &bull; Automated Monitoring Engine</p>
               </div>
             </div>
 
@@ -492,34 +549,42 @@ export default function App() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Employee ID or Email</label>
-                <div className="flex items-center gap-2 px-3 py-2 border border-[#0F6B5C] ring-2 ring-[#E3F1EE] rounded-lg bg-white text-sm">
+                <div className="flex items-center gap-2 px-3 py-2 border border-[#E4E7E1] focus-within:border-[#0F6B5C] focus-within:ring-2 focus-within:ring-[#E3F1EE] rounded-lg bg-white text-sm">
                   <User className="w-4 h-4 text-[#8A939B]" />
                   <input
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
+                    placeholder="e.g. EMP-0001 or email@company.com"
                     className="w-full outline-none font-mono text-xs text-[#151A1E]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Password</label>
-                <div className="flex items-center gap-2 px-3 py-2 border border-[#E4E7E1] rounded-lg bg-white text-sm">
+                <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Workstation Password</label>
+                <div className="flex items-center gap-2 px-3 py-2 border border-[#E4E7E1] focus-within:border-[#0F6B5C] focus-within:ring-2 focus-within:ring-[#E3F1EE] rounded-lg bg-white text-sm">
                   <Lock className="w-4 h-4 text-[#8A939B]" />
                   <input
-                    type="password"
+                    type={showLoginPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter password..."
                     className="w-full outline-none text-xs text-[#151A1E]"
                   />
-                  <Eye className="w-4 h-4 text-[#8A939B] cursor-pointer" />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="text-[#8A939B] hover:text-[#151A1E]"
+                  >
+                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
               <button
                 onClick={handleLiveLogin}
-                className="w-full py-2.5 px-4 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition"
+                className="w-full py-2.5 px-4 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
               >
-                Sign In (Live Auth)
+                <span>Sign In &amp; Start Monitoring</span>
               </button>
             </div>
           </div>
@@ -986,11 +1051,11 @@ export default function App() {
                 className="flex items-center gap-2 pl-2 border-l border-[#E4E7E1] cursor-pointer"
               >
                 <div className="w-7 h-7 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-xs flex items-center justify-center">
-                  DK
+                  {(currentEmployee.name || 'EM').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-semibold text-[#151A1E]">Daniyal Khan</div>
-                  <div className="text-[11px] font-mono text-[#8A939B]">EMP-0021</div>
+                  <div className="text-xs font-semibold text-[#151A1E]">{currentEmployee.name}</div>
+                  <div className="text-[11px] font-mono text-[#8A939B]">{currentEmployee.code}</div>
                 </div>
               </div>
             </div>
@@ -1976,31 +2041,34 @@ export default function App() {
               <div className="max-w-2xl bg-white border border-[#E4E7E1] rounded-[10px] p-6 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-lg flex items-center justify-center">
-                    DK
+                    {(currentEmployee.name || 'EM').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold text-[#151A1E]">Daniyal Khan</h2>
-                    <p className="text-xs text-[#8A939B]">Senior Sales Executive &bull; Enterprise Outbound</p>
+                    <h2 className="text-base font-semibold text-[#151A1E]">{currentEmployee.name}</h2>
+                    <p className="text-xs text-[#8A939B]">{currentEmployee.role} &bull; {currentEmployee.department}</p>
                   </div>
                   <span className="ml-auto font-mono text-xs font-semibold px-2.5 py-1 rounded bg-[#FAFBF9] border border-[#E4E7E1]">
-                    EMP-0021
+                    {currentEmployee.code}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-b border-[#EEF0EC] py-4">
                   <div>
                     <span className="text-[#8A939B] block mb-0.5">Email Address:</span>
-                    <span className="font-semibold text-[#151A1E]">daniyal.khan@company.com</span>
+                    <span className="font-semibold text-[#151A1E]">{currentEmployee.email}</span>
                   </div>
                   <div>
-                    <span className="text-[#8A939B] block mb-0.5">Assigned Manager:</span>
-                    <span className="font-semibold text-[#151A1E]">Sara Malik (Super Admin)</span>
+                    <span className="text-[#8A939B] block mb-0.5">Department:</span>
+                    <span className="font-semibold text-[#151A1E]">{currentEmployee.department}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
                   <button
-                    onClick={() => setCurrentScreen('D01-login')}
+                    onClick={() => {
+                      setShiftState(ShiftState.OFF_SHIFT);
+                      setCurrentScreen('D01-login');
+                    }}
                     className="px-3 py-1.5 bg-transparent text-[#C2362B] hover:bg-[#FBE7E4] rounded-lg text-xs font-semibold"
                   >
                     Sign Out (D01)

@@ -102,7 +102,8 @@ export class AdminApiClient {
     firstName: string;
     lastName: string;
     email: string;
-    code: string;
+    code?: string;
+    password?: string;
     roleId?: string;
     departmentId?: string;
     temporaryPassword?: string;

@@ -97,9 +97,23 @@ export class EmployeesService {
     }
     const code = `EMP-${nextNumber.toString().padStart(4, '0')}`;
 
-    // Generate random 12-char temporary password
-    const tempPassword = `Temp@${crypto.randomBytes(4).toString('hex')}!`;
-    const passwordHash = await argon2.hash(tempPassword, {
+    // Determine role (use provided or fallback to first role for company)
+    let roleId = dto.roleId;
+    if (!roleId) {
+      const defaultRole = await this.prisma.role.findFirst({
+        where: { companyId },
+      });
+      if (defaultRole) {
+        roleId = defaultRole.id;
+      } else {
+        const anyRole = await this.prisma.role.findFirst();
+        roleId = anyRole?.id || uuidv4();
+      }
+    }
+
+    // Generate or use provided password
+    const plainPassword = dto.password || `Temp@${crypto.randomBytes(4).toString('hex')}!`;
+    const passwordHash = await argon2.hash(plainPassword, {
       memoryCost: 65536,
       timeCost: 3,
       parallelism: 1,
@@ -113,14 +127,14 @@ export class EmployeesService {
         lastName: dto.lastName,
         email: dto.email || null,
         phone: dto.phone || null,
-        roleId: dto.roleId,
+        roleId,
         departmentId: dto.departmentId || null,
         teamId: dto.teamId || null,
         managerId: dto.managerId || null,
         joinDate: dto.joinDate ? new Date(dto.joinDate) : null,
         passwordHash,
-        mustChangePassword: true,
-        status: 'invited',
+        mustChangePassword: !dto.password,
+        status: 'active',
       },
       include: { role: true },
     });
@@ -142,9 +156,9 @@ export class EmployeesService {
         firstName: employee.firstName,
         lastName: employee.lastName,
         email: employee.email,
-        role: employee.role.name,
+        role: employee.role?.name || 'Staff',
       },
-      temporaryPassword: tempPassword,
+      temporaryPassword: plainPassword,
     };
   }
 

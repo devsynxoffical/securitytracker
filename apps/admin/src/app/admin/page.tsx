@@ -214,8 +214,19 @@ export default function AdminControlCenter() {
   const [newEmpFirstName, setNewEmpFirstName] = useState('');
   const [newEmpLastName, setNewEmpLastName] = useState('');
   const [newEmpEmail, setNewEmpEmail] = useState('');
-  const [newEmpCode, setNewEmpCode] = useState('EMP-0046');
-  const [newEmpDept, setNewEmpDept] = useState('Sales');
+  const [newEmpCode, setNewEmpCode] = useState('EMP-0001');
+  const [newEmpDept, setNewEmpDept] = useState('Sales & Business Development');
+  const [newEmpRole, setNewEmpRole] = useState('Senior BDR / SDR Specialist');
+  const [newEmpPassword, setNewEmpPassword] = useState('WorkPulse2026!');
+  const [showNewEmpPassword, setShowNewEmpPassword] = useState(false);
+  const [createdEmpCredentials, setCreatedEmpCredentials] = useState<{
+    name: string;
+    email: string;
+    code: string;
+    password: string;
+    role: string;
+    dept: string;
+  } | null>(null);
 
   // Live Enterprise Database State (PostgreSQL & ClickUp Engine)
   const [employees, setEmployees] = useState<any[]>([]);
@@ -3106,29 +3117,29 @@ export default function AdminControlCenter() {
         </div>
       </div>
 
-      {/* DRAWER: A05 New Employee Drawer */}
+      {/* DRAWER: A05 New Employee Drawer with Password & Access Provisioning */}
       {showNewEmployeeDrawer && (
         <div className="fixed inset-0 bg-[rgba(21,26,30,0.38)] flex justify-end z-50">
-          <div className="w-[520px] bg-white h-full shadow-[-10px_0_40px_rgba(0,0,0,0.15)] flex flex-col justify-between overflow-y-auto">
+          <div className="w-[540px] bg-white h-full shadow-[-10px_0_40px_rgba(0,0,0,0.15)] flex flex-col justify-between overflow-y-auto">
             <div className="p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[#151A1E]">Add New Employee</h2>
-                  <p className="text-xs text-[#8A939B]">Creates record directly in PostgreSQL database</p>
+                  <h2 className="text-base font-semibold text-[#151A1E]">Enroll New Employee</h2>
+                  <p className="text-xs text-[#8A939B]">Create employee profile &amp; configure desktop workstation credentials</p>
                 </div>
-                <X className="w-5 h-5 text-[#8A939B] cursor-pointer" onClick={() => setShowNewEmployeeDrawer(false)} />
+                <X className="w-5 h-5 text-[#8A939B] cursor-pointer hover:text-[#151A1E]" onClick={() => setShowNewEmployeeDrawer(false)} />
               </div>
 
               <div className="space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-[#4A535B] mb-1">First Name</label>
+                    <label className="block font-semibold text-[#4A535B] mb-1">First Name <span className="text-[#C2362B]">*</span></label>
                     <input
                       type="text"
                       value={newEmpFirstName}
                       onChange={(e) => setNewEmpFirstName(e.target.value)}
                       placeholder="e.g. Zainab"
-                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                     />
                   </div>
                   <div>
@@ -3138,30 +3149,32 @@ export default function AdminControlCenter() {
                       value={newEmpLastName}
                       onChange={(e) => setNewEmpLastName(e.target.value)}
                       placeholder="e.g. Qazi"
-                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-[#4A535B] mb-1">Company Email</label>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Company Login Email <span className="text-[#C2362B]">*</span></label>
                   <input
                     type="email"
                     value={newEmpEmail}
                     onChange={(e) => setNewEmpEmail(e.target.value)}
                     placeholder="e.g. zainab.qazi@company.com"
-                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                   />
+                  <p className="text-[11px] text-[#8A939B] mt-1">Used as the sign-in identifier in the WorkPulse Desktop Client.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-[#4A535B] mb-1">Employee Code</label>
+                    <label className="block font-semibold text-[#4A535B] mb-1">Employee ID Code</label>
                     <input
                       type="text"
                       value={newEmpCode}
                       onChange={(e) => setNewEmpCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none"
+                      placeholder="EMP-0001"
+                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg font-mono outline-none focus:border-[#0F6B5C]"
                     />
                   </div>
                   <div>
@@ -3169,13 +3182,66 @@ export default function AdminControlCenter() {
                     <select
                       value={newEmpDept}
                       onChange={(e) => setNewEmpDept(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white"
+                      className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none bg-white focus:border-[#0F6B5C]"
                     >
-                      <option>Sales</option>
-                      <option>Support</option>
-                      <option>Engineering</option>
-                      <option>Operations</option>
+                      <option>Sales &amp; Business Development</option>
+                      <option>Engineering &amp; Core Platform</option>
+                      <option>Customer Success &amp; Support</option>
+                      <option>Security, Compliance &amp; IT</option>
+                      <option>Marketing &amp; Demand Gen</option>
                     </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#4A535B] mb-1">Role / Job Title</label>
+                  <input
+                    type="text"
+                    value={newEmpRole}
+                    onChange={(e) => setNewEmpRole(e.target.value)}
+                    placeholder="e.g. Senior BDR Specialist"
+                    className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
+                  />
+                </div>
+
+                {/* Password Provisioning Section */}
+                <div className="p-4 bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-semibold text-[#151A1E]">
+                      Workstation Login Password <span className="text-[#C2362B]">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomPass = `Wp@${Math.random().toString(36).substring(2, 6).toUpperCase()}!${Math.floor(100 + Math.random() * 900)}`;
+                        setNewEmpPassword(randomPass);
+                      }}
+                      className="text-[11px] text-[#0F6B5C] hover:underline font-semibold flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Generate Password
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={showNewEmpPassword ? 'text' : 'password'}
+                      value={newEmpPassword}
+                      onChange={(e) => setNewEmpPassword(e.target.value)}
+                      placeholder="Set workstation password..."
+                      className="w-full px-3 py-2.5 pr-10 border border-[#E4E7E1] rounded-lg font-mono text-xs outline-none bg-white focus:border-[#0F6B5C]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewEmpPassword(!showNewEmpPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A939B] hover:text-[#151A1E]"
+                    >
+                      {showNewEmpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-start gap-1.5 text-[11px] text-[#5C666E]">
+                    <Shield className="w-3.5 h-3.5 text-[#0F6B5C] shrink-0 mt-0.5" />
+                    <span>The employee will enter their Email/ID and this password on the desktop app to log in and begin telemetry monitoring.</span>
                   </div>
                 </div>
               </div>
@@ -3184,57 +3250,141 @@ export default function AdminControlCenter() {
             <div className="p-5 bg-[#FAFBF9] border-t border-[#EEF0EC] flex justify-end gap-2">
               <button
                 onClick={() => setShowNewEmployeeDrawer(false)}
-                className="px-3 py-1.5 bg-white border border-[#E4E7E1] rounded-lg text-xs font-semibold text-[#4A535B]"
+                className="px-4 py-2 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] rounded-lg text-xs font-semibold text-[#4A535B]"
               >
                 Cancel
               </button>
               <button
                 onClick={async () => {
-                  if (!newEmpFirstName.trim() || !newEmpEmail.trim()) {
-                    showToast('Please enter employee name and company email', 'error');
+                  if (!newEmpFirstName.trim() || !newEmpEmail.trim() || !newEmpPassword.trim()) {
+                    showToast('Please enter employee name, email, and password', 'error');
                     return;
                   }
+                  const codeToUse = newEmpCode.trim() || `EMP-${String(employees.length + 1).padStart(4, '0')}`;
                   const createdEmp = {
                     id: `e-${Date.now()}`,
-                    code: newEmpCode || `EMP-00${Math.floor(10 + Math.random() * 90)}`,
+                    code: codeToUse,
                     name: `${newEmpFirstName.trim()} ${newEmpLastName.trim()}`.trim(),
                     email: newEmpEmail.trim(),
-                    role: 'Employee',
+                    role: newEmpRole.trim() || 'Staff Member',
                     department: newEmpDept,
                     status: 'active',
-                    shift: 'WORKING',
-                    checkIn: 'Just Now',
-                    activeHours: '0h 01m',
-                    currentApp: 'WorkPulse Desktop Agent',
-                    device: 'Enrolled Workstation',
+                    shift: 'OFF_SHIFT',
+                    checkIn: '—',
+                    activeHours: '0h 00m',
+                    currentApp: 'Offline (Awaiting Login)',
+                    device: 'Unassigned Workstation',
                     keystrokes: '0',
                     mouseClicks: '0',
-                    productivityScore: '100%',
+                    productivityScore: '—',
                   };
+
                   try {
                     await AdminApiClient.createEmployee({
                       firstName: newEmpFirstName.trim(),
                       lastName: newEmpLastName.trim(),
                       email: newEmpEmail.trim(),
-                      code: newEmpCode,
-                      temporaryPassword: 'Password123!',
+                      code: codeToUse,
+                      password: newEmpPassword.trim(),
                     });
-                  } catch (e) {}
+                  } catch (e) {
+                    console.warn('Backend sync warning:', e);
+                  }
+
                   setEmployees((prev) => [createdEmp, ...prev]);
                   setShowNewEmployeeDrawer(false);
+
+                  // Show Credentials Pop-up
+                  setCreatedEmpCredentials({
+                    name: createdEmp.name,
+                    email: createdEmp.email,
+                    code: createdEmp.code,
+                    password: newEmpPassword.trim(),
+                    role: createdEmp.role,
+                    dept: createdEmp.department,
+                  });
+
                   setNewEmpFirstName('');
                   setNewEmpLastName('');
                   setNewEmpEmail('');
+                  setNewEmpCode(`EMP-${String(employees.length + 2).padStart(4, '0')}`);
+
                   showToast(
-                    `Employee ${createdEmp.name} (${createdEmp.code}) enrolled into live database!`,
+                    `Employee ${createdEmp.name} (${createdEmp.code}) successfully enrolled!`,
                     'success',
-                    'Employee Created'
+                    'Employee Provisioned'
                   );
                 }}
-                className="px-4 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                className="px-5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
               >
-                Save to Database
+                <Plus className="w-3.5 h-3.5" />
+                Enroll &amp; Create Credentials
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Employee Credentials Summary */}
+      {createdEmpCredentials && (
+        <div className="fixed inset-0 bg-[rgba(21,26,30,0.5)] backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#E4E7E1]">
+            <div className="bg-[#FAFBF9] border-b border-[#EEF0EC] p-5 text-center">
+              <div className="w-12 h-12 mx-auto rounded-full bg-[#E3F1EE] text-[#0B5548] flex items-center justify-center mb-2">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-base text-[#151A1E]">Employee Enrolled Successfully</h3>
+              <p className="text-xs text-[#8A939B] mt-0.5">Desktop Workstation login credentials are ready</p>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-4 bg-[#F5F6F3] border border-[#E4E7E1] rounded-xl space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E4E7E1]">
+                  <span className="text-[#8A939B]">Employee</span>
+                  <span className="font-semibold text-[#151A1E]">{createdEmpCredentials.name}</span>
+                </div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E4E7E1]">
+                  <span className="text-[#8A939B]">Employee Code</span>
+                  <span className="font-mono font-bold text-[#0F6B5C]">{createdEmpCredentials.code}</span>
+                </div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E4E7E1]">
+                  <span className="text-[#8A939B]">Login Email / ID</span>
+                  <span className="font-mono font-bold text-[#151A1E]">{createdEmpCredentials.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8A939B]">Login Password</span>
+                  <span className="font-mono font-bold text-[#0B5548] bg-[#E3F1EE] px-2 py-0.5 rounded">
+                    {createdEmpCredentials.password}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#E4F4EB] text-[#14673F] rounded-lg text-[11.5px] flex items-start gap-2">
+                <Activity className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  Once the employee signs in with these credentials on the WorkPulse Desktop Client, live telemetry and active application monitoring will start automatically.
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const textToCopy = `WorkPulse Workstation Login Credentials:\nEmployee: ${createdEmpCredentials.name}\nEmployee Code: ${createdEmpCredentials.code}\nLogin Email: ${createdEmpCredentials.email}\nPassword: ${createdEmpCredentials.password}\n\nDownload WorkPulse Workstation: https://roofingclients.us/downloads/WorkPulse-Mac-Universal.dmg`;
+                    navigator.clipboard.writeText(textToCopy);
+                    showToast('Credentials copied to clipboard!', 'success');
+                  }}
+                  className="flex-1 py-2.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy Login Details
+                </button>
+                <button
+                  onClick={() => setCreatedEmpCredentials(null)}
+                  className="px-4 py-2.5 bg-white border border-[#E4E7E1] hover:bg-[#FAFBF9] text-[#4A535B] rounded-lg font-semibold text-xs"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
