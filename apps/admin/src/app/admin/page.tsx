@@ -74,6 +74,8 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  CheckCircle,
+  Copy,
 } from 'lucide-react';
 import { AdminApiClient } from '../../apiClient';
 
