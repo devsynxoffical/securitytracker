@@ -72,6 +72,8 @@ import {
   AlertTriangle,
   Info,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { AdminApiClient } from '../../apiClient';
 
