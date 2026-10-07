@@ -128,6 +128,15 @@ export default function AdminControlCenter() {
       if (savedAuth === 'true' || savedToken) {
         setIsAuthenticated(true);
       }
+      try {
+        const rawEmps = localStorage.getItem('workpulse_local_employees');
+        if (rawEmps) {
+          const parsed = JSON.parse(rawEmps);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEmployees(parsed);
+          }
+        }
+      } catch {}
       setAuthChecked(true);
     }
   }, []);
@@ -612,30 +621,49 @@ export default function AdminControlCenter() {
           ? empRes.value
           : [];
 
+        // Load cached/locally enrolled employees first
+        let cachedEmployees: any[] = [];
+        try {
+          const raw = localStorage.getItem('workpulse_local_employees');
+          if (raw) cachedEmployees = JSON.parse(raw);
+        } catch {}
+
         if (empList.length > 0) {
-          setEmployees(
-            empList.map((e: any) => {
-              const live = liveMap[e.id] || liveMap[e.code] || {};
-              const isLiveWorking = live.shiftState === 'WORKING';
-              return {
-                id: e.id,
-                code: e.code || 'EMP-0001',
-                name: `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Staff Member',
-                email: e.email || '',
-                role: e.role?.name || e.role || 'Staff',
-                department: e.department?.name || e.department || 'General Operations',
-                status: e.status || 'active',
-                shift: live.shiftState || 'OFF_SHIFT',
-                checkIn: live.checkIn || '—',
-                activeHours: live.activeHours || '0h 00m',
-                currentApp: live.currentApp || (isLiveWorking ? 'WorkPulse Workstation' : 'Offline'),
-                device: live.device || 'Unassigned',
-                keystrokes: live.keystrokes || '0',
-                mouseClicks: live.mouseClicks || '0',
-                productivityScore: live.productivityScore || '—',
-              };
-            })
+          const backendMapped = empList.map((e: any) => {
+            const live = liveMap[e.id] || liveMap[e.code] || {};
+            const isLiveWorking = live.shiftState === 'WORKING';
+            return {
+              id: e.id,
+              code: e.code || 'EMP-0001',
+              name: `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.name || 'Staff Member',
+              email: e.email || '',
+              role: e.role?.name || e.role || 'Staff',
+              department: e.department?.name || e.department || 'General Operations',
+              status: e.status || 'active',
+              shift: live.shiftState || 'OFF_SHIFT',
+              checkIn: live.checkIn || '—',
+              activeHours: live.activeHours || '0h 00m',
+              currentApp: live.currentApp || (isLiveWorking ? 'WorkPulse Workstation' : 'Offline'),
+              device: live.device || 'Unassigned',
+              keystrokes: live.keystrokes || '0',
+              mouseClicks: live.mouseClicks || '0',
+              productivityScore: live.productivityScore || '—',
+            };
+          });
+
+          // Merge backend with locally created, avoiding duplicates by code or email
+          const existingCodes = new Set(backendMapped.map((e: any) => e.code));
+          const existingEmails = new Set(backendMapped.map((e: any) => e.email));
+          const uniqueCached = cachedEmployees.filter(
+            (c: any) => !existingCodes.has(c.code) && !existingEmails.has(c.email)
           );
+          const merged = [...backendMapped, ...uniqueCached];
+          setEmployees(merged);
+          try {
+            localStorage.setItem('workpulse_local_employees', JSON.stringify(merged));
+          } catch {}
+        } else if (cachedEmployees.length > 0) {
+          setEmployees(cachedEmployees);
         }
       }
 
@@ -3293,7 +3321,13 @@ export default function AdminControlCenter() {
                     console.warn('Backend sync warning:', e);
                   }
 
-                  setEmployees((prev) => [createdEmp, ...prev]);
+                  setEmployees((prev) => {
+                    const updated = [createdEmp, ...prev];
+                    try {
+                      localStorage.setItem('workpulse_local_employees', JSON.stringify(updated));
+                    } catch {}
+                    return updated;
+                  });
                   setShowNewEmployeeDrawer(false);
 
                   // Show Credentials Pop-up
