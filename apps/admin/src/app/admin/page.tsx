@@ -2897,11 +2897,11 @@ export default function AdminControlCenter() {
                           <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-[#EEF0EC]">
                             <div>
                               <span className="text-[10.5px] text-[#8A939B]">Keystrokes:</span>
-                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.keystrokes || '12,450'}</div>
+                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.keystrokes || '0'}</div>
                             </div>
                             <div>
                               <span className="text-[10.5px] text-[#8A939B]">Mouse Taps:</span>
-                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.mouseClicks || '2,890'}</div>
+                              <div className="font-mono font-bold text-xs text-[#151A1E]">{emp.mouseClicks || '0'}</div>
                             </div>
                           </div>
                         </div>
@@ -4413,26 +4413,26 @@ export default function AdminControlCenter() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
                   <div className="text-[11px] text-[#8A939B] font-medium">Shift Duration</div>
-                  <div className="text-lg font-bold font-mono text-[#0F6B5C] mt-0.5">{selectedTelemetryEmp.activeHours || '6h 30m'}</div>
-                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Punched at {selectedTelemetryEmp.checkIn || '09:00 AM'}</div>
+                  <div className="text-lg font-bold font-mono text-[#0F6B5C] mt-0.5">{selectedTelemetryEmp.activeHours || '0h 00m'}</div>
+                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Punched at {selectedTelemetryEmp.checkIn || '—'}</div>
                 </div>
 
                 <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
                   <div className="text-[11px] text-[#8A939B] font-medium">Keystroke Activity</div>
-                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.keystrokes || '14,280'}</div>
-                  <div className="text-[10px] text-[#5C666E] mt-0.5">Counts only (No logging)</div>
+                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.keystrokes || '0'}</div>
+                  <div className="text-[10px] text-[#5C666E] mt-0.5">Rule 8 Counts Only</div>
                 </div>
 
                 <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
                   <div className="text-[11px] text-[#8A939B] font-medium">Mouse Clicks</div>
-                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.mouseClicks || '3,420'}</div>
-                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">High Interaction</div>
+                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.mouseClicks || '0'}</div>
+                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Interaction Volume</div>
                 </div>
 
                 <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
                   <div className="text-[11px] text-[#8A939B] font-medium">Productive Ratio</div>
-                  <div className="text-lg font-bold font-mono text-[#1C469B] mt-0.5">94.2%</div>
-                  <div className="text-[10px] text-[#14673F] mt-0.5">Break: 18m total</div>
+                  <div className="text-lg font-bold font-mono text-[#1C469B] mt-0.5">{selectedTelemetryEmp.productivityScore || '100%'}</div>
+                  <div className="text-[10px] text-[#14673F] mt-0.5">Status: {selectedTelemetryEmp.shift === 'WORKING' ? 'Active' : 'On Break'}</div>
                 </div>
               </div>
 
@@ -4455,59 +4455,41 @@ export default function AdminControlCenter() {
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Workstation CPU Load:</span>
-                    <span className="font-mono font-bold text-[#0F6B5C]">14.2% &bull; Normal</span>
+                    <span className="text-[#8A939B]">Workstation Status:</span>
+                    <span className="font-mono font-bold text-[#0F6B5C]">
+                      {selectedTelemetryEmp.shift === 'WORKING' ? 'Online & Recording' : 'Standby / Off-Shift'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Memory / RAM Allocated:</span>
-                    <span className="font-mono font-bold text-[#151A1E]">1.35 GB / 16.0 GB</span>
+                    <span className="text-[#8A939B]">Hardware Device Assigned:</span>
+                    <span className="font-mono font-bold text-[#151A1E]">{selectedTelemetryEmp.device || 'Unassigned'}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">OS Platform:</span>
-                    <span className="font-semibold text-[#4A535B]">macOS 15.1 (ARM64 Apple M3)</span>
+                    <span className="text-[#8A939B]">Employee Code:</span>
+                    <span className="font-semibold text-[#4A535B] font-mono">{selectedTelemetryEmp.code}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#8A939B]">Hardware ID Hash:</span>
-                    <span className="font-mono text-[11px] text-[#5C666E]">sha256:7f91a...e84b</span>
+                    <span className="text-[#8A939B]">Privacy Compliance:</span>
+                    <span className="font-mono text-[11px] text-[#0F6B5C]">Hard Rule 8 (Counts Only)</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#8A939B]">Heartbeat Frequency:</span>
-                    <span className="font-mono text-[11px] text-[#0F6B5C]">10s Live Push</span>
+                    <span className="text-[#8A939B]">Heartbeat Polling:</span>
+                    <span className="font-mono text-[11px] text-[#0F6B5C]">10s Live Sync</span>
                   </div>
                 </div>
               </div>
 
               {/* Application Usage Breakdown */}
               <div className="border border-[#E4E7E1] rounded-xl p-4 space-y-3 bg-white">
-                <h4 className="font-bold text-xs text-[#151A1E]">Application Usage Timeline (Today)</h4>
+                <h4 className="font-bold text-xs text-[#151A1E]">Foreground Application &amp; Window Activity</h4>
                 <div className="space-y-2.5">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium text-[#151A1E]">Google Chrome (CRM &amp; Sales Research)</span>
-                      <span className="font-mono font-semibold text-[#0F6B5C]">3h 45m (58%)</span>
+                  <div className="p-3 bg-[#FAFBF9] border border-[#EEF0EC] rounded-lg space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-[#151A1E]">{selectedTelemetryEmp.currentApp || 'WorkPulse Workstation'}</span>
+                      <span className="font-mono font-semibold text-[#0F6B5C]">{selectedTelemetryEmp.activeHours || '0h 00m'} Active</span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: '58%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium text-[#151A1E]">WorkPulse Outbound Softphone</span>
-                      <span className="font-mono font-semibold text-[#1C469B]">2h 10m (33%)</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-[#1C469B] rounded-full" style={{ width: '33%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium text-[#151A1E]">Excel / Google Sheets (Lead Distribution)</span>
-                      <span className="font-mono font-semibold text-[#55359C]">35m (9%)</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-[#55359C] rounded-full" style={{ width: '9%' }} />
+                    <div className="w-full h-2 rounded-full bg-[#E4E7E1] overflow-hidden">
+                      <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: selectedTelemetryEmp.shift === 'WORKING' ? '100%' : '0%' }} />
                     </div>
                   </div>
                 </div>

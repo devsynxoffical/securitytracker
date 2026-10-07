@@ -23,6 +23,7 @@ import {
   Plus,
   Check,
   Eye,
+  EyeOff,
   Lock,
   Minus,
   X,
@@ -80,11 +81,11 @@ export default function App() {
     role: string;
     department: string;
   }>({
-    id: 'emp-1',
-    name: 'Workstation Employee',
-    code: 'EMP-0001',
-    email: 'employee@company.com',
-    role: 'Specialist',
+    id: '',
+    name: '',
+    code: '',
+    email: '',
+    role: 'Workstation Operator',
     department: 'Operations',
   });
 
@@ -102,6 +103,9 @@ export default function App() {
   const [showLogCallModal, setShowLogCallModal] = useState<boolean>(false);
   const [showComposeModal, setShowComposeModal] = useState<boolean>(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState<boolean>(false);
+  const [showNewTaskModal, setShowNewTaskModal] = useState<boolean>(false);
+  const [newTaskTitle, setNewTaskTitle] = useState<string>('');
+  const [newTaskPriority, setNewTaskPriority] = useState<string>('Normal');
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
   // CRM Call Form
@@ -125,103 +129,11 @@ export default function App() {
   const [desktopActiveTimerId, setDesktopActiveTimerId] = useState<string | null>(null);
   const [desktopTimerSeconds, setDesktopTimerSeconds] = useState<number>(0);
   const [desktopNewSubtaskTitle, setDesktopNewSubtaskTitle] = useState<string>('');
-  const [dailyCallsLogged, setDailyCallsLogged] = useState<number>(34);
+  const [dailyCallsLogged, setDailyCallsLogged] = useState<number>(0);
   const [dailyCallsTarget] = useState<number>(40);
 
-  // ClickUp Live Leads Data (Assigned to Employee Daniyal Khan)
-  const [leads, setLeads] = useState<any[]>([
-    {
-      id: '00000000-0000-0000-0000-000000000101',
-      name: 'Sarah Jenkins',
-      companyName: 'Apex Logistics Inc',
-      jobTitle: 'VP of Operations',
-      email: 's.jenkins@apexlogistics.com',
-      phones: ['+1 (555) 234-8901'],
-      stage: 'Qualified',
-      value: '$28,000',
-      numericValue: 28000,
-      priority: 'urgent',
-      lastContact: 'Today, 2:15 PM',
-      nextFollowUp: 'Tomorrow, 10:00 AM',
-      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
-      tags: ['Enterprise', 'Hot Deal'],
-      timeSpent: '2h 15m',
-      subtasks: [
-        { id: 'st-1', title: 'Verify budget authority & decision makers', completed: true },
-        { id: 'st-2', title: 'Conduct live platform demonstration', completed: true },
-        { id: 'st-3', title: 'Deliver custom security compliance paperwork', completed: true },
-        { id: 'st-4', title: 'Finalize master services agreement & pricing', completed: false },
-      ],
-      notes: 'Interested in 50 workstation deployment. Requested enterprise SLA details.',
-    },
-    {
-      id: '00000000-0000-0000-0000-000000000102',
-      name: 'Michael Chang',
-      companyName: 'Nexus Health Systems',
-      jobTitle: 'Chief Information Officer',
-      email: 'mchang@nexushealth.org',
-      phones: ['+1 (555) 872-1140'],
-      stage: 'Contacted',
-      value: '$45,000',
-      numericValue: 45000,
-      priority: 'high',
-      lastContact: 'Yesterday',
-      nextFollowUp: 'Thursday, 3:00 PM',
-      sheet: 'Healthcare & Medical Practice Leads',
-      tags: ['HIPAA', 'Healthcare'],
-      timeSpent: '1h 05m',
-      subtasks: [
-        { id: 'st-5', title: 'Initial intro call & scope requirement', completed: true },
-        { id: 'st-6', title: 'Send HIPAA BAA documentation', completed: false },
-        { id: 'st-7', title: 'Schedule security architectural review', completed: false },
-      ],
-      notes: 'HIPAA compliance audit in progress. Callback scheduled.',
-    },
-    {
-      id: '00000000-0000-0000-0000-000000000103',
-      name: 'Elena Rostova',
-      companyName: 'Vanguard FinTech Global',
-      jobTitle: 'Head of People & Ops',
-      email: 'elena@vanguardfin.io',
-      phones: ['+1 (555) 349-1122'],
-      stage: 'Meeting Scheduled',
-      value: '$72,000',
-      numericValue: 72000,
-      priority: 'urgent',
-      lastContact: 'Today, 9:30 AM',
-      nextFollowUp: 'Oct 8, 2:00 PM',
-      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
-      tags: ['SaaS', 'High Value'],
-      timeSpent: '3h 40m',
-      subtasks: [
-        { id: 'st-8', title: 'Review workstation tracking specs', completed: true },
-        { id: 'st-9', title: 'Executive demo with VP HR', completed: false },
-      ],
-      notes: 'Scheduled executive demo for 150 workstation rollout.',
-    },
-    {
-      id: '00000000-0000-0000-0000-000000000104',
-      name: 'Rachel Adams',
-      companyName: 'CloudMatrix Security',
-      jobTitle: 'Director of Security Operations',
-      email: 'radams@cloudmatrix.com',
-      phones: ['+1 (555) 777-9988'],
-      stage: 'Won',
-      value: '$54,000',
-      numericValue: 54000,
-      priority: 'high',
-      lastContact: 'Today, 10:00 AM',
-      nextFollowUp: 'Completed',
-      sheet: 'Q4 Enterprise SaaS Outbound Batch A',
-      tags: ['Closed Won'],
-      timeSpent: '8h 20m',
-      subtasks: [
-        { id: 'st-13', title: 'Contract signed via DocuSign', completed: true },
-        { id: 'st-14', title: 'Workstation agent deployment initiated', completed: true },
-      ],
-      notes: 'Deal closed! Kickoff scheduled for next Monday.',
-    },
-  ]);
+  // Live Leads Data
+  const [leads, setLeads] = useState<any[]>([]);
 
   // Desktop ClickUp Timer Hook
   useEffect(() => {
@@ -237,82 +149,61 @@ export default function App() {
   }, [desktopActiveTimerId]);
 
   // Live Tasks Data
-  const [tasks, setTasks] = useState<any[]>([
-    { id: 'T-101', title: 'Follow up with Apex Logistics on SLA agreement', priority: 'High', due: 'Today, 4:00 PM', done: false, lead: 'Apex Logistics' },
-    { id: 'T-102', title: 'Send updated enterprise proposal to Elena at Vanguard', priority: 'High', due: 'Today, 5:30 PM', done: false, lead: 'Vanguard Security' },
-  ]);
+  const [tasks, setTasks] = useState<any[]>([]);
 
   // Emails Data
   const [selectedEmail, setSelectedEmail] = useState<number>(0);
-  const [emails] = useState([
-    {
-      id: 'EM-501',
-      from: 'Sarah Jenkins <s.jenkins@apexlogistics.com>',
-      subject: 'Re: WorkPulse Enterprise Workstation SLA details',
-      time: '2:15 PM',
-      snippet: 'Thanks for the quick response! We reviewed the monitoring specs and transparency model...',
-      body: 'Hi Daniyal,\n\nThanks for the quick turnaround! We reviewed the monitoring specs and employee transparency model with our executive board. They are very pleased with the zero-keystroke/clipboard architecture.\n\nCould you send over the final pricing schedule for 50 initial seats?\n\nBest regards,\nSarah Jenkins\nVP Operations, Apex Logistics',
-      unread: false,
-    },
-    {
-      id: 'EM-502',
-      from: 'Michael Chang <mchang@nexushealth.org>',
-      subject: 'HIPAA verification questionnaire received',
-      time: '11:30 AM',
-      snippet: 'Our compliance officer has begun reviewing Section 4. We will have feedback by tomorrow...',
-      body: 'Hello Daniyal,\n\nOur compliance officer has begun reviewing Section 4. We will have feedback by tomorrow afternoon regarding the cloud logging retention requirements.\n\nThanks,\nMichael Chang',
-      unread: true,
-    },
-  ]);
+  const [emails] = useState<any[]>([]);
 
   // Notifications Data
-  const [notifications] = useState([
-    { id: 'N-1', title: 'Target Milestone: 80% Calls Completed', time: '15m ago', unread: true, type: 'target', desc: 'You completed 32 of 40 calls scheduled for today. Great momentum!' },
-    { id: 'N-2', title: 'Correction Request Approved', time: '2h ago', unread: true, type: 'attendance', desc: 'Manager approved your attendance adjustment for Oct 1st (09:00 AM - 05:30 PM).' },
+  const [notifications] = useState<any[]>([
+    { id: 'N-1', title: 'Workstation Telemetry Initialized', time: 'Just now', unread: true, type: 'system', desc: 'Secure local session created. Activity and window tracking will record during active shift.' },
   ]);
 
   // Live Hardware & Input Telemetry State
   const [telemetry, setTelemetry] = useState<any>({
-    isTracking: true,
+    isTracking: false,
     cursorPosition: { x: 0, y: 0 },
-    cursorDistancePixels: 48920,
-    cursorMovementSeconds: 1420,
-    mouseClicksCount: 842,
-    mouseActive: true,
-    keystrokeTapsCount: 2950,
-    typingActiveSeconds: 980,
-    keyboardActive: true,
+    cursorDistancePixels: 0,
+    cursorMovementSeconds: 0,
+    mouseClicksCount: 0,
+    mouseActive: false,
+    keystrokeTapsCount: 0,
+    typingActiveSeconds: 0,
+    keyboardActive: false,
     activeApp: {
-      name: 'Visual Studio Code',
-      processName: 'Code.app',
-      windowTitle: 'WorkPulse — Desktop Workstation & Activity Telemetry',
-      activeSeconds: 2450,
+      name: 'WorkPulse Workstation',
+      processName: 'WorkPulse.app',
+      windowTitle: 'WorkPulse Workstation — Dashboard',
+      activeSeconds: 0,
       category: 'PRODUCTIVE',
     },
-    shiftDurationSeconds: 24155,
-    totalActiveSeconds: 21960,
-    totalIdleSeconds: 2195,
-    currentIdleStreakSeconds: 12,
+    recentWindows: [],
+    openWindowsCount: 0,
+    shiftDurationSeconds: 0,
+    totalActiveSeconds: 0,
+    totalIdleSeconds: 0,
+    currentIdleStreakSeconds: 0,
     isIdle: false,
-    queuedSegmentsCount: 3,
-    lastSyncedAt: 'Just now',
+    queuedSegmentsCount: 0,
+    lastSyncedAt: null,
     hardware: {
-      hostname: 'MacBook-Pro.local',
-      platform: 'darwin',
-      osRelease: '24.2.0',
-      osVersion: 'macOS 15.2 (Sequoia)',
-      arch: 'arm64',
-      cpuModel: 'Apple M3 Pro',
-      cpuCores: 12,
-      cpuSpeedMhz: 4050,
-      totalMemoryMb: 36864,
-      freeMemoryMb: 14220,
-      usedMemoryPercent: 61,
-      systemUptimeSeconds: 148290,
-      macAddress: '3c:22:fb:91:a4:02',
-      ipAddress: '192.168.1.45',
-      hardwareHash: '8f7a1c4e92b34d58e01934ba72c918f0a45e9981245b73e512cf3498a1b528c1',
-      displayInfo: { width: 3456, height: 2234, scaleFactor: 2 },
+      hostname: 'Workstation',
+      platform: 'desktop',
+      osRelease: '',
+      osVersion: '',
+      arch: '',
+      cpuModel: 'System CPU',
+      cpuCores: 0,
+      cpuSpeedMhz: 0,
+      totalMemoryMb: 0,
+      freeMemoryMb: 0,
+      usedMemoryPercent: 0,
+      systemUptimeSeconds: 0,
+      macAddress: '',
+      ipAddress: '',
+      hardwareHash: '',
+      displayInfo: { width: 1920, height: 1080, scaleFactor: 1 },
     },
   });
 
@@ -1081,27 +972,31 @@ export default function App() {
                     <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
                       {formatHoursMins(activeSeconds)}
                     </div>
-                    <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">91% productive</div>
+                    <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
+                      {shiftSeconds > 0 ? `${Math.round((activeSeconds / Math.max(shiftSeconds, 1)) * 100)}% active` : 'Active'}
+                    </div>
                   </div>
 
                   <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
                     <div className="text-[11.5px] font-medium text-[#8A939B]">Idle / Break</div>
                     <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">
-                      {formatHoursMins(idleSeconds)}
+                      {formatHoursMins(telemetry.totalIdleSeconds || 0)}
                     </div>
-                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">36m total break</div>
+                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Continuous tracking</div>
+                  </div>
+
+                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
+                    <div className="text-[11.5px] font-medium text-[#8A939B]">Open Windows</div>
+                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">
+                      {telemetry.recentWindows?.length || (shiftState === ShiftState.WORKING ? 1 : 0)}
+                    </div>
+                    <div className="text-[11.5px] text-[#0F6B5C] font-medium mt-0.5">Recent foreground radar</div>
                   </div>
 
                   <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
                     <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged</div>
-                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">32</div>
-                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Target: 40 calls</div>
-                  </div>
-
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Deals Qualified</div>
-                    <div className="text-2xl font-bold font-mono text-[#1E8E5A] mt-1">4</div>
-                    <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">Target reached!</div>
+                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">{dailyCallsLogged}</div>
+                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Target: {dailyCallsTarget} calls</div>
                   </div>
                 </div>
 
@@ -1143,52 +1038,145 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* Live Open Windows & Running Applications Stream */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4 text-[#0F6B5C]" />
+                      <h3 className="font-semibold text-xs text-[#151A1E]">Live Open Windows &amp; Recent Applications Radar</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E4F4EB] text-[#14673F]">
+                        {telemetry.recentWindows?.length || (shiftState === ShiftState.WORKING ? 1 : 0)} Windows Detected
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#8A939B]">
+                      Active Foreground: <strong className="text-[#151A1E]">{telemetry.activeApp?.name || 'WorkPulse Workstation'}</strong>
+                    </span>
+                  </div>
+
+                  {(!telemetry.recentWindows || telemetry.recentWindows.length === 0) ? (
+                    <div className="p-4 bg-[#FAFBF9] border border-[#EEF0EC] rounded-lg text-center text-xs text-[#8A939B]">
+                      Active foreground windows, browser tabs, and applications will record and stream here continuously as you work.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#EEF0EC] border border-[#EEF0EC] rounded-lg overflow-hidden">
+                      {telemetry.recentWindows.slice(0, 8).map((win: any) => (
+                        <div key={win.id} className="p-3 flex items-center justify-between hover:bg-[#FAFBF9] transition text-xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-[#E3F1EE] text-[#0F6B5C] flex items-center justify-center shrink-0 font-bold text-xs">
+                              {win.appName.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-[#151A1E] flex items-center gap-2">
+                                <span>{win.appName}</span>
+                                {win.appName === telemetry.activeApp?.name && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-[#E4F4EB] text-[#14673F] font-bold">
+                                    Active Now
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-[#8A939B] truncate max-w-[420px] font-mono">
+                                {win.windowTitle || `${win.appName} Active Session`}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="text-right">
+                              <div className="font-mono font-bold text-[#0F6B5C]">{formatHoursMins(win.activeSeconds || 1)}</div>
+                              <div className="text-[10px] text-[#8A939B]">Active Time</div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${
+                              win.category === 'PRODUCTIVE'
+                                ? 'bg-[#E4F4EB] text-[#14673F]'
+                                : win.category === 'UNPRODUCTIVE'
+                                ? 'bg-[#FBE7E4] text-[#9E2A21]'
+                                : 'bg-[#FAFBF9] border border-[#E4E7E1] text-[#4A535B]'
+                            }`}>
+                              {win.category}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Grid 2-column: Tasks & CRM Call Queue */}
                 <div className="grid grid-cols-12 gap-4">
                   {/* Left Col (7 cols): Today's Tasks */}
                   <div className="col-span-7 bg-white border border-[#E4E7E1] rounded-[10px] shadow-[0_1px_2px_rgba(21,26,30,0.05)] overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[#EEF0EC]">
                       <h3 className="font-semibold text-xs text-[#151A1E]">Priority Tasks for Today</h3>
-                      <button
-                        onClick={() => setCurrentScreen('D11-my-tasks')}
-                        className="text-xs font-semibold text-[#0F6B5C] hover:underline"
-                      >
-                        View all tasks ({tasks.length})
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const title = prompt('Enter new task description:');
+                            if (title) {
+                              setTasks([...tasks, { id: `T-${Date.now()}`, title, priority: 'Normal', due: 'Today', done: false, lead: 'General Assignment' }]);
+                            }
+                          }}
+                          className="text-xs font-semibold text-[#0F6B5C] hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Task
+                        </button>
+                        <button
+                          onClick={() => setCurrentScreen('D11-my-tasks')}
+                          className="text-xs font-semibold text-[#8A939B] hover:text-[#151A1E]"
+                        >
+                          View all ({tasks.length})
+                        </button>
+                      </div>
                     </div>
-                    <div className="divide-y divide-[#EEF0EC]">
-                      {tasks.map((task) => (
-                        <div key={task.id} className="p-3.5 flex items-center justify-between hover:bg-[#FAFBF9] transition">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={task.done}
-                              onChange={() => {
-                                setTasks(
-                                  tasks.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t))
-                                );
-                              }}
-                              className="w-4 h-4 rounded text-[#0F6B5C] focus:ring-[#0F6B5C]"
-                            />
-                            <div>
-                              <div className={`text-xs font-medium ${task.done ? 'line-through text-[#8A939B]' : 'text-[#151A1E]'}`}>
-                                {task.title}
+                    {tasks.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-[#8A939B] space-y-2">
+                        <p>No tasks assigned for this shift.</p>
+                        <button
+                          onClick={() => {
+                            const title = prompt('Enter new task description:');
+                            if (title) {
+                              setTasks([...tasks, { id: `T-${Date.now()}`, title, priority: 'Normal', due: 'Today', done: false, lead: 'General Assignment' }]);
+                            }
+                          }}
+                          className="px-3 py-1 bg-[#E3F1EE] text-[#0B5548] rounded-md font-semibold text-xs hover:bg-[#D2EAE5] transition"
+                        >
+                          + Create Today's First Task
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-[#EEF0EC]">
+                        {tasks.map((task) => (
+                          <div key={task.id} className="p-3.5 flex items-center justify-between hover:bg-[#FAFBF9] transition">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={task.done}
+                                onChange={() => {
+                                  setTasks(
+                                    tasks.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t))
+                                  );
+                                }}
+                                className="w-4 h-4 rounded text-[#0F6B5C] focus:ring-[#0F6B5C]"
+                              />
+                              <div>
+                                <div className={`text-xs font-medium ${task.done ? 'line-through text-[#8A939B]' : 'text-[#151A1E]'}`}>
+                                  {task.title}
+                                </div>
+                                <div className="text-[11px] text-[#8A939B]">{task.lead}</div>
                               </div>
-                              <div className="text-[11px] text-[#8A939B]">{task.lead}</div>
                             </div>
+                            <span
+                              className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                                task.priority === 'High'
+                                  ? 'bg-[#FBE7E4] text-[#9E2A21]'
+                                  : 'bg-[#FAFBF9] border border-[#E4E7E1] text-[#4A535B]'
+                              }`}
+                            >
+                              {task.due}
+                            </span>
                           </div>
-                          <span
-                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                              task.priority === 'High'
-                                ? 'bg-[#FBE7E4] text-[#9E2A21]'
-                                : 'bg-[#FAFBF9] border border-[#E4E7E1] text-[#4A535B]'
-                            }`}
-                          >
-                            {task.due}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Col (5 cols): Quick Lead Call Launcher */}
@@ -1202,26 +1190,33 @@ export default function App() {
                         Open CRM
                       </button>
                     </div>
-                    <div className="divide-y divide-[#EEF0EC]">
-                      {leads.slice(0, 3).map((lead) => (
-                        <div key={lead.id} className="p-3.5 flex items-center justify-between hover:bg-[#FAFBF9] transition">
-                          <div>
-                            <div className="text-xs font-semibold text-[#151A1E]">{lead.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{lead.companyName} &bull; {lead.phones?.[0] || '+1 (555) 234-8901'}</div>
+                    {leads.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-[#8A939B] space-y-1">
+                        <p>No CRM leads in queue.</p>
+                        <p className="text-[11px] text-[#B0B7BE]">Leads assigned from Admin Calling Sheets will appear here for 1-click calling.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-[#EEF0EC]">
+                        {leads.slice(0, 3).map((lead) => (
+                          <div key={lead.id} className="p-3.5 flex items-center justify-between hover:bg-[#FAFBF9] transition">
+                            <div>
+                              <div className="text-xs font-semibold text-[#151A1E]">{lead.name}</div>
+                              <div className="text-[11px] text-[#8A939B]">{lead.companyName} &bull; {lead.phones?.[0] || '+1 (555) 234-8901'}</div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setShowLogCallModal(true);
+                              }}
+                              className="px-2.5 py-1 bg-[#E3F1EE] hover:bg-[#0F6B5C] text-[#0B5548] hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                            >
+                              <PhoneCall className="w-3.5 h-3.5" />
+                              Call (D14)
+                            </button>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedLead(lead);
-                              setShowLogCallModal(true);
-                            }}
-                            className="px-2.5 py-1 bg-[#E3F1EE] hover:bg-[#0F6B5C] text-[#0B5548] hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
-                          >
-                            <PhoneCall className="w-3.5 h-3.5" />
-                            Call (D14)
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1229,18 +1224,37 @@ export default function App() {
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-xs text-[#151A1E]">Today's Activity Timeline</h3>
-                    <span className="font-mono text-xs text-[#4A535B]">Active: 6h 06m | Idle: 36m</span>
+                    <span className="font-mono text-xs text-[#4A535B]">
+                      Active: {formatHoursMins(activeSeconds)} | Idle: {formatHoursMins(telemetry.totalIdleSeconds || 0)}
+                    </span>
                   </div>
                   {/* Segmented Timeline Bar */}
                   <div className="h-5.5 rounded-md overflow-hidden bg-[#ECEEEB] flex">
-                    <div style={{ width: '45%' }} className="bg-[#0F6B5C] h-full" title="Active CRM & Work (09:00 - 12:45)"></div>
-                    <div style={{ width: '10%' }} className="bg-[#E0921A] h-full" title="Idle 36m"></div>
-                    <div style={{ width: '8%' }} className="bg-[#2459C4] h-full" title="Lunch Break (12:45 - 01:15)"></div>
-                    <div style={{ width: '37%' }} className="bg-[#0F6B5C] h-full" title="Active Calls & Tasks (01:15 - Present)"></div>
+                    <div
+                      style={{
+                        width: `${Math.max(
+                          shiftSeconds > 0
+                            ? Math.round((activeSeconds / Math.max(shiftSeconds, 1)) * 100)
+                            : 100,
+                          5
+                        )}%`,
+                      }}
+                      className="bg-[#0F6B5C] h-full"
+                      title={`Active Workstation Usage: ${formatHoursMins(activeSeconds)}`}
+                    />
+                    {(telemetry.totalIdleSeconds || 0) > 0 && (
+                      <div
+                        style={{
+                          width: `${Math.round(((telemetry.totalIdleSeconds || 0) / Math.max(shiftSeconds, 1)) * 100)}%`,
+                        }}
+                        className="bg-[#E0921A] h-full"
+                        title={`Idle Break Time: ${formatHoursMins(telemetry.totalIdleSeconds || 0)}`}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[#8A939B]">
-                    <span>09:00 AM Check-in</span>
-                    <span>01:00 PM</span>
+                    <span>Shift Start ({new Date(Date.now() - shiftSeconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                    <span>Live Tracking</span>
                     <span>Now ({new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
                   </div>
                 </div>
@@ -1983,29 +1997,65 @@ export default function App() {
             )}
 
             {/* SCREEN D20: MY ACTIVITY TRANSPARENCY */}
+            {/* SCREEN D20: MY ACTIVITY TRANSPARENCY */}
             {currentScreen === 'D20-my-activity' && (
               <div className="space-y-5">
                 <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-sm text-[#151A1E]">Application &amp; Website Usage Breakdown</h3>
-                      <p className="text-xs text-[#8A939B]">Categorized by company productivity rules</p>
+                      <p className="text-xs text-[#8A939B]">Categorized by company productivity rules &amp; active foreground time</p>
                     </div>
                     <span className="font-mono text-xs font-semibold text-[#1E8E5A] px-2.5 py-1 rounded bg-[#E4F4EB]">
-                      91% Productive Overall
+                      {activeSeconds > 0 ? Math.round((activeSeconds / Math.max(shiftSeconds, 1)) * 100) : 100}% Productive Overall
                     </span>
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-medium text-[#151A1E]">WorkPulse CRM</span>
-                        <span className="font-mono font-semibold text-[#0F6B5C]">3h 42m (48%)</span>
+                    {(!telemetry.recentWindows || telemetry.recentWindows.length === 0) ? (
+                      <div className="p-8 text-center text-xs text-[#8A939B] bg-[#FAFBF9] rounded-lg border border-[#EEF0EC] space-y-1">
+                        <Monitor className="w-6 h-6 mx-auto text-[#0F6B5C] mb-2 opacity-60" />
+                        <div className="font-semibold text-[#151A1E]">No Application Activity Recorded Yet</div>
+                        <div>Switch between applications and tasks while on-shift to see real-time duration and productivity categorization.</div>
                       </div>
-                      <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">
-                        <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: '48%' }}></div>
-                      </div>
-                    </div>
+                    ) : (
+                      telemetry.recentWindows.map((win: any) => {
+                        const winSec = win.activeSeconds || 1;
+                        const pct = Math.min(100, Math.max(4, Math.round((winSec / Math.max(activeSeconds, 1)) * 100)));
+                        return (
+                          <div key={win.id} className="p-2.5 rounded-lg hover:bg-[#FAFBF9] transition border border-[#EEF0EC]">
+                            <div className="flex justify-between text-xs mb-1.5">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-semibold text-[#151A1E]">{win.appName}</span>
+                                <span className="text-[10.5px] text-[#8A939B] font-mono truncate max-w-[340px]">
+                                  {win.windowTitle || `${win.appName} Active Session`}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-mono font-bold text-[#0F6B5C]">{formatHoursMins(winSec)}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  win.category === 'PRODUCTIVE'
+                                    ? 'bg-[#E4F4EB] text-[#14673F]'
+                                    : win.category === 'UNPRODUCTIVE'
+                                    ? 'bg-[#FBE7E4] text-[#9E2A21]'
+                                    : 'bg-[#FAFBF9] border border-[#E4E7E1] text-[#4A535B]'
+                                }`}>
+                                  {win.category}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="h-2 rounded-full bg-[#ECEEEB] overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  win.category === 'UNPRODUCTIVE' ? 'bg-[#C2362B]' : 'bg-[#0F6B5C]'
+                                }`}
+                                style={{ width: `${pct}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
@@ -2387,6 +2437,77 @@ export default function App() {
                       <Coffee className="w-5 h-5 text-[#B26A00]" />
                     </div>
                   </div>
+                </div>
+
+                {/* 4. Live Open Windows & Activity Log */}
+                <div className="bg-white border border-[#E4E7E1] rounded-[12px] p-5 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#EEF0EC]">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4 text-[#0F6B5C]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#151A1E]">
+                        Recent Windows &amp; Process Telemetry Radar
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-semibold text-[#0F6B5C]">
+                      {telemetry.recentWindows?.length || 0} Windows Tracked
+                    </span>
+                  </div>
+
+                  {(!telemetry.recentWindows || telemetry.recentWindows.length === 0) ? (
+                    <div className="p-6 text-center text-xs text-[#8A939B] bg-[#FAFBF9] rounded-lg border border-[#EEF0EC]">
+                      No active foreground window events logged yet. Window titles and processes will stream here in real time as you switch tasks.
+                    </div>
+                  ) : (
+                    <div className="border border-[#EEF0EC] rounded-lg overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-[#FAFBF9] border-b border-[#EEF0EC] text-[11px] uppercase tracking-wider text-[#8A939B]">
+                          <tr>
+                            <th className="py-2.5 px-3">Application</th>
+                            <th className="py-2.5 px-3">Window Title</th>
+                            <th className="py-2.5 px-3">Active Duration</th>
+                            <th className="py-2.5 px-3">Category</th>
+                            <th className="py-2.5 px-3 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EEF0EC]">
+                          {telemetry.recentWindows.map((win: any) => (
+                            <tr key={win.id} className="hover:bg-[#FAFBF9] transition">
+                              <td className="py-2.5 px-3 font-semibold text-[#151A1E]">
+                                {win.appName}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-[11px] text-[#4A535B] truncate max-w-[320px]">
+                                {win.windowTitle || `${win.appName} Active Session`}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono font-bold text-[#0F6B5C]">
+                                {formatHoursMins(win.activeSeconds || 1)}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${
+                                  win.category === 'PRODUCTIVE'
+                                    ? 'bg-[#E4F4EB] text-[#14673F]'
+                                    : win.category === 'UNPRODUCTIVE'
+                                    ? 'bg-[#FBE7E4] text-[#9E2A21]'
+                                    : 'bg-[#FAFBF9] border border-[#E4E7E1] text-[#4A535B]'
+                                }`}>
+                                  {win.category}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                {win.appName === telemetry.activeApp?.name ? (
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#14673F] bg-[#E4F4EB] px-2 py-0.5 rounded-full">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E5A] animate-ping" />
+                                    Active Foreground
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-[#8A939B]">Recent</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

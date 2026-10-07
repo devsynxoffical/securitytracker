@@ -30,6 +30,16 @@ export interface HardwareProfile {
   };
 }
 
+export interface WindowActivityRecord {
+  id: string;
+  appName: string;
+  processName: string;
+  windowTitle: string;
+  activeSeconds: number;
+  lastActiveAt: string;
+  category: 'PRODUCTIVE' | 'NEUTRAL' | 'UNPRODUCTIVE';
+}
+
 export interface LiveTelemetryState {
   isTracking: boolean;
   shiftId: string | null;
@@ -58,6 +68,10 @@ export interface LiveTelemetryState {
     activeSeconds: number;
     category: 'PRODUCTIVE' | 'NEUTRAL' | 'UNPRODUCTIVE';
   };
+  
+  // Recent Windows & Application Radar
+  recentWindows: WindowActivityRecord[];
+  openWindowsCount: number;
   
   // Global Shift Counters
   shiftDurationSeconds: number;
@@ -116,12 +130,14 @@ export class TelemetryEngine {
     activeSeconds: number;
     category: 'PRODUCTIVE' | 'NEUTRAL' | 'UNPRODUCTIVE';
   } = {
-    name: 'WorkPulse',
+    name: 'WorkPulse Workstation',
     processName: 'WorkPulse.app',
-    windowTitle: 'WorkPulse — Desktop Workstation',
+    windowTitle: 'WorkPulse Workstation — Live Floor',
     activeSeconds: 0,
     category: 'PRODUCTIVE',
   };
+
+  private recentWindows: WindowActivityRecord[] = [];
 
 
   private segmentBuffer: ActivitySegment[] = [];
@@ -205,15 +221,23 @@ export class TelemetryEngine {
       hardwareHash,
       displayInfo,
     };
-  }
-
-  public startShift(shiftId: string) {
+  }  public startShift(shiftId: string) {
     this.shiftId = shiftId;
     this.trackingActive = true;
     this.shiftState = 'WORKING';
     this.currentSegmentStart = new Date();
     this.segmentKeyCount = 0;
     this.segmentMouseCount = 0;
+    this.shiftDurationSeconds = 0;
+    this.totalActiveSeconds = 0;
+    this.totalIdleSeconds = 0;
+    this.currentIdleStreakSeconds = 0;
+    this.totalCursorDistance = 0;
+    this.cursorMovementSeconds = 0;
+    this.mouseClicksCount = 0;
+    this.keystrokeTapsCount = 0;
+    this.typingActiveSeconds = 0;
+    this.recentWindows = [];
     
     this.startTelemetryLoop();
   }
@@ -325,44 +349,33 @@ export class TelemetryEngine {
 
   private async detectActiveApplication() {
     try {
+      let appName = 'WorkPulse Workstation';
+      let processName = 'WorkPulse.app';
+      let windowTitle = 'WorkPulse Workstation — Active Session';
+
       if (process.platform === 'darwin') {
         const { stdout } = await execAsync(
-          `osascript -l JavaScript -e '
-            try {
-              ObjC.import("AppKit");
-              const app = $.NSWorkspace.sharedWorkspace.frontmostApplication;
-              const name = app.localizedName ? app.localizedName.js : "WorkPulse Workstation";
-              const bundleId = app.bundleIdentifier ? app.bundleIdentifier.js : "";
-              const pid = app.processIdentifier;
-              JSON.stringify({ name, bundleId, pid });
-            } catch(e) {
-              JSON.stringify({ name: "WorkPulse Workstation", bundleId: "", pid: 0 });
-            }
+          `osascript -e '
+            tell application "System Events"
+              try
+                set frontApp to first application process whose frontmost is true
+                set appName to name of frontApp
+                set winTitle to ""
+                try
+                  tell frontApp to set winTitle to name of front window
+                end try
+                return appName & "|||" & winTitle
+              on error
+                return "WorkPulse Workstation|||Dashboard"
+              end try
+            end tell
           '`
         );
-        const data = JSON.parse(stdout.trim());
-        const appName = data.name || 'WorkPulse Workstation';
-        const bundleId = data.bundleId || '';
-
-        // Determine user-friendly process binary name
-        let processName = `${appName}.app`;
-        if (bundleId.includes('chrome')) processName = 'Google Chrome.app';
-        else if (bundleId.includes('vscode') || bundleId.includes('code')) processName = 'Code.app';
-        else if (bundleId.includes('slack')) processName = 'Slack.app';
-        else if (bundleId.includes('terminal')) processName = 'Terminal.app';
-
-        let windowTitle = `${appName} - Active Session`;
-
-        if (appName && (appName !== this.currentApp.name || processName !== this.currentApp.processName)) {
-          this.currentApp = {
-            name: appName,
-            processName,
-            windowTitle,
-            activeSeconds: 0,
-            category: this.categorizeApp(appName),
-          };
-          this.broadcastState();
-        }
+        const parts = stdout.trim().split('|||');
+        appName = parts[0]?.trim() || 'WorkPulse Workstation';
+        const rawTitle = parts[1]?.trim() || '';
+        windowTitle = rawTitle ? `${appName} - ${rawTitle}` : `${appName} - Active Window`;
+        processName = `${appName}.app`;
       } else if (process.platform === 'win32') {
         const { stdout } = await execAsync(
           `powershell -NoProfile -Command "
@@ -383,26 +396,55 @@ export class TelemetryEngine {
             [void][WinUtil]::GetWindowThreadProcessId($hwnd, [ref]$pid)
             $p = Get-Process -Id $pid -ErrorAction SilentlyContinue
             [PSCustomObject]@{
-              ProcessName = if ($p) { $p.ProcessName } else { 'Unknown' }
+              ProcessName = if ($p) { $p.ProcessName } else { 'WorkPulse' }
               WindowTitle = $sb.ToString()
             } | ConvertTo-Json -Compress
           "`
         );
         const data = JSON.parse(stdout.trim());
-        const procName = data.ProcessName || 'WorkPulse';
-        const winTitle = data.WindowTitle || `${procName} Window`;
+        appName = data.ProcessName || 'WorkPulse Workstation';
+        processName = `${appName}.exe`;
+        windowTitle = data.WindowTitle || `${appName} - Active Window`;
+      }
 
-        if (procName && procName !== this.currentApp.name) {
-          this.currentApp = {
-            name: procName,
-            processName: `${procName}.exe`,
-            windowTitle: winTitle,
-            activeSeconds: 0,
-            category: this.categorizeApp(procName),
-          };
-          this.broadcastState();
+      const category = this.categorizeApp(appName);
+
+      // Update current active app
+      this.currentApp = {
+        name: appName,
+        processName,
+        windowTitle,
+        activeSeconds: (this.currentApp && this.currentApp.name === appName ? this.currentApp.activeSeconds + 1 : 1),
+        category,
+      };
+
+      // Record in recent windows list
+      if (this.trackingActive) {
+        const nowIso = new Date().toISOString();
+        const existingIdx = this.recentWindows.findIndex(
+          (w) => w.appName === appName && (w.windowTitle === windowTitle || !w.windowTitle)
+        );
+        if (existingIdx >= 0) {
+          this.recentWindows[existingIdx].activeSeconds += 1;
+          this.recentWindows[existingIdx].lastActiveAt = nowIso;
+          this.recentWindows[existingIdx].windowTitle = windowTitle;
+        } else {
+          this.recentWindows.unshift({
+            id: `win-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            appName,
+            processName,
+            windowTitle,
+            activeSeconds: 1,
+            lastActiveAt: nowIso,
+            category,
+          });
+          if (this.recentWindows.length > 25) {
+            this.recentWindows.pop();
+          }
         }
       }
+
+      this.broadcastState();
     } catch {
       // Non-blocking fallback
     }
@@ -446,7 +488,6 @@ export class TelemetryEngine {
     }
   }
 
-
   private initPowerMonitor() {
     powerMonitor.on('lock-screen', () => {
       this.closeCurrentSegment('locked');
@@ -478,6 +519,8 @@ export class TelemetryEngine {
       typingActiveSeconds: this.typingActiveSeconds,
       keyboardActive: this.currentIdleStreakSeconds < 5 && this.segmentKeyCount > 0,
       activeApp: this.currentApp,
+      recentWindows: this.recentWindows,
+      openWindowsCount: this.recentWindows.length || (this.trackingActive ? 1 : 0),
       shiftDurationSeconds: this.shiftDurationSeconds,
       totalActiveSeconds: this.totalActiveSeconds,
       totalIdleSeconds: this.totalIdleSeconds,
