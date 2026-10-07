@@ -97,17 +97,19 @@ export class EmployeesService {
     }
     const code = `EMP-${nextNumber.toString().padStart(4, '0')}`;
 
-    // Determine role (use provided or fallback to first role for company)
-    let roleId = dto.roleId;
-    if (!roleId) {
+    // Determine role (use provided or fallback to first available role)
+    let roleId: string;
+    if (dto.roleId) {
+      roleId = dto.roleId;
+    } else {
       const defaultRole = await this.prisma.role.findFirst({
-        where: { companyId },
+        where: { name: 'Employee' },
       });
       if (defaultRole) {
         roleId = defaultRole.id;
       } else {
         const anyRole = await this.prisma.role.findFirst();
-        roleId = anyRole?.id || uuidv4();
+        roleId = anyRole ? anyRole.id : crypto.randomUUID();
       }
     }
 
@@ -156,7 +158,7 @@ export class EmployeesService {
         firstName: employee.firstName,
         lastName: employee.lastName,
         email: employee.email,
-        role: employee.role?.name || 'Staff',
+        role: (employee as any).role?.name || 'Staff',
       },
       temporaryPassword: plainPassword,
     };
