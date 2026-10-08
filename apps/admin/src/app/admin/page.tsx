@@ -15,6 +15,7 @@ import {
   Upload,
   ChevronRight,
   ChevronDown,
+  Monitor,
   MonitorSmartphone,
   Calendar,
   CalendarClock,
@@ -1259,107 +1260,123 @@ export default function AdminControlCenter() {
               {/* 1. Top Header Banner Card */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#FFF1F2] border border-[#FFE4E6] text-[#E11D48] flex items-center justify-center shadow-xs">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
                     <Activity className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Analytics Dashboard</h2>
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Workforce &amp; Operations Dashboard</h2>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      This is an example dashboard created using build-in elements and components.
+                      Live telemetry, attendance shifts, CRM pipeline velocity, and PostgreSQL database records.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2.5 shrink-0">
                   <button
-                    onClick={() => showToast('Starred to quick access toolbar.', 'info', 'Quick Action')}
-                    className="p-2.5 rounded-lg bg-[#1E293B] hover:bg-black text-white transition shadow-sm"
-                    title="Bookmark Dashboard"
+                    onClick={() => handleSyncLiveData()}
+                    className="p-2.5 rounded-lg bg-slate-900 hover:bg-black text-white transition shadow-sm flex items-center gap-1.5 text-xs font-bold"
+                    title="Refresh Live Data"
                   >
-                    <Star className="w-4 h-4 fill-white" />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLiveSyncing ? 'animate-spin' : ''}`} />
+                    <span>Sync Live</span>
                   </button>
                   <button
                     onClick={() => setShowNewEmployeeDrawer(true)}
-                    className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
+                    className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Buttons</span>
+                    <span>Add Employee</span>
                   </button>
                 </div>
               </div>
 
-              {/* 2. Sub-Nav Tabs (Variation 1 / Variation 2) */}
+              {/* 2. Sub-Nav Tabs (Live View Filters) */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setAttendanceFilter('ALL')}
-                  className="px-4 py-2 rounded-lg bg-[#2563EB] text-white font-semibold text-xs shadow-sm shadow-blue-500/20 transition"
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition shadow-sm ${
+                    attendanceFilter === 'ALL'
+                      ? 'bg-[#2563EB] text-white shadow-blue-500/20'
+                      : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                  }`}
                 >
-                  Variation 1
+                  All Workforce ({employees.length})
                 </button>
                 <button
                   onClick={() => setAttendanceFilter('WORKING')}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white/80 font-medium text-xs transition"
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition shadow-sm ${
+                    attendanceFilter === 'WORKING'
+                      ? 'bg-[#2563EB] text-white shadow-blue-500/20'
+                      : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                  }`}
                 >
-                  Variation 2
+                  Active Shift Now ({liveAttendance.filter((a) => a.status === 'WORKING').length})
                 </button>
               </div>
 
-              {/* 3. Portfolio Performance Card */}
+              {/* 3. Real-Time Operations Metrics (REAL DATA) */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <h3 className="font-bold text-sm text-slate-800 tracking-tight">Portfolio Performance</h3>
+                  <div>
+                    <h3 className="font-black text-sm text-slate-900 tracking-tight">Real-Time Operational Metrics</h3>
+                    <p className="text-[11px] text-slate-400">Directly synchronized with central PostgreSQL database</p>
+                  </div>
                   <button
                     onClick={() => selectNav('crm-leads')}
-                    className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-1.5 rounded-lg transition"
+                    className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-bold text-xs px-3.5 py-1.5 rounded-lg transition"
                   >
-                    View All
+                    View All CRM Leads ({leads.length})
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Cash Deposits Metric */}
-                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                  {/* Total Employees Enrolled */}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200/60 transition">
                     <div className="w-13 h-13 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
-                      <Layers className="w-6 h-6" />
+                      <Users className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-400">Cash Deposits</div>
-                      <div className="text-2xl font-extrabold text-slate-900 tracking-tight">1,7M</div>
-                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#E11D48] mt-0.5">
-                        <ArrowDownRight className="w-3.5 h-3.5" />
-                        <span>54.1% less earnings</span>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Workforce</div>
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                        {employees.length} Staff
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-0.5">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>{departments.length} Departments Active</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Invested Dividends Metric */}
-                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                  {/* CRM Pipeline Total Value */}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200/60 transition">
                     <div className="w-13 h-13 rounded-full bg-[#E11D48] text-white flex items-center justify-center shadow-lg shadow-rose-500/25 shrink-0">
-                      <GraduationCap className="w-6 h-6" />
+                      <DollarSign className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-400">Invested Dividends</div>
-                      <div className="text-2xl font-extrabold text-slate-900 tracking-tight">9M</div>
-                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2563EB] mt-0.5">
-                        <span>Grow Rate:</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>14.1%</span>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">CRM Pipeline Value</div>
+                      <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                        ${leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0).toLocaleString()}
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#2563EB] mt-0.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>{leads.length} Total Sales Leads</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Capital Gains Metric */}
-                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                  {/* Active Hardware Workstations */}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200/60 transition">
                     <div className="w-13 h-13 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
-                      <Building2 className="w-6 h-6" />
+                      <Monitor className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-400">Capital Gains</div>
-                      <div className="text-2xl font-extrabold text-[#10B981] tracking-tight">$563</div>
-                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#D97706] mt-0.5">
-                        <span>Increased by</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>7.35%</span>
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Enrolled Workstations</div>
+                      <div className="text-2xl font-black text-[#10B981] tracking-tight font-mono">
+                        {devices.filter((d) => d.status === 'APPROVED').length} / {devices.length || 0}
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-0.5">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Zero-Trust Enrolled</span>
                       </div>
                     </div>
                   </div>
@@ -1368,42 +1385,55 @@ export default function AdminControlCenter() {
                 <div className="pt-2 text-center">
                   <button
                     onClick={() => selectNav('attendance-live')}
-                    className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
+                    className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
                   >
                     <Activity className="w-4 h-4" />
-                    <span>View Complete Report</span>
+                    <span>Open Live Attendance Floor</span>
                   </button>
                 </div>
               </div>
 
-              {/* 4. Split 2-Column Section (Technical Support Wave Chart & Timeline Feed) */}
+              {/* 4. Split 2-Column Section (Live Telemetry Radar & Live Activity Stream) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Left Card: Technical Support Wave Chart (7 cols) */}
+                {/* Left Card: Active Telemetry & Attendance Wave (7 cols) */}
                 <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-500" />
-                        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Technical Support</h3>
+                        <h3 className="font-black text-xs text-slate-800 uppercase tracking-wider">Live Workforce Telemetry</h3>
                       </div>
-                      <Menu className="w-4 h-4 text-slate-400" />
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-mono font-bold text-[10px]">
+                        10s Live Polling
+                      </span>
                     </div>
 
                     <div className="pt-3">
                       <span className="text-[10.5px] uppercase font-bold text-slate-400 tracking-wider">
-                        New Accounts Since 2018
+                        Active Shift Floor Utilization
                       </span>
                       <div className="flex items-baseline gap-2 mt-1">
-                        <div className="flex items-center text-2xl font-extrabold text-[#10B981] tracking-tight">
+                        <div className="flex items-center text-2xl font-black text-[#10B981] tracking-tight font-mono">
                           <ArrowUp className="w-5 h-5 mr-1" />
-                          <span>78 %</span>
+                          <span>
+                            {employees.length > 0
+                              ? Math.round(
+                                  (liveAttendance.filter((a) => a.status === 'WORKING').length /
+                                    employees.length) *
+                                    100
+                                )
+                              : 0}{' '}
+                            %
+                          </span>
                         </div>
-                        <span className="text-xs font-bold text-[#10B981]">+14</span>
+                        <span className="text-xs font-bold text-[#10B981]">
+                          ({liveAttendance.filter((a) => a.status === 'WORKING').length} / {employees.length} Online)
+                        </span>
                       </div>
                     </div>
 
                     {/* Smooth Neon Emerald Wave Chart */}
-                    <div className="relative h-44 w-full mt-2 flex items-center justify-center">
+                    <div className="relative h-40 w-full mt-3 flex items-center justify-center">
                       <svg className="w-full h-full overflow-visible" viewBox="0 0 500 160" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -1411,12 +1441,10 @@ export default function AdminControlCenter() {
                             <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
-                        {/* Area Fill */}
                         <path
                           d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60 L 500,160 L 0,160 Z"
                           fill="url(#chartGradient)"
                         />
-                        {/* Smooth Line Curve */}
                         <path
                           d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60"
                           fill="none"
@@ -1425,143 +1453,139 @@ export default function AdminControlCenter() {
                           strokeLinecap="round"
                         />
                       </svg>
-
-                      {/* Carousel Arrow Controls */}
-                      <button className="absolute left-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button className="absolute right-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Pagination dots */}
-                    <div className="flex items-center justify-center gap-1.5 pt-2">
-                      <span className="w-2.5 h-2.5 rounded-full border-2 border-[#2563EB] bg-white"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
                     </div>
                   </div>
 
-                  {/* Sales Progress Bar Bottom */}
+                  {/* Calling Sheets Progress Bottom */}
                   <div className="pt-3 border-t border-slate-100 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div>
-                        <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sales Progress</div>
-                        <div className="font-bold text-slate-900">Total Orders</div>
-                        <div className="text-[11px] text-slate-400">Last year expenses</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Calling Progress</div>
+                        <div className="font-black text-slate-900">Assigned CRM Leads</div>
+                        <div className="text-[11px] text-slate-400">Total verified phone records</div>
                       </div>
-                      <div className="text-xl font-extrabold text-[#10B981] font-mono">$ 1896</div>
+                      <div className="text-xl font-black text-[#10B981] font-mono">
+                        {leads.filter((l) => Boolean(l.phone)).length} Leads
+                      </div>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full bg-[#2563EB] rounded-full" style={{ width: '42%' }}></div>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-400">
-                      <span>YoY Growth</span>
-                      <span>100%</span>
+                      <div
+                        className="h-full bg-[#2563EB] rounded-full transition-all"
+                        style={{
+                          width: `${
+                            leads.length > 0
+                              ? Math.min(
+                                  100,
+                                  Math.round(
+                                    (leads.filter((l) => Boolean(l.phone)).length / leads.length) * 100
+                                  )
+                                )
+                              : 0
+                          }%`,
+                        }}
+                      ></div>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Card: Timeline Example Widget (5 cols) */}
+                {/* Right Card: Live Audit Trail & Events (5 cols) (REAL DATA) */}
                 <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-rose-500" />
-                        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Timeline Example</h3>
+                        <Clock className="w-4 h-4 text-[#2563EB]" />
+                        <h3 className="font-black text-xs text-slate-800 uppercase tracking-wider">Live System Activity</h3>
                       </div>
-                      <Menu className="w-4 h-4 text-slate-400" />
+                      <button
+                        onClick={() => selectNav('audit-logs')}
+                        className="text-[11px] font-bold text-[#2563EB] hover:underline"
+                      >
+                        View All Logs
+                      </button>
                     </div>
 
-                    <div className="space-y-3.5 pt-3 text-xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-rose-100 bg-[#E11D48] shrink-0"></span>
-                        <span className="font-semibold text-slate-800">All Hands Meeting</span>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-amber-100 bg-[#F59E0B] shrink-0"></span>
-                        <span className="text-slate-600">Yet another one, at <strong className="text-[#10B981]">15:00 PM</strong></span>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-emerald-100 bg-[#10B981] shrink-0"></span>
-                        <span className="font-semibold text-slate-800">Build the production release</span>
-                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#E11D48] text-white">NEW</span>
-                      </div>
-
-                      <div className="flex items-start gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-blue-100 bg-[#2563EB] shrink-0 mt-1"></span>
-                        <div>
-                          <span className="font-semibold text-slate-800">Something not important</span>
-                          {/* Overlapping User Avatars Stack */}
-                          <div className="flex items-center -space-x-2 mt-2">
-                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces" alt="User" />
-                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=faces" alt="User" />
-                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces" alt="User" />
-                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=64&h=64&fit=crop&crop=faces" alt="User" />
-                            <div className="w-7 h-7 rounded-full bg-blue-50 border-2 border-dashed border-[#2563EB] text-[#2563EB] font-bold text-xs flex items-center justify-center">
-                              +
-                            </div>
-                          </div>
+                    <div className="space-y-3 pt-3 text-xs max-h-[260px] overflow-y-auto">
+                      {auditLogs.length === 0 ? (
+                        <div className="py-8 text-center text-slate-400 space-y-1">
+                          <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-500 mb-1" />
+                          <div className="font-bold text-slate-700">System Ready</div>
+                          <div className="text-[11px]">Audit events will stream here as employees interact with the system.</div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-700 shrink-0"></span>
-                        <span className="text-slate-600">This dot has an info state</span>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-900 shrink-0"></span>
-                        <span className="text-slate-600">This dot has a dark state</span>
-                      </div>
+                      ) : (
+                        auditLogs.slice(0, 6).map((log, idx) => (
+                          <div key={log.id || idx} className="flex items-start gap-2.5 pb-2 border-b border-slate-50 last:border-0">
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${
+                                log.action?.includes('CREATE') || log.action?.includes('START')
+                                  ? 'bg-emerald-500 ring-4 ring-emerald-100'
+                                  : log.action?.includes('DELETE') || log.action?.includes('OFFBOARD')
+                                  ? 'bg-rose-500 ring-4 ring-rose-100'
+                                  : 'bg-blue-500 ring-4 ring-blue-100'
+                              }`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-slate-800 truncate">{log.action || 'System Event'}</div>
+                              <div className="text-[11px] text-slate-400 truncate">{log.details || log.target || log.userEmail || 'Internal Operation'}</div>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap shrink-0">
+                              {log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                            </span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
-                  <div className="pt-4 text-center">
+                  <div className="pt-3 border-t border-slate-100 flex justify-center">
                     <button
                       onClick={() => selectNav('audit-logs')}
-                      className="px-5 py-2 rounded-full bg-[#1E293B] hover:bg-black text-white font-semibold text-xs shadow-md inline-flex items-center gap-2 transition"
+                      className="w-full py-2 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs shadow-sm transition"
                     >
-                      <span>View All Messages</span>
+                      View All Audit Events ({auditLogs.length})
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* 5. Bottom 4 KPI Stat Cards */}
+              {/* 5. Bottom 4 Metric Cards (REAL DATA) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
-                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 874</div>
-                  <div className="text-xs text-slate-500">sales last month</div>
-                  <div className="flex items-center gap-1 text-[#10B981] text-xs font-bold pt-1">
+                  <div className="text-2xl font-black text-slate-900 font-mono">{employees.length}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Staff</div>
+                  <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold pt-1">
                     <ArrowUp className="w-3.5 h-3.5" />
+                    <span>Active</span>
                   </div>
                 </div>
 
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
-                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 1283</div>
-                  <div className="text-xs text-slate-500">sales Income</div>
+                  <div className="text-2xl font-black text-[#2563EB] font-mono">{leads.length}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">CRM Leads</div>
                   <div className="flex items-center gap-1 text-[#2563EB] text-xs font-bold pt-1">
-                    <ArrowUp className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>In Pipeline</span>
                   </div>
                 </div>
 
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
-                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 1286</div>
-                  <div className="text-xs text-slate-500">last month sales</div>
-                  <div className="flex items-center gap-1 text-[#F59E0B] text-xs font-bold pt-1">
-                    <ArrowUp className="w-3.5 h-3.5" />
+                  <div className="text-2xl font-black text-emerald-600 font-mono">
+                    {devices.filter((d) => d.status === 'APPROVED').length}
+                  </div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Approved Devices</div>
+                  <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold pt-1">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Verified</span>
                   </div>
                 </div>
 
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
-                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 564</div>
-                  <div className="text-xs text-slate-500">total revenue</div>
-                  <div className="flex items-center gap-1 text-[#E11D48] text-xs font-bold pt-1">
-                    <ArrowUp className="w-3.5 h-3.5" />
+                  <div className="text-2xl font-black text-slate-900 font-mono">
+                    ${leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pipeline Value</div>
+                  <div className="flex items-center gap-1 text-[#10B981] text-xs font-bold pt-1">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span>Total Deal Volume</span>
                   </div>
                 </div>
               </div>
