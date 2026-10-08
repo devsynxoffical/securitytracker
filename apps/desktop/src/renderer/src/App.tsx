@@ -421,61 +421,70 @@ export default function App() {
   // Switch Auth Views (for testing full flow)
   if (currentScreen === 'D01-login') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
-        <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
-          <span className="font-semibold text-[#151A1E]">WorkPulse Workstation</span>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><Minus className="w-3.5 h-3.5" /></span>
-            <span className="cursor-pointer hover:bg-gray-100 p-1 rounded"><X className="w-3.5 h-3.5" /></span>
+      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B] relative overflow-hidden">
+        {/* Subtle Ambient Background Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[300px] bg-gradient-to-tr from-emerald-200/40 via-blue-100/30 to-lime-200/40 blur-3xl -z-10 pointer-events-none rounded-full" />
+
+        {/* Top Window Titlebar */}
+        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+            WP
+          </div>
+          <span className="font-extrabold text-slate-900">WorkPulse Workstation</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="cursor-pointer hover:bg-slate-100 p-1.5 rounded-md text-slate-500 hover:text-slate-900 transition"><Minus className="w-3.5 h-3.5" /></span>
+            <span className="cursor-pointer hover:bg-rose-50 hover:text-rose-600 p-1.5 rounded-md text-slate-500 transition"><X className="w-3.5 h-3.5" /></span>
           </div>
         </div>
+
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[420px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <img src={logoImg} alt="WorkPulse" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
+          <div className="w-[430px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8">
+            <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-slate-100">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] flex items-center justify-center text-white shadow-md font-bold text-sm shrink-0">
+                WP
+              </div>
               <div>
-                <h1 className="text-base font-semibold text-[#151A1E]">Sign in to WorkPulse</h1>
-                <p className="text-xs text-[#8A939B]">Live Telemetry &bull; Automated Monitoring Engine</p>
+                <h1 className="text-base font-black text-slate-900 tracking-tight">Sign in to WorkPulse</h1>
+                <p className="text-[11.5px] text-slate-400 mt-0.5">Live Telemetry &bull; Automated Monitoring Engine</p>
               </div>
             </div>
 
             {authError && (
-              <div className="mb-4 p-2.5 rounded-lg bg-[#FBE7E4] text-[#9E2A21] text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
                 <span>{authError}</span>
               </div>
             )}
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Employee ID or Email</label>
-                <div className="flex items-center gap-2 px-3 py-2 border border-[#E4E7E1] focus-within:border-[#0F6B5C] focus-within:ring-2 focus-within:ring-[#E3F1EE] rounded-lg bg-white text-sm">
-                  <User className="w-4 h-4 text-[#8A939B]" />
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Employee ID or Email</label>
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-xl bg-slate-50 focus-within:bg-white transition text-xs">
+                  <User className="w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="e.g. EMP-0001 or email@company.com"
-                    className="w-full outline-none font-mono text-xs text-[#151A1E]"
+                    className="w-full outline-none font-mono text-xs text-slate-900 bg-transparent placeholder:text-slate-400"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1.5">Workstation Password</label>
-                <div className="flex items-center gap-2 px-3 py-2 border border-[#E4E7E1] focus-within:border-[#0F6B5C] focus-within:ring-2 focus-within:ring-[#E3F1EE] rounded-lg bg-white text-sm">
-                  <Lock className="w-4 h-4 text-[#8A939B]" />
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Workstation Password</label>
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-xl bg-slate-50 focus-within:bg-white transition text-xs">
+                  <Lock className="w-4 h-4 text-slate-400" />
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter password..."
-                    className="w-full outline-none text-xs text-[#151A1E]"
+                    className="w-full outline-none text-xs text-slate-900 bg-transparent placeholder:text-slate-400"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="text-[#8A939B] hover:text-[#151A1E]"
+                    className="text-slate-400 hover:text-slate-700"
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -483,7 +492,7 @@ export default function App() {
               </div>
               <button
                 onClick={handleLiveLogin}
-                className="w-full py-2.5 px-4 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-3 px-4 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 shadow-md"
               >
                 <span>Sign In &amp; Start Monitoring</span>
               </button>
@@ -496,43 +505,45 @@ export default function App() {
 
   if (currentScreen === 'D02-device-pending') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
-        <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
-          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
+      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B]">
+        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px]">
+            WP
+          </div>
+          <span className="font-extrabold text-slate-900">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[440px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#FCF0DA] text-[#B26A00] flex items-center justify-center mx-auto mb-4">
+          <div className="w-[440px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto mb-4">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <h2 className="text-base font-semibold text-[#151A1E] mb-2">Device Approval Required</h2>
-            <p className="text-xs text-[#4A535B] leading-relaxed mb-6">
+            <h2 className="text-base font-black text-slate-900 mb-2">Device Approval Required</h2>
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
               This workstation is new or has not been authorized by your company administrator yet.
             </p>
-            <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-3 text-left space-y-2 mb-6 text-xs">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-left space-y-2 mb-6 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#8A939B]">Hardware ID:</span>
-                <span className="font-mono text-[#151A1E] font-semibold">HW-MAC-9821-B4</span>
+                <span className="text-slate-400">Hardware ID:</span>
+                <span className="font-mono text-slate-900 font-bold">HW-MAC-9821-B4</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8A939B]">Platform:</span>
-                <span className="font-mono text-[#151A1E]">macOS 15.1.1 (Apple Silicon)</span>
+                <span className="text-slate-400">Platform:</span>
+                <span className="font-mono text-slate-900">macOS 15.1.1 (Apple Silicon)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8A939B]">Status:</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#FCF0DA] text-[#B26A00] font-semibold text-[11px]">Pending Admin Review</span>
+                <span className="text-slate-400">Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[11px]">Pending Admin Review</span>
               </div>
             </div>
             <button
               onClick={() => setCurrentScreen('D03-change-password')}
-              className="w-full py-2.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition mb-2"
+              className="w-full py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-sm transition mb-2"
             >
               Simulate: Admin Approved &gt; Next Step
             </button>
             <button
               onClick={() => setCurrentScreen('D01-login')}
-              className="w-full py-2 bg-transparent text-[#4A535B] hover:bg-gray-100 rounded-lg font-medium text-xs transition"
+              className="w-full py-2 bg-transparent text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-xs transition"
             >
               Back to Login
             </button>
@@ -544,38 +555,40 @@ export default function App() {
 
   if (currentScreen === 'D03-change-password') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
-        <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
-          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
+      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B]">
+        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px]">
+            WP
+          </div>
+          <span className="font-extrabold text-slate-900">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[440px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
-            <h2 className="text-base font-semibold text-[#151A1E] mb-1">Update Temporary Password</h2>
-            <p className="text-xs text-[#8A939B] mb-6">You must set a secure personal password before continuing.</p>
+          <div className="w-[440px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8">
+            <h2 className="text-base font-black text-slate-900 mb-1">Update Temporary Password</h2>
+            <p className="text-xs text-slate-400 mb-6">You must set a secure personal password before continuing.</p>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1">Current Temporary Password</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Current Temporary Password</label>
                 <input
                   type="password"
                   defaultValue="tempPass123!"
-                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg text-xs outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1">New Password</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">New Password</label>
                 <input
                   type="password"
                   placeholder="Minimum 8 characters"
-                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg text-xs outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#4A535B] mb-1">Confirm New Password</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Confirm New Password</label>
                 <input
                   type="password"
                   placeholder="Re-enter password"
-                  className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg text-xs outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
                 />
               </div>
               <button
