@@ -41,3 +41,4 @@ public/downloads/*.dmg
 apps/admin/public/downloads/*.dmg
 apps/admin/public/downloads/*.zip
 *.dmg
+WorkPulse-Mac-Universal.zip

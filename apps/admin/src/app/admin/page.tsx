@@ -76,6 +76,13 @@ import {
   EyeOff,
   CheckCircle,
   Copy,
+  Star,
+  ArrowDownRight,
+  ArrowUpRight,
+  GraduationCap,
+  Building2,
+  ArrowUp,
+  ChevronLeft,
 } from 'lucide-react';
 import { AdminApiClient } from '../../apiClient';
 
@@ -807,265 +814,258 @@ export default function AdminControlCenter() {
   };
 
   const renderSidebarNav = () => (
-    <div className="flex flex-col h-full justify-between">
-      <div className="overflow-y-auto p-3 space-y-1">
+    <div className="flex flex-col h-full justify-between bg-gradient-to-b from-[#10B981] via-[#16A34A] to-[#65A30D] text-white shadow-xl">
+      <div className="overflow-y-auto p-4 space-y-3">
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-          <img src="/logo.jpg" alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
-          <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
-          <span className="ml-auto px-2 py-0.5 rounded-full bg-[#ECEEEB] text-[#5C666E] font-semibold text-[10px]">
-            Admin Live
+        <div className="flex items-center gap-3 px-2 py-2 mb-2 border-b border-white/20 pb-3">
+          <img src="/logo.jpg" alt="WorkPulse" className="w-8 h-8 rounded-xl object-cover shadow-md ring-2 ring-white/30" />
+          <div>
+            <div className="font-bold text-sm text-white tracking-tight">WorkPulse OS</div>
+            <div className="text-[10px] text-white/80 font-medium">Enterprise Analytics</div>
+          </div>
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-white/20 text-white font-bold text-[10px] backdrop-blur-xs">
+            LIVE
           </span>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden ml-1 p-1 rounded-md text-[#8A939B] hover:text-[#151A1E] hover:bg-[#FAFBF9]"
+            className="md:hidden ml-1 p-1 rounded-md text-white/80 hover:text-white hover:bg-white/20"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Nav: Dashboard (A03) */}
-        <button
-          onClick={() => selectNav('dashboard')}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-medium transition ${
+        {/* Section: MENU */}
+        <div className="space-y-1">
+          <div className="px-2.5 py-1 text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold">
+            Menu
+          </div>
+
+          {/* Dashboards Category */}
+          <button
+            onClick={() => selectNav('dashboard')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition ${
               currentSection === 'dashboard'
-                ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                ? 'bg-white/25 text-white font-bold shadow-xs backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Dashboard</span>
+            <div className="flex items-center gap-2.5">
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Dashboards</span>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-white/70" />
           </button>
 
-          {/* Group 1: Employees */}
-          <div className="pt-2">
+          {/* Sub-menu: Analytics (Active State Highlight) */}
+          <div className="space-y-0.5 mt-1 pl-4 border-l-2 border-white/25 ml-4">
             <button
-              onClick={() => toggleGroup('employees')}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold hover:text-[#151A1E]"
-            >
-              <span>Employees</span>
-              {expandedGroups.employees ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-
-            {expandedGroups.employees && (
-              <div className="space-y-0.5 mt-0.5 pl-2">
-                <button
-                  onClick={() => setCurrentSection('employees')}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'employees' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Roster &amp; Profiles (A04)</span>
-                </button>
-                <button
-                  onClick={() => setCurrentSection('departments')}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'departments' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <FolderTree className="w-3.5 h-3.5" />
-                  <span>Departments (A08)</span>
-                </button>
-                <button
-                  onClick={() => setCurrentSection('roles')}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'roles' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Roles &amp; Perms (A09)</span>
-                </button>
-                <button
-                  onClick={() => setCurrentSection('devices')}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'devices' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <MonitorSmartphone className="w-3.5 h-3.5" />
-                    <span>Devices (A10)</span>
-                  </div>
-                  {devices.filter((d) => d.status === 'Pending').length > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#FCF0DA] text-[#8A5200] font-mono text-[10px] font-bold">
-                      {devices.filter((d) => d.status === 'Pending').length}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Group 2: CRM */}
-          <div className="pt-2">
-            <button
-              onClick={() => toggleGroup('crm')}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold hover:text-[#151A1E]"
-            >
-              <span>CRM &amp; Sales</span>
-              {expandedGroups.crm ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-
-            {expandedGroups.crm && (
-              <div className="space-y-0.5 mt-0.5 pl-2">
-                <button
-                  onClick={() => {
-                    setCurrentSection('crm-leads');
-                    setCrmView('table');
-                  }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'crm-leads' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Leads Table (A11)</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentSection('crm-board');
-                    setCrmView('board');
-                  }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'crm-board' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Pipeline Board (A12)</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentSection('crm-sheets');
-                    setCrmView('sheets');
-                  }}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'crm-sheets' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                    <span>Calling Sheets (A14)</span>
-                  </div>
-                  {callingSheets.length > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#E3F1EE] text-[#0B5548] font-mono text-[10px] font-bold">
-                      {callingSheets.length}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentSection('crm-import');
-                    setCrmView('import');
-                  }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'crm-import' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>CSV Import (A13)</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Group 3: Workforce & Tracking */}
-          <div className="pt-2">
-            <button
-              onClick={() => toggleGroup('workforce')}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold hover:text-[#151A1E]"
-            >
-              <span>Workforce &amp; Time</span>
-              {expandedGroups.workforce ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-
-            {expandedGroups.workforce && (
-              <div className="space-y-0.5 mt-0.5 pl-2">
-                <button
-                  onClick={() => setCurrentSection('attendance-live')}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'attendance-live' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Live Board (A16)</span>
-                </button>
-                <button
-                  onClick={() => setCurrentSection('attendance-sheet')}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'attendance-sheet' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Monthly Sheet (A17)</span>
-                </button>
-                <button
-                  onClick={() => setCurrentSection('attendance-corrections')}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md transition ${
-                    currentSection === 'attendance-corrections' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <CalendarClock className="w-3.5 h-3.5" />
-                    <span>Corrections (A19)</span>
-                  </div>
-                  {corrections.length > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-[#E4F4EB] text-[#14673F] font-mono text-[10px] font-bold">
-                      {corrections.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Direct Nav: Audit Logs (A32) */}
-          <div className="pt-2">
-            <button
-              onClick={() => setCurrentSection('audit-logs')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-medium transition ${
-                currentSection === 'audit-logs' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+              onClick={() => selectNav('dashboard')}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition ${
+                currentSection === 'dashboard'
+                  ? 'bg-white/30 text-white font-bold backdrop-blur-xs'
+                  : 'text-white/80 hover:bg-white/15 hover:text-white'
               }`}
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Audit Logs (A32)</span>
+              <span>Analytics</span>
             </button>
-          </div>
-
-          {/* Direct Nav: Settings (A34) */}
-          <div className="pt-2">
             <button
-              onClick={() => setCurrentSection('settings')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-medium transition ${
-                currentSection === 'settings' ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold' : 'text-[#4A535B] hover:bg-[#FAFBF9]'
-              }`}
+              onClick={() => {
+                selectNav('crm-leads');
+                setCrmView('table');
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white/80 hover:bg-white/15 hover:text-white transition"
             >
-              <Settings className="w-4 h-4" />
-              <span>Company Settings (A34)</span>
+              <span>Commerce / CRM</span>
+            </button>
+            <button
+              onClick={() => {
+                selectNav('crm-sheets');
+                setCrmView('sheets');
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white/80 hover:bg-white/15 hover:text-white transition"
+            >
+              <span>Sales &amp; Sheets</span>
+            </button>
+            <button
+              onClick={() => selectNav('attendance-live')}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white/80 hover:bg-white/15 hover:text-white transition"
+            >
+              <span>Live Attendance Floor</span>
             </button>
           </div>
         </div>
 
-        {/* Bottom Pinned User Profile */}
-        <div className="p-3 border-t border-[#EEF0EC] bg-[#FAFBF9]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-xs flex items-center justify-center shrink-0">
-                AD
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-xs text-[#151A1E] truncate">System Admin</div>
-                <div className="text-[11px] text-[#8A939B] truncate">admin@devsynx.com</div>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Sign Out of Admin Portal"
-              className="p-1.5 rounded-lg border border-[#E4E7E1] hover:bg-[#FBE7E4] hover:text-[#C2362B] text-[#5C666E] transition shrink-0"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+        {/* Section: UI COMPONENTS */}
+        <div className="pt-2 space-y-1">
+          <div className="px-2.5 py-1 text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold">
+            UI Components
           </div>
+
+          <button
+            onClick={() => selectNav('employees')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition ${
+              currentSection === 'employees'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Users className="w-4 h-4" />
+              <span>Employees &amp; Roster</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">
+              {employees.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => selectNav('departments')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'departments'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <FolderTree className="w-4 h-4" />
+            <span>Departments &amp; Teams</span>
+          </button>
+
+          <button
+            onClick={() => selectNav('roles')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'roles'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Roles &amp; Permissions</span>
+          </button>
+
+          <button
+            onClick={() => selectNav('devices')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition ${
+              currentSection === 'devices'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <MonitorSmartphone className="w-4 h-4" />
+              <span>Hardware Devices</span>
+            </div>
+            {devices.filter((d) => d.status === 'Pending').length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-[#F59E0B] text-slate-900 font-mono text-[10px] font-bold shadow-xs">
+                {devices.filter((d) => d.status === 'Pending').length} New
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Section: DASHBOARD WIDGETS */}
+        <div className="pt-2 space-y-1">
+          <div className="px-2.5 py-1 text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold">
+            Dashboard Widgets
+          </div>
+
+          <button
+            onClick={() => selectNav('attendance-live')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'attendance-live'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Live Floor Radar (A16)</span>
+          </button>
+
+          <button
+            onClick={() => selectNav('attendance-sheet')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'attendance-sheet'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <CalendarClock className="w-4 h-4" />
+            <span>Monthly Timesheet Grid</span>
+          </button>
+
+          <button
+            onClick={() => selectNav('attendance-corrections')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition ${
+              currentSection === 'attendance-corrections'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-4 h-4" />
+              <span>Shift Corrections</span>
+            </div>
+            {corrections.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-white/25 text-white font-mono text-[10px] font-bold">
+                {corrections.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Section: CHARTS & AUDIT */}
+        <div className="pt-2 space-y-1">
+          <div className="px-2.5 py-1 text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold">
+            System &amp; Settings
+          </div>
+
+          <button
+            onClick={() => selectNav('audit-logs')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'audit-logs'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Audit Trail (A32)</span>
+          </button>
+
+          <button
+            onClick={() => selectNav('settings')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition ${
+              currentSection === 'settings'
+                ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30'
+                : 'text-white/90 hover:bg-white/15'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Company Settings</span>
+          </button>
         </div>
       </div>
+
+      {/* Bottom Pinned User Profile */}
+      <div className="p-4 border-t border-white/20 bg-black/10 backdrop-blur-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center shrink-0 ring-2 ring-white/30">
+              AD
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-xs text-white truncate">System Administrator</div>
+              <div className="text-[11px] text-white/75 truncate">admin@devsynx.com</div>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Sign Out of Admin Portal"
+            className="p-2 rounded-lg bg-white/15 hover:bg-[#E11D48] text-white transition shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 
   if (authChecked && !isAuthenticated) {
@@ -1248,74 +1248,349 @@ export default function AdminControlCenter() {
 
         {/* Viewport Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* SCREEN A03: ADMIN DASHBOARD */}
+          {/* SCREEN A03: ADMIN DASHBOARD (MATCHING REFERENCE SCREENSHOT) */}
           {currentSection === 'dashboard' && (
-            <div className="space-y-5">
-              {/* 5 KPI Stat Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                  <div className="text-[11.5px] font-medium text-[#8A939B]">Working now</div>
-                  <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">{employees.length}</div>
-                  <div className="text-[11.5px] text-[#4A535B] mt-0.5">Live Staff Scheduled</div>
-                </div>
-
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                  <div className="text-[11.5px] font-medium text-[#8A939B]">Late today</div>
-                  <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">0</div>
-                  <div className="text-[11.5px] text-[#4A535B] mt-0.5">after grace period</div>
-                </div>
-
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                  <div className="text-[11.5px] font-medium text-[#8A939B]">Absent</div>
-                  <div className="text-2xl font-bold font-mono text-[#C2362B] mt-1">0</div>
-                  <div className="text-[11.5px] text-[#4A535B] mt-0.5">all present</div>
-                </div>
-
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                  <div className="text-[11.5px] font-medium text-[#8A939B]">Avg. active time</div>
-                  <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
-                    {employees.length > 0 ? '6h 15m' : '0h 00m'}
+            <div className="space-y-6">
+              {/* 1. Top Header Banner Card */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#FFF1F2] border border-[#FFE4E6] text-[#E11D48] flex items-center justify-center shadow-xs">
+                    <Activity className="w-6 h-6" />
                   </div>
-                  <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">Real-time Telemetry</div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 tracking-tight">Analytics Dashboard</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      This is an example dashboard created using build-in elements and components.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                  <div className="text-[11.5px] font-medium text-[#8A939B]">Leads in CRM</div>
-                  <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">{leads.length}</div>
-                  <div className="text-[11.5px] text-[#4A535B] mt-0.5">Active deals</div>
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <button
+                    onClick={() => showToast('Starred to quick access toolbar.', 'info', 'Quick Action')}
+                    className="p-2.5 rounded-lg bg-[#1E293B] hover:bg-black text-white transition shadow-sm"
+                    title="Bookmark Dashboard"
+                  >
+                    <Star className="w-4 h-4 fill-white" />
+                  </button>
+                  <button
+                    onClick={() => setShowNewEmployeeDrawer(true)}
+                    className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Buttons</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Live Attendance Table */}
-              <div className="bg-white border border-[#E4E7E1] rounded-[10px] shadow-[0_1px_2px_rgba(21,26,30,0.05)] overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#EEF0EC]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#1E8E5A] animate-pulse" />
-                    <h3 className="font-semibold text-xs text-[#151A1E]">Live Attendance Floor (Connected to API)</h3>
+              {/* 2. Sub-Nav Tabs (Variation 1 / Variation 2) */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAttendanceFilter('ALL')}
+                  className="px-4 py-2 rounded-lg bg-[#2563EB] text-white font-semibold text-xs shadow-sm shadow-blue-500/20 transition"
+                >
+                  Variation 1
+                </button>
+                <button
+                  onClick={() => setAttendanceFilter('WORKING')}
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white/80 font-medium text-xs transition"
+                >
+                  Variation 2
+                </button>
+              </div>
+
+              {/* 3. Portfolio Performance Card */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <h3 className="font-bold text-sm text-slate-800 tracking-tight">Portfolio Performance</h3>
+                  <button
+                    onClick={() => selectNav('crm-leads')}
+                    className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-1.5 rounded-lg transition"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Cash Deposits Metric */}
+                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                    <div className="w-13 h-13 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-400">Cash Deposits</div>
+                      <div className="text-2xl font-extrabold text-slate-900 tracking-tight">1,7M</div>
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#E11D48] mt-0.5">
+                        <ArrowDownRight className="w-3.5 h-3.5" />
+                        <span>54.1% less earnings</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invested Dividends Metric */}
+                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                    <div className="w-13 h-13 rounded-full bg-[#E11D48] text-white flex items-center justify-center shadow-lg shadow-rose-500/25 shrink-0">
+                      <GraduationCap className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-400">Invested Dividends</div>
+                      <div className="text-2xl font-extrabold text-slate-900 tracking-tight">9M</div>
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2563EB] mt-0.5">
+                        <span>Grow Rate:</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <span>14.1%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Capital Gains Metric */}
+                  <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                    <div className="w-13 h-13 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-400">Capital Gains</div>
+                      <div className="text-2xl font-extrabold text-[#10B981] tracking-tight">$563</div>
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#D97706] mt-0.5">
+                        <span>Increased by</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <span>7.35%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 text-center">
+                  <button
+                    onClick={() => selectNav('attendance-live')}
+                    className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
+                  >
+                    <Activity className="w-4 h-4" />
+                    <span>View Complete Report</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. Split 2-Column Section (Technical Support Wave Chart & Timeline Feed) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Card: Technical Support Wave Chart (7 cols) */}
+                <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-emerald-500" />
+                        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Technical Support</h3>
+                      </div>
+                      <Menu className="w-4 h-4 text-slate-400" />
+                    </div>
+
+                    <div className="pt-3">
+                      <span className="text-[10.5px] uppercase font-bold text-slate-400 tracking-wider">
+                        New Accounts Since 2018
+                      </span>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <div className="flex items-center text-2xl font-extrabold text-[#10B981] tracking-tight">
+                          <ArrowUp className="w-5 h-5 mr-1" />
+                          <span>78 %</span>
+                        </div>
+                        <span className="text-xs font-bold text-[#10B981]">+14</span>
+                      </div>
+                    </div>
+
+                    {/* Smooth Neon Emerald Wave Chart */}
+                    <div className="relative h-44 w-full mt-2 flex items-center justify-center">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 500 160" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        {/* Area Fill */}
+                        <path
+                          d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60 L 500,160 L 0,160 Z"
+                          fill="url(#chartGradient)"
+                        />
+                        {/* Smooth Line Curve */}
+                        <path
+                          d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60"
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+
+                      {/* Carousel Arrow Controls */}
+                      <button className="absolute left-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button className="absolute right-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Pagination dots */}
+                    <div className="flex items-center justify-center gap-1.5 pt-2">
+                      <span className="w-2.5 h-2.5 rounded-full border-2 border-[#2563EB] bg-white"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                    </div>
+                  </div>
+
+                  {/* Sales Progress Bar Bottom */}
+                  <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sales Progress</div>
+                        <div className="font-bold text-slate-900">Total Orders</div>
+                        <div className="text-[11px] text-slate-400">Last year expenses</div>
+                      </div>
+                      <div className="text-xl font-extrabold text-[#10B981] font-mono">$ 1896</div>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-[#2563EB] rounded-full" style={{ width: '42%' }}></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>YoY Growth</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Card: Timeline Example Widget (5 cols) */}
+                <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-rose-500" />
+                        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Timeline Example</h3>
+                      </div>
+                      <Menu className="w-4 h-4 text-slate-400" />
+                    </div>
+
+                    <div className="space-y-3.5 pt-3 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-rose-100 bg-[#E11D48] shrink-0"></span>
+                        <span className="font-semibold text-slate-800">All Hands Meeting</span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-amber-100 bg-[#F59E0B] shrink-0"></span>
+                        <span className="text-slate-600">Yet another one, at <strong className="text-[#10B981]">15:00 PM</strong></span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-emerald-100 bg-[#10B981] shrink-0"></span>
+                        <span className="font-semibold text-slate-800">Build the production release</span>
+                        <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#E11D48] text-white">NEW</span>
+                      </div>
+
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full ring-4 ring-blue-100 bg-[#2563EB] shrink-0 mt-1"></span>
+                        <div>
+                          <span className="font-semibold text-slate-800">Something not important</span>
+                          {/* Overlapping User Avatars Stack */}
+                          <div className="flex items-center -space-x-2 mt-2">
+                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces" alt="User" />
+                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=faces" alt="User" />
+                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces" alt="User" />
+                            <img className="w-7 h-7 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=64&h=64&fit=crop&crop=faces" alt="User" />
+                            <div className="w-7 h-7 rounded-full bg-blue-50 border-2 border-dashed border-[#2563EB] text-[#2563EB] font-bold text-xs flex items-center justify-center">
+                              +
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-700 shrink-0"></span>
+                        <span className="text-slate-600">This dot has an info state</span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-900 shrink-0"></span>
+                        <span className="text-slate-600">This dot has a dark state</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 text-center">
+                    <button
+                      onClick={() => selectNav('audit-logs')}
+                      className="px-5 py-2 rounded-full bg-[#1E293B] hover:bg-black text-white font-semibold text-xs shadow-md inline-flex items-center gap-2 transition"
+                    >
+                      <span>View All Messages</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Bottom 4 KPI Stat Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
+                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 874</div>
+                  <div className="text-xs text-slate-500">sales last month</div>
+                  <div className="flex items-center gap-1 text-[#10B981] text-xs font-bold pt-1">
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
+                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 1283</div>
+                  <div className="text-xs text-slate-500">sales Income</div>
+                  <div className="flex items-center gap-1 text-[#2563EB] text-xs font-bold pt-1">
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
+                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 1286</div>
+                  <div className="text-xs text-slate-500">last month sales</div>
+                  <div className="flex items-center gap-1 text-[#F59E0B] text-xs font-bold pt-1">
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-1">
+                  <div className="text-2xl font-extrabold text-slate-900 tracking-tight">$ 564</div>
+                  <div className="text-xs text-slate-500">total revenue</div>
+                  <div className="flex items-center gap-1 text-[#E11D48] text-xs font-bold pt-1">
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 6. Live Floor Attendance Table (Full PostgreSQL Sync) */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse ring-4 ring-emerald-50" />
+                    <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Live Floor Attendance Floor (Connected to API)</h3>
                   </div>
                   <button
                     onClick={handleSyncLiveData}
-                    className="text-xs text-[#0F6B5C] hover:underline flex items-center gap-1 font-semibold"
+                    className="text-xs text-[#2563EB] hover:underline flex items-center gap-1.5 font-bold"
                   >
-                    <RefreshCw className="w-3 h-3" />
+                    <RefreshCw className="w-3.5 h-3.5" />
                     Refresh
                   </button>
                 </div>
                 {employees.length === 0 ? (
                   <div className="p-10 text-center space-y-2 text-xs">
-                    <div className="w-10 h-10 mx-auto rounded-full bg-[#E3F1EE] flex items-center justify-center text-[#0B5548]">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
                       <Activity className="w-5 h-5 animate-pulse" />
                     </div>
-                    <div className="font-semibold text-[#151A1E]">No Live Workstations Transmitting Telemetry</div>
-                    <div className="text-[#8A939B] max-w-sm mx-auto">
+                    <div className="font-bold text-slate-900">No Live Workstations Transmitting Telemetry</div>
+                    <div className="text-slate-500 max-w-sm mx-auto">
                       Workstations stream live metrics here automatically once employees log in to the WorkPulse Desktop Client.
                     </div>
                     <div className="pt-2">
                       <button
                         onClick={() => setShowNewEmployeeDrawer(true)}
-                        className="px-3 py-1.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs inline-flex items-center gap-1"
+                        className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg font-semibold text-xs inline-flex items-center gap-1.5 shadow-md shadow-blue-500/20"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5" />
                         Add First Employee
                       </button>
                     </div>
@@ -1323,30 +1598,30 @@ export default function AdminControlCenter() {
                 ) : (
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-[#FAFBF9] border-b border-[#E4E7E1] text-[11px] uppercase tracking-wider text-[#8A939B] font-semibold">
-                        <th className="py-2.5 px-4">Employee</th>
-                        <th className="py-2.5 px-4">Status</th>
-                        <th className="py-2.5 px-4">Check-in</th>
-                        <th className="py-2.5 px-4 text-right">Working Hours</th>
-                        <th className="py-2.5 px-4">Hardware Device</th>
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+                        <th className="py-3 px-6">Employee</th>
+                        <th className="py-3 px-6">Status</th>
+                        <th className="py-3 px-6">Check-in</th>
+                        <th className="py-3 px-6 text-right">Working Hours</th>
+                        <th className="py-3 px-6">Hardware Device</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#EEF0EC]">
+                    <tbody className="divide-y divide-slate-100">
                       {employees.map((emp) => (
-                        <tr key={emp.id} className="hover:bg-[#FAFBF9]">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-[#151A1E]">{emp.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{emp.department} &bull; {emp.code}</div>
+                        <tr key={emp.id} className="hover:bg-slate-50/60 transition">
+                          <td className="py-3.5 px-6">
+                            <div className="font-bold text-slate-900">{emp.name}</div>
+                            <div className="text-[11px] text-slate-400">{emp.department} &bull; {emp.code}</div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#E4F4EB] text-[#14673F]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E5A] animate-pulse"></span>
+                          <td className="py-3.5 px-6">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-[#ECFDF5] text-[#065F46]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
                               Live Working
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-mono text-[#4A535B]">{emp.checkIn}</td>
-                          <td className="py-3 px-4 font-mono text-right font-semibold">{emp.activeHours}</td>
-                          <td className="py-3 px-4 text-[#4A535B] font-mono">{emp.device}</td>
+                          <td className="py-3.5 px-6 font-mono text-slate-600">{emp.checkIn}</td>
+                          <td className="py-3.5 px-6 font-mono text-right font-bold text-[#10B981]">{emp.activeHours}</td>
+                          <td className="py-3.5 px-6 text-slate-600 font-mono">{emp.device}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -4536,8 +4811,17 @@ export default function AdminControlCenter() {
         </div>
       )}
 
+      {/* FLOATING ACTION BUTTON (FAB) - AMBER SETTINGS GEAR */}
+      <button
+        onClick={() => selectNav('settings')}
+        title="Quick Company Settings"
+        className="fixed bottom-6 right-6 w-11 h-11 rounded-full bg-[#F59E0B] hover:bg-[#D97706] text-slate-900 flex items-center justify-center shadow-xl shadow-amber-500/30 z-50 transition transform hover:scale-105 active:scale-95 cursor-pointer ring-4 ring-white"
+      >
+        <Settings className="w-5 h-5 text-slate-900 animate-spin-slow" />
+      </button>
+
       {/* TOAST NOTIFICATION CONTAINER */}
-      <div className="fixed bottom-5 right-5 z-[9999] space-y-2 pointer-events-none">
+      <div className="fixed bottom-5 right-20 z-[9999] space-y-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}

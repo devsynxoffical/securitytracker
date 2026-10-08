@@ -41,6 +41,16 @@ import {
   Timer,
   FileSpreadsheet,
   Flame,
+  Star,
+  Layers,
+  GraduationCap,
+  Building2,
+  ArrowUp,
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
 } from 'lucide-react';
 import { ShiftState, CallOutcome } from '@company-os/contracts';
 import { ApiClient } from './apiClient';
@@ -665,26 +675,29 @@ export default function App() {
 
       {/* Main Workspace Frame */}
       <div className="flex flex-1 min-h-0">
-        {/* 216px Fixed Sidebar */}
-        <div className="w-[216px] bg-white border-r border-[#E4E7E1] flex flex-col p-3.5 shrink-0 justify-between">
-          <div className="space-y-1">
+        {/* 224px Fixed Sidebar */}
+        <div className="w-[224px] bg-gradient-to-b from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex flex-col p-4 shrink-0 justify-between shadow-xl">
+          <div className="space-y-1.5 overflow-y-auto">
             {/* Brand Header */}
-            <div className="flex items-center gap-2.5 px-2 py-1 mb-4">
-              <img src={logoImg} alt="WorkPulse" className="w-6 h-6 rounded-md object-cover shadow-sm" />
-              <span className="font-semibold text-sm text-[#151A1E]">WorkPulse</span>
+            <div className="flex items-center gap-3 px-2 py-1 mb-3 border-b border-white/20 pb-3">
+              <img src={logoImg} alt="WorkPulse" className="w-8 h-8 rounded-xl object-cover shadow-md ring-2 ring-white/30" />
+              <div>
+                <div className="font-bold text-sm text-white tracking-tight">WorkPulse OS</div>
+                <div className="text-[10px] text-white/80 font-medium">Workstation Agent</div>
+              </div>
             </div>
 
-            <div className="text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold px-2 py-1">
+            <div className="text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold px-2 py-1">
               Workspace
             </div>
 
             {/* Nav Items */}
             <button
               onClick={() => setCurrentScreen('D05-dashboard')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D05-dashboard'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -693,77 +706,77 @@ export default function App() {
 
             <button
               onClick={() => setCurrentScreen('D11-my-tasks')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D11-my-tasks'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <CheckSquare className="w-4 h-4" />
                 <span>My Tasks</span>
               </div>
-              <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-[#ECEEEB] text-[#4A535B]">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">
                 {tasks.filter((t) => !t.done).length}
               </span>
             </button>
 
             <button
               onClick={() => setCurrentScreen('D12-crm-leads')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D12-crm-leads'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <Users className="w-4 h-4" />
                 <span>CRM Leads</span>
               </div>
-              <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-[#ECEEEB] text-[#4A535B]">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">
                 {leads.length}
               </span>
             </button>
 
             <button
               onClick={() => setCurrentScreen('D15-email')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D15-email'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4" />
                 <span>Email</span>
               </div>
-              <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-[#ECEEEB] text-[#4A535B]">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">
                 {emails.filter((e) => e.unread).length}
               </span>
             </button>
 
             <button
               onClick={() => setCurrentScreen('D17-targets')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D17-targets'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <Target className="w-4 h-4" />
               <span>Targets &amp; KPIs</span>
             </button>
 
-            <div className="text-[10.5px] uppercase tracking-wider text-[#8A939B] font-semibold px-2 pt-3 pb-1">
+            <div className="text-[10.5px] uppercase tracking-wider text-emerald-100/70 font-extrabold px-2 pt-3 pb-1">
               Workforce
             </div>
 
             <button
               onClick={() => setCurrentScreen('D18-attendance')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D18-attendance'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <CalendarCheck className="w-4 h-4" />
@@ -772,10 +785,10 @@ export default function App() {
 
             <button
               onClick={() => setCurrentScreen('D20-my-activity')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D20-my-activity'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <Activity className="w-4 h-4" />
@@ -784,25 +797,25 @@ export default function App() {
 
             <button
               onClick={() => setCurrentScreen('D23-hardware-telemetry')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D23-hardware-telemetry'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Cpu className="w-4 h-4 text-[#0F6B5C]" />
+                <Cpu className="w-4 h-4" />
                 <span>Hardware &amp; Telemetry</span>
               </div>
-              <span className="w-2 h-2 rounded-full bg-[#1E8E5A] animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
             </button>
 
             <button
               onClick={() => setCurrentScreen('D21-notifications')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D21-notifications'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <div className="flex items-center gap-2.5">
@@ -810,16 +823,16 @@ export default function App() {
                 <span>Notifications</span>
               </div>
               {notifications.some((n) => n.unread) && (
-                <span className="w-2 h-2 rounded-full bg-[#1E8E5A]"></span>
+                <span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
               )}
             </button>
 
             <button
               onClick={() => setCurrentScreen('D22-profile')}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition ${
                 currentScreen === 'D22-profile'
-                  ? 'bg-[#E3F1EE] text-[#0B5548] font-semibold'
-                  : 'text-[#4A535B] hover:bg-[#FAFBF9]'
+                  ? 'bg-white/25 text-white font-bold backdrop-blur-xs ring-1 ring-white/30 shadow-xs'
+                  : 'text-white/90 hover:bg-white/15'
               }`}
             >
               <User className="w-4 h-4" />
@@ -828,7 +841,7 @@ export default function App() {
           </div>
 
           {/* Pinned Bottom Shift Box */}
-          <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3 space-y-2.5">
+          <div className="bg-black/15 border border-white/20 rounded-xl p-3 space-y-2 backdrop-blur-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
@@ -954,92 +967,263 @@ export default function App() {
 
           {/* Scrollable View Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            {/* SCREEN D05 / D06: DASHBOARD */}
+            {/* SCREEN D05 / D06: DASHBOARD (MATCHING REFERENCE SCREENSHOT) */}
             {currentScreen === 'D05-dashboard' && (
-              <div className="space-y-5">
-                {/* 5 KPI Stat Cards */}
-                <div className="grid grid-cols-5 gap-3.5">
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Today's Shift</div>
-                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">
-                      {formatHoursMins(shiftSeconds)}
+              <div className="space-y-6">
+                {/* 1. Top Header Banner Card */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#FFF1F2] border border-[#FFE4E6] text-[#E11D48] flex items-center justify-center shadow-xs">
+                      <Activity className="w-6 h-6" />
                     </div>
-                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Target: 08h 00m</div>
-                  </div>
-
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Active Time</div>
-                    <div className="text-2xl font-bold font-mono text-[#0F6B5C] mt-1">
-                      {formatHoursMins(activeSeconds)}
-                    </div>
-                    <div className="text-[11.5px] text-[#1E8E5A] font-semibold mt-0.5">
-                      {shiftSeconds > 0 ? `${Math.round((activeSeconds / Math.max(shiftSeconds, 1)) * 100)}% active` : 'Active'}
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight">Workstation Analytics Dashboard</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Real-time hardware telemetry, active shift metrics &amp; automated foreground radar.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Idle / Break</div>
-                    <div className="text-2xl font-bold font-mono text-[#B26A00] mt-1">
-                      {formatHoursMins(telemetry.totalIdleSeconds || 0)}
-                    </div>
-                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Continuous tracking</div>
-                  </div>
-
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Open Windows</div>
-                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">
-                      {telemetry.recentWindows?.length || (shiftState === ShiftState.WORKING ? 1 : 0)}
-                    </div>
-                    <div className="text-[11.5px] text-[#0F6B5C] font-medium mt-0.5">Recent foreground radar</div>
-                  </div>
-
-                  <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)]">
-                    <div className="text-[11.5px] font-medium text-[#8A939B]">Calls Logged</div>
-                    <div className="text-2xl font-bold font-mono text-[#151A1E] mt-1">{dailyCallsLogged}</div>
-                    <div className="text-[11.5px] text-[#4A535B] mt-0.5">Target: {dailyCallsTarget} calls</div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <button
+                      onClick={() => setCurrentScreen('D23-hardware-telemetry')}
+                      className="p-2.5 rounded-lg bg-[#1E293B] hover:bg-black text-white transition shadow-sm"
+                      title="Hardware Telemetry Inspector"
+                    >
+                      <Star className="w-4 h-4 fill-white" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const title = prompt('Enter priority task for today:');
+                        if (title) {
+                          setTasks([...tasks, { id: `T-${Date.now()}`, title, priority: 'Normal', due: 'Today', done: false, lead: 'Workstation Task' }]);
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Buttons</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Live Hardware & Telemetry Bar */}
-                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-[10px] p-3.5 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Cpu className="w-4 h-4 text-[#0F6B5C]" />
-                      <span className="font-semibold text-[#151A1E]">Host: {telemetry.hardware?.hostname || 'Workstation'}</span>
-                      <span className="text-[11px] font-mono text-[#8A939B]">({telemetry.hardware?.arch || 'arm64'})</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
-                      <MousePointer className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                      <span className="text-[#8A939B]">Cursor:</span>
-                      <span className="font-mono font-bold text-[#151A1E]">
-                        {Number(telemetry.cursorDistancePixels || 0).toLocaleString()} px ({Number(telemetry.mouseClicksCount || 0).toLocaleString()} clicks)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
-                      <Keyboard className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                      <span className="text-[#8A939B]">Key Taps:</span>
-                      <span className="font-mono font-bold text-[#151A1E]">{Number(telemetry.keystrokeTapsCount || 0).toLocaleString()}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 border-l border-[#E4E7E1] pl-4">
-                      <Monitor className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                      <span className="text-[#8A939B]">Active App:</span>
-                      <span className="font-semibold text-[#151A1E] truncate max-w-[160px]">{telemetry.activeApp?.name || 'WorkPulse'}</span>
-                    </div>
-                  </div>
-
+                {/* 2. Sub-Nav Tabs (Variation 1 / Variation 2) */}
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCurrentScreen('D23-hardware-telemetry')}
-                    className="text-[11px] font-bold text-[#0F6B5C] hover:underline"
+                    onClick={() => setCurrentScreen('D05-dashboard')}
+                    className="px-4 py-2 rounded-lg bg-[#2563EB] text-white font-semibold text-xs shadow-sm shadow-blue-500/20 transition"
                   >
-                    View Telemetry Details &rarr;
+                    Variation 1
+                  </button>
+                  <button
+                    onClick={() => setCurrentScreen('D20-my-activity')}
+                    className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white/80 font-medium text-xs transition"
+                  >
+                    Variation 2
                   </button>
                 </div>
 
-                {/* Live Open Windows & Running Applications Stream */}
-                <div className="bg-white border border-[#E4E7E1] rounded-[10px] p-4 shadow-[0_1px_2px_rgba(21,26,30,0.05)] space-y-3">
+                {/* 3. Portfolio Performance Card */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <h3 className="font-bold text-sm text-slate-800 tracking-tight">Portfolio Performance</h3>
+                    <button
+                      onClick={() => setCurrentScreen('D12-crm-leads')}
+                      className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-1.5 rounded-lg transition"
+                    >
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Cash Deposits / Shift Time */}
+                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                      <div className="w-13 h-13 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+                        <Layers className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-slate-400">Cash Deposits</div>
+                        <div className="text-2xl font-extrabold text-slate-900 tracking-tight">1,7M</div>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#E11D48] mt-0.5">
+                          <ArrowDownRight className="w-3.5 h-3.5" />
+                          <span>54.1% less earnings</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Invested Dividends / Active Time */}
+                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                      <div className="w-13 h-13 rounded-full bg-[#E11D48] text-white flex items-center justify-center shadow-lg shadow-rose-500/25 shrink-0">
+                        <GraduationCap className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-slate-400">Invested Dividends</div>
+                        <div className="text-2xl font-extrabold text-slate-900 tracking-tight">9M</div>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2563EB] mt-0.5">
+                          <span>Grow Rate:</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>14.1%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Capital Gains / Target Reach */}
+                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
+                      <div className="w-13 h-13 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-slate-400">Capital Gains</div>
+                        <div className="text-2xl font-extrabold text-[#10B981] tracking-tight">$563</div>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#D97706] mt-0.5">
+                          <span>Increased by</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>7.35%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 text-center">
+                    <button
+                      onClick={() => setCurrentScreen('D23-hardware-telemetry')}
+                      className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
+                    >
+                      <Activity className="w-4 h-4" />
+                      <span>View Complete Report</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Split 2-Column Section (Wave Chart & Live Telemetry) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Left: Technical Support Wave Chart */}
+                  <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-emerald-500" />
+                          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Technical Support</h3>
+                        </div>
+                        <Menu className="w-4 h-4 text-slate-400" />
+                      </div>
+
+                      <div className="pt-3">
+                        <span className="text-[10.5px] uppercase font-bold text-slate-400 tracking-wider">
+                          New Accounts Since 2018
+                        </span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <div className="flex items-center text-2xl font-extrabold text-[#10B981] tracking-tight">
+                            <ArrowUp className="w-5 h-5 mr-1" />
+                            <span>78 %</span>
+                          </div>
+                          <span className="text-xs font-bold text-[#10B981]">+14</span>
+                        </div>
+                      </div>
+
+                      {/* Smooth Neon Emerald Wave Chart */}
+                      <div className="relative h-44 w-full mt-2 flex items-center justify-center">
+                        <svg className="w-full h-full overflow-visible" viewBox="0 0 500 160" preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id="chartGradDesktop" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+                              <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60 L 500,160 L 0,160 Z"
+                            fill="url(#chartGradDesktop)"
+                          />
+                          <path
+                            d="M 0,140 Q 60,30 110,100 T 210,110 T 310,80 T 400,120 T 500,60"
+                            fill="none"
+                            stroke="#10B981"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+
+                        <button className="absolute left-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button className="absolute right-0 w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center shadow-md">
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-1.5 pt-2">
+                        <span className="w-2.5 h-2.5 rounded-full border-2 border-[#2563EB] bg-white"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div>
+                          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sales Progress</div>
+                          <div className="font-bold text-slate-900">Total Orders</div>
+                          <div className="text-[11px] text-slate-400">Last year expenses</div>
+                        </div>
+                        <div className="text-xl font-extrabold text-[#10B981] font-mono">$ 1896</div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-[#2563EB] rounded-full" style={{ width: '42%' }}></div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>YoY Growth</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Live Hardware & Telemetry Matrix */}
+                  <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-emerald-600" />
+                          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Live Telemetry Radar</h3>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
+                      </div>
+
+                      <div className="space-y-3 pt-3 text-xs">
+                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                          <span className="text-slate-500">Host Workstation:</span>
+                          <span className="font-mono font-bold text-slate-900">{telemetry.hardware?.hostname || 'MacBook-Air'}</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                          <span className="text-slate-500">Cursor Movement:</span>
+                          <span className="font-mono font-bold text-[#10B981]">{Number(telemetry.cursorDistancePixels || 0).toLocaleString()} px</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                          <span className="text-slate-500">Keystroke Volume:</span>
+                          <span className="font-mono font-bold text-slate-900">{Number(telemetry.keystrokeTapsCount || 0).toLocaleString()} taps</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                          <span className="text-slate-500">Active Foreground:</span>
+                          <span className="font-semibold text-slate-900 truncate max-w-[180px]">{telemetry.activeApp?.name || 'WorkPulse'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 text-center">
+                      <button
+                        onClick={() => setCurrentScreen('D23-hardware-telemetry')}
+                        className="px-5 py-2 rounded-full bg-[#1E293B] hover:bg-black text-white font-semibold text-xs shadow-md inline-flex items-center gap-2 transition"
+                      >
+                        <span>View Telemetry Details</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Live Open Windows & Running Applications Stream */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Monitor className="w-4 h-4 text-[#0F6B5C]" />
