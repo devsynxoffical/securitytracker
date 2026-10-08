@@ -1070,46 +1070,51 @@ export default function AdminControlCenter() {
 
   if (authChecked && !isAuthenticated) {
     return (
-      <div className="min-h-screen w-screen bg-[#F5F6F3] flex flex-col items-center justify-center p-4 select-none font-sans text-xs text-[#151A1E]">
-        <div className="w-full max-w-md bg-white border border-[#E4E7E1] rounded-2xl shadow-xl overflow-hidden">
+      <div className="min-h-screen w-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-4 select-none font-sans text-xs text-[#1E293B] relative overflow-hidden">
+        {/* Subtle Ambient Background Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[300px] bg-gradient-to-tr from-emerald-200/40 via-blue-100/30 to-lime-200/40 blur-3xl -z-10 pointer-events-none rounded-full" />
+
+        <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden">
           {/* Top Brand Banner */}
-          <div className="bg-[#FAFBF9] border-b border-[#EEF0EC] p-6 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <img src="/logo.jpg" alt="WorkPulse" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
-              <span className="font-bold text-lg text-[#151A1E]">WorkPulse</span>
+          <div className="bg-[#FAFBF9] border-b border-slate-100 p-6 text-center">
+            <div className="flex items-center justify-center gap-2.5 mb-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] flex items-center justify-center text-white shadow-md font-bold text-sm">
+                WP
+              </div>
+              <span className="font-black text-xl text-slate-900 tracking-tight">WorkPulse</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E3F1EE] text-[#0B5548] font-bold text-[10.5px]">
-              <Lock className="w-3 h-3" />
-              Secured Administrator Gateway
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[11px]">
+              <Lock className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Secured Administrator Gateway</span>
             </div>
-            <p className="text-xs text-[#8A939B] mt-2">Enter credentials to access the central company management platform</p>
+            <p className="text-xs text-slate-500 mt-2">Enter credentials to access the central company management platform</p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="p-6 space-y-4">
             {authError && (
-              <div className="p-3 bg-[#FDF2F0] border border-[#EBC4BF] rounded-lg text-xs text-[#C2362B] flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
                 <span>{authError}</span>
               </div>
             )}
 
             <div>
-              <label className="block font-semibold text-[#4A535B] mb-1">Administrator Email</label>
+              <label className="block font-bold text-slate-700 mb-1.5">Administrator Email</label>
               <input
                 type="email"
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 placeholder="admin@devsynx.com"
-                className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg outline-none text-xs text-[#151A1E] focus:border-[#0F6B5C] focus:bg-white transition"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs text-slate-900 font-medium focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="font-semibold text-[#4A535B]">Password</label>
-                <span className="text-[10px] text-[#8A939B]">PostgreSQL RBAC Hash</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-bold text-slate-700">Password</label>
+                <span className="text-[10.5px] text-slate-400 font-mono">PostgreSQL RBAC Hash</span>
               </div>
               <input
                 type="password"
@@ -1117,28 +1122,28 @@ export default function AdminControlCenter() {
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg outline-none text-xs text-[#151A1E] focus:border-[#0F6B5C] focus:bg-white transition"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs text-slate-900 font-medium focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="font-semibold text-[#4A535B]">2FA / TOTP Security Token (Optional)</label>
-                <span className="text-[10px] text-[#8A939B]">Authenticator App</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-bold text-slate-700">2FA / TOTP Security Token (Optional)</label>
+                <span className="text-[10.5px] text-slate-400 font-mono">Authenticator App</span>
               </div>
               <input
                 type="text"
                 value={totpInput}
                 onChange={(e) => setTotpInput(e.target.value)}
                 placeholder="6-digit code (e.g. 123456)"
-                className="w-full px-3 py-2 bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg outline-none text-xs text-[#151A1E] font-mono focus:border-[#0F6B5C] focus:bg-white transition"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs text-slate-900 font-mono focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={isAuthenticating}
-              className="w-full py-2.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition shadow-sm flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs tracking-wide transition shadow-md flex items-center justify-center gap-2"
             >
               {isAuthenticating ? (
                 <>
@@ -1147,7 +1152,7 @@ export default function AdminControlCenter() {
                 </>
               ) : (
                 <>
-                  <Shield className="w-3.5 h-3.5" />
+                  <Shield className="w-4 h-4" />
                   <span>Sign In to Admin Portal</span>
                 </>
               )}
@@ -1155,10 +1160,10 @@ export default function AdminControlCenter() {
           </form>
 
           {/* Footer with return to website */}
-          <div className="bg-[#FAFBF9] border-t border-[#EEF0EC] p-3.5 text-center">
+          <div className="bg-slate-50 border-t border-slate-100 p-4 text-center">
             <a
               href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-[#5C666E] hover:text-[#0B5548] font-medium transition"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-emerald-600 font-semibold transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Public Website &amp; Workstation Downloads</span>
@@ -1170,7 +1175,7 @@ export default function AdminControlCenter() {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-[#F5F6F3] overflow-hidden select-none font-sans text-xs text-[#151A1E]">
+    <div className="flex h-screen w-screen bg-[#F0F2F5] overflow-hidden select-none font-sans text-xs text-[#1E293B]">
       {/* Mobile Drawer Backdrop & Sidebar */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
