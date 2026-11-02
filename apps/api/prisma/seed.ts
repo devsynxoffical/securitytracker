@@ -63,7 +63,30 @@ async function main() {
         'crm.leads.delete': 'all',
         'crm.leads.import': 'all',
         'crm.leads.export': 'all',
+        'crm.leads.convert': 'all',
+        'crm.contacts.view': 'all',
+        'crm.contacts.create': 'all',
+        'crm.contacts.edit': 'all',
+        'crm.contacts.assign': 'all',
+        'crm.contacts.delete': 'all',
+        'crm.contacts.import': 'all',
+        'crm.contacts.export': 'all',
+        'crm.accounts.view': 'all',
+        'crm.accounts.create': 'all',
+        'crm.accounts.edit': 'all',
+        'crm.accounts.assign': 'all',
+        'crm.accounts.delete': 'all',
+        'crm.accounts.import': 'all',
+        'crm.accounts.export': 'all',
+        'crm.deals.view': 'all',
+        'crm.deals.create': 'all',
+        'crm.deals.edit': 'all',
+        'crm.deals.assign': 'all',
+        'crm.deals.reopen': 'all',
+        'crm.deals.delete': 'all',
+        'crm.deals.export': 'all',
         'crm.pipelines.manage': 'all',
+        'crm.config.manage': 'all',
         'crm.calls.log': 'all',
         'crm.calls.manage': 'all',
         'tasks.view': 'all',
@@ -101,6 +124,25 @@ async function main() {
         'crm.leads.reopen': 'department',
         'crm.leads.import': 'department',
         'crm.leads.export': 'department',
+        'crm.leads.convert': 'department',
+        'crm.contacts.view': 'department',
+        'crm.contacts.create': 'department',
+        'crm.contacts.edit': 'department',
+        'crm.contacts.assign': 'department',
+        'crm.contacts.import': 'department',
+        'crm.contacts.export': 'department',
+        'crm.accounts.view': 'department',
+        'crm.accounts.create': 'department',
+        'crm.accounts.edit': 'department',
+        'crm.accounts.assign': 'department',
+        'crm.accounts.import': 'department',
+        'crm.accounts.export': 'department',
+        'crm.deals.view': 'department',
+        'crm.deals.create': 'department',
+        'crm.deals.edit': 'department',
+        'crm.deals.assign': 'department',
+        'crm.deals.reopen': 'department',
+        'crm.deals.export': 'department',
         'crm.calls.log': 'department',
         'crm.calls.manage': 'department',
         'tasks.view': 'department',
@@ -129,6 +171,20 @@ async function main() {
         'crm.leads.edit': 'team',
         'crm.leads.assign': 'team',
         'crm.leads.reopen': 'team',
+        'crm.leads.convert': 'team',
+        'crm.contacts.view': 'team',
+        'crm.contacts.create': 'team',
+        'crm.contacts.edit': 'team',
+        'crm.contacts.assign': 'team',
+        'crm.accounts.view': 'team',
+        'crm.accounts.create': 'team',
+        'crm.accounts.edit': 'team',
+        'crm.accounts.assign': 'team',
+        'crm.deals.view': 'team',
+        'crm.deals.create': 'team',
+        'crm.deals.edit': 'team',
+        'crm.deals.assign': 'team',
+        'crm.deals.reopen': 'team',
         'crm.calls.log': 'team',
         'crm.calls.manage': 'team',
         'tasks.view': 'team',
@@ -151,6 +207,16 @@ async function main() {
         'crm.leads.view': 'own',
         'crm.leads.create': 'own',
         'crm.leads.edit': 'own',
+        'crm.leads.convert': 'own',
+        'crm.contacts.view': 'own',
+        'crm.contacts.create': 'own',
+        'crm.contacts.edit': 'own',
+        'crm.accounts.view': 'own',
+        'crm.accounts.create': 'own',
+        'crm.accounts.edit': 'own',
+        'crm.deals.view': 'own',
+        'crm.deals.create': 'own',
+        'crm.deals.edit': 'own',
         'crm.calls.log': 'own',
         'tasks.view': 'own',
         'tasks.create': 'own',
@@ -311,6 +377,62 @@ async function main() {
       },
     },
   });
+
+  // 5b. Deal pipeline, lead sources, lost reasons, tags (13-crm-spec.md)
+  await prisma.pipeline.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000020' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000020',
+      companyId: company.id,
+      name: 'Deal Pipeline',
+      entity: 'deal',
+      isDefault: true,
+      stages: {
+        create: [
+          { name: 'Qualification', position: 1, type: 'open', probability: 10 },
+          { name: 'Discovery', position: 2, type: 'open', probability: 25 },
+          { name: 'Proposal', position: 3, type: 'open', probability: 50, countsAsQualified: true },
+          { name: 'Negotiation', position: 4, type: 'open', probability: 75 },
+          { name: 'Closed Won', position: 5, type: 'won', probability: 100 },
+          { name: 'Closed Lost', position: 6, type: 'lost', probability: 0 },
+        ],
+      },
+    },
+  });
+
+  const sources = ['Website', 'Referral', 'Cold Call', 'Social Media', 'Trade Show', 'Partner'];
+  for (const [i, name] of sources.entries()) {
+    await prisma.leadSource.upsert({
+      where: { companyId_name: { companyId: company.id, name } },
+      update: {},
+      create: { companyId: company.id, name, position: i + 1 },
+    });
+  }
+
+  const lostReasons = ['Budget', 'Timing', 'Competitor', 'No decision', 'Not a fit', 'Unresponsive'];
+  for (const [i, name] of lostReasons.entries()) {
+    await prisma.lostReason.upsert({
+      where: { companyId_name: { companyId: company.id, name } },
+      update: {},
+      create: { companyId: company.id, name, position: i + 1 },
+    });
+  }
+
+  const tags: Array<[string, string]> = [
+    ['Hot', '#C2362B'],
+    ['Enterprise', '#6B46C1'],
+    ['SMB', '#2459C4'],
+    ['Renewal', '#1E8E5A'],
+    ['Upsell', '#B26A00'],
+  ];
+  for (const [name, colour] of tags) {
+    await prisma.tag.upsert({
+      where: { companyId_name: { companyId: company.id, name } },
+      update: {},
+      create: { companyId: company.id, name, colour },
+    });
+  }
 
   const stages = await prisma.pipelineStage.findMany({ where: { pipelineId: pipeline.id } });
   const qualifiedStage = stages.find((s) => s.name === 'Proposal Sent') || stages[0]!;
