@@ -148,7 +148,20 @@ export function ColumnChart({ categories, series, height = 180, format, stacked 
         </table>
       ) : (
         <>
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-labelledby={id} onMouseLeave={() => setHover(null)}>
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full"
+            role="img"
+            aria-labelledby={id}
+            onMouseMove={(e) => {
+              const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+              const px = ((e.clientX - rect.left) / rect.width) * width;
+              const ci = Math.floor((px - padL) / slot);
+              if (ci >= 0 && ci < categories.length) setHover({ ci, x: e.clientX - rect.left, y: e.clientY - rect.top });
+              else setHover(null);
+            }}
+            onMouseLeave={() => setHover(null)}
+          >
             <title id={id}>Column chart</title>
             {ticks.map((t) => (
               <g key={t}>
@@ -162,7 +175,7 @@ export function ColumnChart({ categories, series, height = 180, format, stacked 
               const cx = padL + slot * ci + slot / 2;
               let acc = 0;
               return (
-                <g key={c} onMouseEnter={(e) => setHover({ ci, x: (e.nativeEvent as MouseEvent).offsetX, y: (e.nativeEvent as MouseEvent).offsetY })}>
+                <g key={c}>
                   <rect x={padL + slot * ci} y={padT} width={slot} height={plotH} fill="transparent" />
                   {series.map((s, si) => {
                     const v = s.values[ci] ?? 0;

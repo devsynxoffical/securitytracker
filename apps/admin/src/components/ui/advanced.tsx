@@ -108,13 +108,13 @@ export function KpiTile({ label, value, delta, deltaLabel = 'vs previous period'
         {icon && <span className="text-ink-3">{icon}</span>}
       </div>
       <div className="mt-2 flex items-end justify-between gap-3">
-        {loading ? <Skeleton className="h-7 w-24" /> : <div className={clsx('font-mono text-2xl font-semibold', tone ? toneText(tone) : 'text-ink')}>{value}</div>}
+        {loading ? <Skeleton className="h-7 w-24" /> : <div className={clsx('num text-2xl font-semibold', tone ? toneText(tone) : 'text-ink')}>{value}</div>}
         {trend && trend.length > 1 && <Sparkline values={trend} series={series} />}
       </div>
       {delta !== undefined && delta !== null && (
         <div className={clsx('mt-1.5 inline-flex items-center gap-1 text-xs', flat ? 'text-ink-3' : up ? 'text-green-text' : 'text-red-text')}>
           {flat ? <Minus size={12} /> : up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-          <span className="font-mono font-semibold">{up ? '+' : ''}{Math.round(delta * 10) / 10}%</span>
+          <span className="num font-semibold">{up ? '+' : ''}{Math.round(delta * 10) / 10}%</span>
           <span className="text-ink-3">{deltaLabel}</span>
         </div>
       )}

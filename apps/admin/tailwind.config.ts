@@ -53,7 +53,7 @@ const config: Config = {
         'series-8': v('series-8'),
       },
       fontFamily: {
-        sans: ['IBM Plex Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
       borderRadius: {
@@ -65,6 +65,7 @@ const config: Config = {
         pop: 'var(--shadow-pop)',
         modal: 'var(--shadow-modal)',
         drawer: 'var(--shadow-drawer)',
+        btn: 'var(--shadow-btn)',
       },
       fontSize: {
         '2xs': ['10.5px', { lineHeight: '14px', letterSpacing: '0.08em' }],

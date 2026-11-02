@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,42 +10,44 @@
    ------------------------------------------------------------------------ */
 :root {
   color-scheme: light;
-  --bg: #F5F6F3;
+  /* Light theme v3: cooler canvas, real depth, higher text contrast (DESIGN-SYSTEM section 9) */
+  --bg: #EEF1F5;
   --surface: #FFFFFF;
-  --surface-2: #FAFBF9;
-  --surface-3: #F1F3EF;
-  --line: #E4E7E1;
-  --line-2: #EEF0EC;
-  --ink: #151A1E;
-  --ink-2: #4A535B;
-  --ink-3: #8A939B;
-  --pri: #0F6B5C;
-  --pri-2: #0B5548;
-  --pri-soft: #E3F1EE;
-  --green: #1E8E5A;
-  --green-text: #14673F;
-  --green-soft: #E4F4EB;
-  --amber: #B26A00;
-  --amber-text: #8A5200;
-  --amber-soft: #FCF0DA;
-  --amber-bar: #E0921A;
-  --red: #C2362B;
-  --red-text: #9E2A21;
-  --red-soft: #FBE7E4;
-  --blue: #2459C4;
-  --blue-text: #1C469B;
-  --blue-soft: #E6EDFB;
-  --violet: #6B46C1;
-  --violet-text: #55359C;
-  --violet-soft: #EEE8FA;
-  --gray: #5C666E;
-  --gray-soft: #ECEEEB;
-  --gray-bar: #B5BCC2;
-  --overlay: rgba(21, 26, 30, 0.38);
-  --shadow-card: 0 1px 2px rgba(21, 26, 30, 0.05);
-  --shadow-pop: 0 8px 28px rgba(21, 26, 30, 0.14), 0 1px 3px rgba(21, 26, 30, 0.08);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.22);
-  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.15);
+  --surface-2: #F6F8FA;
+  --surface-3: #EDF0F3;
+  --line: #DCE2E8;
+  --line-2: #E8ECF0;
+  --ink: #0F172A;
+  --ink-2: #3B4756;
+  --ink-3: #64748B;
+  --pri: #0E7C66;
+  --pri-2: #0A5B4B;
+  --pri-soft: #DDF2EC;
+  --green: #16834F;
+  --green-text: #0F6B40;
+  --green-soft: #DCF5E7;
+  --amber: #B45309;
+  --amber-text: #92400E;
+  --amber-soft: #FDEFD2;
+  --amber-bar: #E59E1C;
+  --red: #C62828;
+  --red-text: #A32020;
+  --red-soft: #FBE3E1;
+  --blue: #1E56C5;
+  --blue-text: #17439B;
+  --blue-soft: #E3EBFB;
+  --violet: #6D3FC9;
+  --violet-text: #55309F;
+  --violet-soft: #ECE6FA;
+  --gray: #52606D;
+  --gray-soft: #E8ECF0;
+  --gray-bar: #AEB8C2;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-pop: 0 10px 30px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-modal: 0 24px 64px rgba(15, 23, 42, 0.28);
+  --shadow-drawer: -12px 0 44px rgba(15, 23, 42, 0.18);
+  --shadow-btn: 0 1px 2px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --ring: 0 0 0 3px var(--pri-soft);
 
   /* Chart series: validated categorical order (dataviz reference palette). Never cycled. */
@@ -98,6 +100,7 @@
   --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.7);
   --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.6);
+  --shadow-btn: none;
 
   --series-1: #3987e5;
   --series-2: #d95926;
@@ -116,7 +119,8 @@ html {
 
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
   font-size: 13px;
   line-height: 1.45;
   color: var(--ink);
@@ -129,6 +133,30 @@ body {
   font-family: 'IBM Plex Mono', monospace;
   font-feature-settings: 'tnum';
 }
+
+/* Product numerals: Inter with tabular figures, tight tracking (KPIs, money, totals) */
+.num {
+  font-family: 'Inter', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+h1, h2, h3 { letter-spacing: -0.01em; }
+
+/* Elevated primary button and quiet default button */
+.btn-primary {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--pri) 88%, white) 0%, var(--pri) 100%);
+  box-shadow: var(--shadow-btn);
+}
+.btn-primary:hover { background-image: linear-gradient(180deg, var(--pri) 0%, var(--pri-2) 100%); }
+.btn-default { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+:root[data-theme='dark'] .btn-primary { background-image: none; box-shadow: none; }
+:root[data-theme='dark'] .btn-default { box-shadow: none; }
+
+/* Sidebar surface: slightly tinted so the canvas, rail and cards read as three planes */
+.sidebar-surface { background: var(--surface); }
+:root:not([data-theme='dark']) .sidebar-surface { background: #FBFCFD; }
+:root:not([data-theme='dark']) .topbar-surface { box-shadow: 0 1px 0 var(--line), 0 2px 8px rgba(15, 23, 42, 0.03); }
 
 /* Focus ring: 1px primary border plus 3px soft ring (DESIGN-SYSTEM section 3) */
 :where(input, select, textarea, button, a, [tabindex]):focus-visible {

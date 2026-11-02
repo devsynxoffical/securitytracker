@@ -72,7 +72,7 @@ export function Topbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-line bg-surface/95 px-[22px] backdrop-blur">
+      <header className="topbar-surface sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-line bg-surface/95 px-[22px] backdrop-blur">
         <div className="min-w-0 leading-tight">
           <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-ink-3">
             {crumbs.slice(0, -1).map((c) => (

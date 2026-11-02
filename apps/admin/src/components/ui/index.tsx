@@ -23,8 +23,8 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean; icon?: ReactNode }) {
   const v: Record<Variant, string> = {
-    primary: 'bg-pri text-white hover:bg-pri-2 border-pri',
-    default: 'bg-surface text-ink border-line hover:bg-surface-2',
+    primary: 'btn-primary bg-pri text-white hover:bg-pri-2 border-pri',
+    default: 'btn-default bg-surface text-ink border-line hover:bg-surface-2',
     ghost: 'bg-transparent text-ink-2 border-transparent hover:bg-surface-2 hover:text-ink',
     danger: 'bg-red text-white border-red hover:opacity-90',
     'danger-outline': 'bg-surface text-red border-line hover:bg-red-soft',
@@ -190,7 +190,7 @@ export function KpiCard({ label, value, context, tone }: { label: string; value:
   return (
     <div className="rounded-card border border-line bg-surface p-4 shadow-card">
       <div className="text-xs font-semibold text-ink-3">{label}</div>
-      <div className={clsx('mt-1 font-mono text-2xl font-semibold', tone ? toneClass[tone].split(' ')[1] : 'text-ink')}>{value}</div>
+      <div className={clsx('num mt-1 text-2xl font-semibold', tone ? toneClass[tone].split(' ')[1] : 'text-ink')}>{value}</div>
       {context && <div className="mt-1 text-xs text-ink-2">{context}</div>}
     </div>
   );

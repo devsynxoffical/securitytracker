@@ -164,10 +164,12 @@ export class CrmConfigService {
     });
   }
 
-  createView(companyId: string, ownerId: string, dto: CreateSavedViewDto, canManageCompany: boolean) {
+  async createView(companyId: string, ownerId: string, dto: CreateSavedViewDto, canManageCompany: boolean) {
     if (dto.visibility === SavedViewVisibility.COMPANY && !canManageCompany) {
       throw new ForbiddenException('Permission missing: crm.config.manage');
     }
+    const dup = await this.prisma.savedView.findFirst({ where: { companyId, entityType: dto.entityType, name: dto.name, OR: [{ ownerId }, { visibility: SavedViewVisibility.COMPANY }] } });
+    if (dup) throw new ConflictException('A view with this name already exists');
     return this.prisma.savedView.create({
       data: {
         companyId,

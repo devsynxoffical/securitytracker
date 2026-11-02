@@ -60,7 +60,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex flex-col border-r border-line bg-surface transition-[width] duration-150" style={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH }}>
+    <aside className="sidebar-surface fixed inset-y-0 left-0 z-30 flex flex-col border-r border-line transition-[width] duration-150" style={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH }}>
       <div className={clsx('flex h-14 items-center border-b border-line', sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-4')}>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-pri font-mono text-xs font-semibold text-white">OS</span>
         {!sidebarCollapsed && (
