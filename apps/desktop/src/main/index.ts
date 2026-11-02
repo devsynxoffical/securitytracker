@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, Notification } from 'electron';
 import { join } from 'path';
+import { existsSync } from 'fs';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { Store } from './store';
 import { DeviceIdentity } from './device';
@@ -41,7 +42,8 @@ function createWindow(): void {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#F5F6F3',
-    title: 'Company OS',
+    title: 'WorkPulse',
+    icon: appIcon(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
@@ -75,10 +77,25 @@ function createWindow(): void {
   }
 }
 
+/** Tray icons ship as extraResources (electron-builder.json); in dev they are read from ./resources. */
+function trayIcon() {
+  const dir = app.isPackaged ? join(process.resourcesPath, 'tray') : join(app.getAppPath(), 'resources', 'tray');
+  const file = process.platform === 'darwin' ? 'trayTemplate.png' : process.platform === 'win32' ? 'tray-color.png' : 'tray-win.png';
+  const path = join(dir, file);
+  if (!existsSync(path)) return nativeImage.createEmpty();
+  const img = nativeImage.createFromPath(path);
+  if (process.platform === 'darwin') img.setTemplateImage(true);
+  return img;
+}
+
+function appIcon() {
+  const path = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'resources', 'icon.png');
+  return existsSync(path) ? nativeImage.createFromPath(path) : undefined;
+}
+
 function createTray(): void {
-  const icon = nativeImage.createEmpty();
-  tray = new Tray(icon);
-  tray.setToolTip('Company OS');
+  tray = new Tray(trayIcon());
+  tray.setToolTip('WorkPulse');
   const refresh = () => {
     const s = shifts.snapshot();
     tray?.setContextMenu(
@@ -123,6 +140,7 @@ function registerIpc(): void {
   ipcMain.handle('win:close', () => mainWindow?.close());
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, apiUrl: api.baseUrl(), deviceName: device.name(), deviceId: device.deviceId() }));
   ipcMain.handle('app:setApiUrl', (_e, url: string) => api.setBaseUrl(String(url)));
+  ipcMain.handle('app:probeApiUrl', (_e, url: string) => api.probe(String(url)));
   ipcMain.handle('app:openExternal', (_e, url: string) => (/^https?:/.test(url) ? shell.openExternal(url) : undefined));
 
   // ---- auth (tokens never leave the main process)
@@ -171,7 +189,7 @@ function registerIpc(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.devsynx.companyos');
+  electronApp.setAppUserModelId('com.devsynx.workpulse'); // must equal appId in electron-builder.json for Windows notifications
   if (!is.dev) app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] }); // 09 §1: auto start at logon, tray
   registerIpc();
   createWindow();

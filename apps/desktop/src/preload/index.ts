@@ -19,6 +19,7 @@ const bridge = {
   app: {
     info: () => ipcRenderer.invoke('app:info'),
     setApiUrl: (url: string) => ipcRenderer.invoke('app:setApiUrl', url),
+    probeApiUrl: (url: string) => ipcRenderer.invoke('app:probeApiUrl', url),
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     toast: (title: string, body: string) => ipcRenderer.invoke('notify:toast', title, body),
   },

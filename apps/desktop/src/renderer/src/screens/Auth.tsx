@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Lock, Settings2 } from 'lucide-react';
+import { ShieldCheck, Lock, Settings2, Server, CheckCircle2 } from 'lucide-react';
 import { bridge, http, type ApiResult } from '../lib/bridge';
 import { Button, Field, Input, Banner, Card } from '../components/ui';
 
@@ -12,13 +12,16 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<LoginOutcome | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiUrl, setApiUrl] = useState('');
+  const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [deviceName, setDeviceName] = useState('');
+  const [version, setVersion] = useState('');
+  const [changingServer, setChangingServer] = useState(false);
 
   useEffect(() => {
-    void bridge.app.info().then((i: { apiUrl: string; deviceName: string }) => {
+    void bridge.app.info().then((i: { apiUrl: string; deviceName: string; version: string }) => {
       setApiUrl(i.apiUrl);
       setDeviceName(i.deviceName);
+      setVersion(i.version);
     });
   }, []);
 
@@ -43,15 +46,28 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
     setOutcome({ kind: 'error', message });
   };
 
+  if (apiUrl === null) return <div className="flex h-full items-center justify-center bg-bg text-[13px] text-ink-3">Loading…</div>;
+  if (!apiUrl || changingServer)
+    return (
+      <ServerScreen
+        initial={apiUrl}
+        version={version}
+        onDone={(url) => {
+          setApiUrl(url);
+          setChangingServer(false);
+        }}
+        onCancel={apiUrl ? () => setChangingServer(false) : undefined}
+      />
+    );
   if (outcome?.kind === 'pending') return <DevicePending message={outcome.message} onRetry={submit} onBack={() => setOutcome(null)} deviceName={deviceName} />;
 
   return (
     <div className="flex h-full items-center justify-center bg-bg">
       <div className="w-[400px]">
         <div className="mb-6 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-pri font-mono text-sm font-semibold text-white">OS</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-pri font-mono text-sm font-semibold text-white">WP</span>
           <div>
-            <div className="text-[17px] font-semibold text-ink">Company OS</div>
+            <div className="text-[17px] font-semibold text-ink">WorkPulse</div>
             <div className="text-[12px] text-ink-3">Employee workstation</div>
           </div>
         </div>
@@ -78,17 +94,91 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
             <Settings2 size={12} /> Connection settings
           </button>
           {showSettings && (
-            <div className="mt-2 space-y-2 rounded-lg bg-surface-2 p-3">
-              <Field label="API URL" hint="Set by IT. Only change if instructed.">
-                <Input value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} onBlur={() => void bridge.app.setApiUrl(apiUrl)} />
-              </Field>
-              <div className="text-[11.5px] text-ink-3">
-                Device: <span className="font-mono">{deviceName}</span>
+            <div className="mt-2 space-y-2 rounded-lg bg-surface-2 p-3 text-[11.5px] text-ink-3">
+              <div className="flex items-center justify-between gap-2">
+                <span>
+                  Server: <span className="font-mono text-ink-2">{apiUrl}</span>
+                </span>
+                <button type="button" className="text-pri hover:underline" onClick={() => setChangingServer(true)}>
+                  Change
+                </button>
+              </div>
+              <div>
+                Device: <span className="font-mono text-ink-2">{deviceName}</span>
+              </div>
+              <div>
+                Version: <span className="font-mono text-ink-2">{version}</span>
               </div>
             </div>
           )}
         </Card>
         <p className="mt-4 text-center text-[11.5px] text-ink-3">Activity is tracked only while a shift is running. Counts only, never content.</p>
+      </div>
+    </div>
+  );
+}
+
+/** First run (F2): the server address comes from the administrator; we check /health before saving it. */
+function ServerScreen({ initial, version, onDone, onCancel }: { initial: string; version: string; onDone: (url: string) => void; onCancel?: () => void }) {
+  const [value, setValue] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [checked, setChecked] = useState<string | null>(null);
+
+  const connect = async () => {
+    if (!value.trim()) return;
+    setBusy(true);
+    setError(null);
+    const res = (await bridge.app.probeApiUrl(value)) as { ok: boolean; url: string; message?: string };
+    setBusy(false);
+    if (!res.ok) return setError(res.message ?? 'Cannot reach the server.');
+    await bridge.app.setApiUrl(res.url);
+    setChecked(res.url);
+    onDone(res.url);
+  };
+
+  return (
+    <div className="flex h-full items-center justify-center bg-bg">
+      <div className="w-[420px]">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-pri text-white">
+            <Server size={18} />
+          </span>
+          <div>
+            <div className="text-[17px] font-semibold text-ink">Connect to your company</div>
+            <div className="text-[12px] text-ink-3">Enter the server address from your administrator</div>
+          </div>
+        </div>
+        <Card>
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void connect();
+            }}
+          >
+            <Field label="Server address" hint="For example company.com or https://api.company.com. We add /api/v1 for you.">
+              <Input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder="api.yourcompany.com" spellCheck={false} />
+            </Field>
+            {error && <Banner tone="red">{error}</Banner>}
+            {checked && (
+              <Banner tone="green">
+                <CheckCircle2 size={14} /> Connected to {checked}
+              </Banner>
+            )}
+            <div className="flex gap-2">
+              {onCancel && (
+                <Button type="button" onClick={onCancel} className="flex-1">
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit" variant="primary" size="lg" className="flex-1" disabled={busy || !value.trim()}>
+                {busy ? 'Checking…' : 'Connect'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+        <p className="mt-4 text-center text-[11.5px] text-ink-3">WorkPulse {version}. The address is saved on this computer only.</p>
       </div>
     </div>
   );

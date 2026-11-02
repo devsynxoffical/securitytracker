@@ -19,7 +19,11 @@ export interface ApiResult<T = unknown> {
 
 type NetListener = (online: boolean) => void;
 
-const DEFAULT_API_URL = process.env.COMPANYOS_API_URL || 'https://roofingclients.us/api/v1';
+/**
+ * Server address. Baked in at build time with MAIN_VITE_API_URL (IT builds), overridable in dev with
+ * COMPANYOS_API_URL. Empty means the first-run screen asks for it (F2).
+ */
+const DEFAULT_API_URL = process.env.COMPANYOS_API_URL || import.meta.env.MAIN_VITE_API_URL || '';
 const OFFLINE_AFTER_MS = 60_000; // F7 rule 5
 
 /**
@@ -47,7 +51,26 @@ export class ApiClient {
   }
 
   setBaseUrl(url: string): void {
-    this.store.set('api.url', url.trim().replace(/\/$/, ''));
+    this.store.set('api.url', normalizeApiUrl(url));
+  }
+
+  /** First-run check (F2): GET /health on a candidate address without storing it. */
+  async probe(url: string): Promise<{ ok: boolean; url: string; message?: string }> {
+    const base = normalizeApiUrl(url);
+    if (!/^https?:\/\//.test(base)) return { ok: false, url: base, message: 'Address must start with https:// (or http:// for local testing).' };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8_000);
+    try {
+      const res = await fetch(`${base}/health`, { signal: controller.signal, headers: { 'X-Client-Type': 'desktop' } });
+      if (!res.ok) return { ok: false, url: base, message: `Server answered ${res.status}. Check the address with your administrator.` };
+      const serverTime = res.headers.get('x-server-time');
+      if (serverTime) this.clock.anchor(serverTime);
+      return { ok: true, url: base };
+    } catch (e) {
+      return { ok: false, url: base, message: `Cannot reach ${base}: ${(e as Error).message || 'network error'}` };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   isOnline(): boolean {
@@ -218,4 +241,13 @@ export class ApiClient {
       return null;
     }
   }
+}
+
+/** Accepts "company.com", "https://api.company.com" or a full ".../api/v1" and returns the API base. */
+export function normalizeApiUrl(input: string): string {
+  let u = input.trim().replace(/\/+$/, '');
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  if (!/\/api\/v1$/.test(u)) u = `${u}/api/v1`;
+  return u;
 }

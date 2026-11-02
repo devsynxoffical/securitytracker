@@ -151,8 +151,8 @@ export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: (
   );
 }
 
-export function Banner({ tone = 'blue', children }: { tone?: 'blue' | 'amber' | 'red'; children: ReactNode }) {
-  return <div className={clsx('rounded-lg px-3 py-2 text-[12.5px]', toneClass[tone])}>{children}</div>;
+export function Banner({ tone = 'blue', children }: { tone?: 'blue' | 'amber' | 'red' | 'green'; children: ReactNode }) {
+  return <div className={clsx('flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px]', toneClass[tone])}>{children}</div>;
 }
 
 export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode }> }) {

@@ -32,8 +32,8 @@ export function TitleBar({ children }: { children?: ReactNode }) {
   return (
     <div className="drag-region flex h-[34px] shrink-0 items-center justify-between border-b border-line bg-surface pl-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded bg-pri font-mono text-[9px] font-semibold text-white">OS</span>
-        <span className="text-[12px] font-semibold text-ink-2">Company OS</span>
+        <span className="flex h-5 w-5 items-center justify-center rounded bg-pri font-mono text-[9px] font-semibold text-white">WP</span>
+        <span className="text-[12px] font-semibold text-ink-2">WorkPulse</span>
         {children}
       </div>
       <div className="no-drag flex h-full">
