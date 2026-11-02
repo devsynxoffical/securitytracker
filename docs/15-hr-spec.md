@@ -25,6 +25,7 @@ The HR module adds leave management with balances, employee profiles and documen
 | FR-HR-13 | Announcements: title, body (markdown), audience (company, department, team, role), pin, publish at; read receipts; delivered as notifications | M |
 | FR-HR-14 | Org chart from the manager tree and department structure | S |
 | FR-HR-15 | Employee directory with search, filters and CSV export (FR-ORG-06 import stays) | M |
+| FR-HR-16 | Celebrations: birthdays (from date of birth) and work anniversaries (from join date) for the next N days, `GET /hr/celebrations?days=`, a card on the home page, and a daily job that notifies the manager and HR a day ahead and the company on the day | M |
 
 ## 3. Flows
 

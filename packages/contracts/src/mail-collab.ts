@@ -65,3 +65,25 @@ export const RenderTemplateSchema = z.object({
   contactId: z.string().uuid().optional(),
 });
 export type RenderTemplateDto = z.infer<typeof RenderTemplateSchema>;
+
+// ---- IMAP/SMTP mailboxes (10 section 2 option D, approved 2026-11-02)
+export const ImapMailboxSettingsSchema = z.object({
+  address: z.string().email(),
+  displayName: z.string().min(1).max(120),
+  imapHost: z.string().min(1).max(253),
+  imapPort: z.number().int().min(1).max(65535).default(993),
+  imapSecure: z.boolean().default(true),
+  smtpHost: z.string().min(1).max(253),
+  smtpPort: z.number().int().min(1).max(65535).default(465),
+  smtpSecure: z.boolean().default(true),
+  username: z.string().min(1).max(255),
+  password: z.string().min(1).max(255),
+});
+export type ImapMailboxSettingsDto = z.infer<typeof ImapMailboxSettingsSchema>;
+
+export const UpdateImapMailboxSchema = ImapMailboxSettingsSchema.omit({ address: true }).partial();
+export type UpdateImapMailboxDto = z.infer<typeof UpdateImapMailboxSchema>;
+
+/** Presence heartbeat for the collision warning (FR-MAIL-19). */
+export const PresenceSchema = z.object({ action: z.enum(['viewing', 'left']).default('viewing') });
+export type PresenceDto = z.infer<typeof PresenceSchema>;

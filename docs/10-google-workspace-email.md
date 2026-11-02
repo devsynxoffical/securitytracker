@@ -16,7 +16,8 @@ Gmail API scopes are coarse (read, send, modify, full). Fine-grained rules such 
 |---|---|---|---|---|
 | A. Per-mailbox OAuth, internal app | Admin clicks Connect and signs in once as each mailbox. Backend stores a refresh token per mailbox | Access exists only for connected mailboxes. Revocable per mailbox. No verification needed for an Internal app | One sign-in per mailbox | Chosen for 1.0 |
 | B. Service account with domain-wide delegation | Super Admin authorises the service account for the Gmail scope. Backend can act as any user | No per-mailbox sign-in, suits many mailboxes | The key can access every mailbox in the domain, including management. High impact if leaked | Alternative when more than about 20 mailboxes. Needs backend allowlist and strict key handling |
-| C. IMAP and SMTP with app passwords | Store mailbox passwords | None | Stores passwords, weak, being phased out by Google | Rejected |
+| C. IMAP and SMTP with app passwords | Store mailbox passwords | None | Stores passwords, weak, being phased out by Google | Rejected for Google mailboxes |
+| D. IMAP and SMTP for non-Google providers (Hostinger, GoDaddy, Outlook, Zoho Mail) | Admin enters host, port, TLS, username and password; stored AES-256-GCM encrypted with the server key; IMAP polling and IDLE for new mail, SMTP for sending, same conversation layer and permissions as A | Any provider | Credentials live on the server (encrypted, never returned by the API); no per-action revocation at the provider | Approved by the client on 2026-11-02 for non-Google providers. Google mailboxes stay on option A |
 
 A connectable mailbox must be a real Workspace user account (licensed mailbox). Aliases and Google Groups (collaborative inboxes) are not mailboxes and cannot be connected. Confirm with the client which addresses are user accounts (Q3).
 
@@ -135,6 +136,10 @@ Recommended default for sales staff: read, send, reply, draft, attach, mark_read
 ## 8. Offboarding effect
 
 Disabling an employee or removing an assignment needs no action at Google: the employee never held a credential. Access ends with the next API request. The mailbox, its password and its tokens are unaffected, so nothing has to be rotated when staff leave. This is the main security gain over sharing mailbox passwords.
+
+## 8b. Message bodies and attachments
+
+Bodies are not stored. `GET /mail/mailboxes/:id/messages/:messageId/body` fetches the message from the provider on demand (Gmail `messages.get format=full`, IMAP `FETCH` by UID), sanitises the HTML server side (scripts, forms, remote images blocked until the user allows them per FR-MAIL-05) and returns it with the attachment list. `GET /mail/mailboxes/:id/messages/:messageId/attachments/:partId` streams one attachment to callers holding the `download` permission and writes a `download_attachment` audit entry.
 
 ## 9. Out of scope for 1.0
 

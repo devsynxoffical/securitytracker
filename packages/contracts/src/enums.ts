@@ -330,3 +330,9 @@ export const MailThreadEventType = {
   COMMENT: 'comment',
 } as const;
 export type MailThreadEventTypeValue = (typeof MailThreadEventType)[keyof typeof MailThreadEventType];
+
+export const MailProvider = {
+  GMAIL: 'gmail',
+  IMAP: 'imap',
+} as const;
+export type MailProviderValue = (typeof MailProvider)[keyof typeof MailProvider];

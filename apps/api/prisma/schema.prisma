@@ -1615,7 +1615,18 @@ model Mailbox {
   address         String    @unique
   displayName     String    @map("display_name")
   googleUserId    String?   @map("google_user_id")
-  refreshTokenEnc String    @map("refresh_token_enc")
+  provider        String    @default("gmail") // gmail, imap (10 section 2 option D)
+  refreshTokenEnc String?   @map("refresh_token_enc")
+  imapHost        String?   @map("imap_host")
+  imapPort        Int?      @map("imap_port")
+  imapSecure      Boolean   @default(true) @map("imap_secure")
+  smtpHost        String?   @map("smtp_host")
+  smtpPort        Int?      @map("smtp_port")
+  smtpSecure      Boolean   @default(true) @map("smtp_secure")
+  username        String?
+  passwordEnc     String?   @map("password_enc")
+  lastUidValidity Int?      @map("last_uid_validity")
+  lastUid         Int?      @map("last_uid")
   tokenStatus     String    @default("ok") @map("token_status") // ok, revoked, error
   historyId       String?   @map("history_id")
   watchExpiresAt  DateTime? @map("watch_expires_at") @db.Timestamptz()
@@ -1692,6 +1703,8 @@ model MailMessage {
   sentAt           DateTime @map("sent_at") @db.Timestamptz()
   snippet          String?
   hasAttachments   Boolean  @default(false) @map("has_attachments")
+  attachments      Json     @default("[]") // [{partId, fileName, mime, size}]
+  uid              Int? // IMAP UID (provider imap)
   sentByEmployeeId String?  @map("sent_by_employee_id") @db.Uuid
 
   thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)

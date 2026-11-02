@@ -80,7 +80,7 @@ export class MailSyncService {
     const mailbox = await this.prisma.mailbox.findUnique({ where: { id: mailboxId } });
     if (!mailbox) throw new NotFoundException('Mailbox not found');
     this.assertSyncable(mailbox);
-    const client = this.clientFor(mailbox.refreshTokenEnc);
+    const client = this.clientFor(this.requireRefreshToken(mailbox));
     const result: SyncResult = { mailboxId, mode: 'initial', fetched: 0, inbound: 0, outbound: 0, historyId: null };
     try {
       const profile = await client.getProfile();
@@ -109,7 +109,7 @@ export class MailSyncService {
     if (!mailbox) throw new NotFoundException('Mailbox not found');
     this.assertSyncable(mailbox);
     if (!mailbox.historyId) return this.initialSync(mailboxId);
-    const client = this.clientFor(mailbox.refreshTokenEnc);
+    const client = this.clientFor(this.requireRefreshToken(mailbox));
     const result: SyncResult = { mailboxId, mode: 'incremental', fetched: 0, inbound: 0, outbound: 0, historyId: mailbox.historyId };
     try {
       let pageToken: string | undefined;
@@ -146,7 +146,7 @@ export class MailSyncService {
     const mailbox = await this.prisma.mailbox.findUnique({ where: { id: mailboxId } });
     if (!mailbox) throw new NotFoundException('Mailbox not found');
     this.assertSyncable(mailbox);
-    const client = this.clientFor(mailbox.refreshTokenEnc);
+    const client = this.clientFor(this.requireRefreshToken(mailbox));
     try {
       const w = await client.watch();
       await this.prisma.mailbox.update({
@@ -270,4 +270,13 @@ export class MailSyncService {
       .then((rows) => rows.forEach((r) => this.gateway.emitToUser(r.employeeId, WebSocketEvents.MAIL_NEW, { mailboxId })))
       .catch(() => undefined);
   }
+
+  /** Gmail mailboxes always carry a refresh token; IMAP mailboxes (10 option D) never reach the Gmail client. */
+  private requireRefreshToken(mailbox: { provider?: string; refreshTokenEnc: string | null; address: string }): string {
+    if (!mailbox.refreshTokenEnc) {
+      throw new Error(`Mailbox ${mailbox.address} has no Gmail refresh token (provider ${mailbox.provider ?? 'gmail'})`);
+    }
+    return mailbox.refreshTokenEnc;
+  }
+
 }

@@ -26,7 +26,7 @@ Extends 10 (Gmail integration) and 04 section 10. The Gmail connection, sync and
 | FR-MAIL-16 | Templates: name, subject, body (HTML), shared or private; insert into compose with placeholder substitution | M |
 | FR-MAIL-17 | Link a conversation to a CRM contact, deal or lead. Automatic link when a participant address matches a contact email (FR-CRM-34). Linked threads appear on the CRM record's Emails tab | M |
 | FR-MAIL-18 | Mailbox assignment permissions extended with `triage` (assign, status, labels) and `comment` | M |
-| FR-MAIL-19 | Collision warning: when two employees open the same conversation within 2 minutes (presence through WebSocket) | S |
+| FR-MAIL-19 | Collision warning: when two employees open the same conversation within 2 minutes. Presence by heartbeat: `POST /mail/mailboxes/:id/threads/:threadId/presence` every 20 s while open, `GET` returns the other viewers of the last 60 s | M |
 | FR-MAIL-20 | Mailbox health view: token status, last sync, watch expiry, reconnect action (10 section 7) | M |
 | FR-MAIL-21 | Rules: auto-assign by sender domain or subject keyword | L |
 
