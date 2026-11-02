@@ -5,7 +5,8 @@ import { Plus, Trash2, Pencil, ArrowUp, ArrowDown, Check, X } from 'lucide-react
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePipelines, useSources, useLostReasons, useTags, useCustomFields, useCrmMutation, type Pipeline, type Stage, type Lookup, type Tag, type CustomFieldDef, type EntityType } from '@/lib/queries/crm';
-import { Button, Card, Tabs, Table, Th, Td, Badge, stageTone, Skeleton, EmptyState, ErrorBanner, Modal, Field, Input, Select, Checkbox, Segmented, TagChip, useToast, PageHeader, Banner } from '@/components/ui';
+import { Button, Card, Tabs, Table, Th, Td, Badge, stageTone, Skeleton, EmptyState, ErrorBanner, Modal, Field, Input, Select, Segmented, TagChip, useToast, PageHeader, Banner } from '@/components/ui';
+import { Toggle, Section } from '@/components/ui/advanced';
 import { titleCase } from '@/lib/format';
 
 type Tab = 'pipelines' | 'fields' | 'tags' | 'sources' | 'lost';
@@ -139,10 +140,12 @@ function StageModal({ pipeline, stage, onClose }: { pipeline: Pipeline; stage: S
           <Field label="Type"><Select value={type} onChange={(e) => { const t = e.target.value as typeof type; setType(t); if (t === 'won') setProbability('100'); if (t === 'lost') setProbability('0'); }}><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option></Select></Field>
           <Field label="Probability %" hint="Default for deals entering this stage"><Input type="number" min={0} max={100} value={probability} onChange={(e) => setProbability(e.target.value)} /></Field>
         </div>
-        <div className="flex gap-6 pt-1">
-          <Checkbox label="Counts as qualified" checked={qualified} onChange={(e) => setQualified(e.target.checked)} />
-          <Checkbox label="Counts as meeting" checked={meeting} onChange={(e) => setMeeting(e.target.checked)} />
-        </div>
+        <Section title="Metric flags">
+          <div className="flex gap-6 pt-1">
+            <Toggle label="Counts as qualified" checked={qualified} onChange={setQualified} />
+            <Toggle label="Counts as meeting" checked={meeting} onChange={setMeeting} />
+          </div>
+        </Section>
       </div>
     </Modal>
   );
@@ -214,8 +217,8 @@ function FieldModal({ entity, field, onClose }: { entity: EntityType; field: Cus
         <Field label="Label" required><Input value={label} onChange={(e) => { setLabel(e.target.value); if (!field) setKey(autoKey(e.target.value)); }} autoFocus /></Field>
         <Field label="Key" hint="snake_case; stored in the record. Cannot change later."><Input value={key} disabled={Boolean(field)} onChange={(e) => setKey(e.target.value)} className="font-mono" /></Field>
         <Field label="Type"><Select value={type} onChange={(e) => setType(e.target.value)}>{FIELD_TYPES.map((t) => <option key={t} value={t}>{titleCase(t)}</option>)}</Select></Field>
-        {needsOptions && <Field label="Options" hint="One per line" required><textarea className="h-28 w-full rounded-lg border border-line px-3 py-2 text-[13px] focus:border-pri focus:outline-none focus:ring-[3px] focus:ring-pri-soft" value={options} onChange={(e) => setOptions(e.target.value)} /></Field>}
-        <Checkbox label="Required on create" checked={required} onChange={(e) => setRequired(e.target.checked)} />
+        {needsOptions && <Field label="Options" hint="One per line" required><textarea className="h-28 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-ink focus:border-pri focus:outline-none" value={options} onChange={(e) => setOptions(e.target.value)} /></Field>}
+        <Toggle label="Required on create" checked={required} onChange={setRequired} />
       </div>
     </Modal>
   );
@@ -243,7 +246,7 @@ function TagsTab({ canEdit }: { canEdit: boolean }) {
       {canEdit && (
         <div className="mb-4 flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface-2 p-3">
           <Field label={editing ? 'Rename tag' : 'New tag'}><Input className="w-56" value={editing ? editing.name : name} onChange={(e) => (editing ? setEditing({ ...editing, name: e.target.value }) : setName(e.target.value))} placeholder="e.g. Hot" /></Field>
-          <Field label="Colour"><div className="flex gap-1.5">{PALETTE.map((c) => <button key={c} type="button" onClick={() => (editing ? setEditing({ ...editing, colour: c }) : setColour(c))} className="h-7 w-7 rounded-full border-2" style={{ backgroundColor: c, borderColor: (editing ? editing.colour : colour) === c ? '#151A1E' : 'transparent' }} aria-label={c} /> )}</div></Field>
+          <Field label="Colour"><div className="flex gap-1.5">{PALETTE.map((c) => <button key={c} type="button" onClick={() => (editing ? setEditing({ ...editing, colour: c }) : setColour(c))} className="h-7 w-7 rounded-full border-2" style={{ backgroundColor: c, borderColor: (editing ? editing.colour : colour) === c ? 'var(--ink)' : 'transparent' }} aria-label={c} /> )}</div></Field>
           {editing ? <>
             <Button variant="primary" loading={update.isPending} onClick={() => update.mutate({ id: editing.id, body: { name: editing.name, colour: editing.colour } }, { onSuccess: () => setEditing(null), onError: err })}>Save</Button>
             <Button onClick={() => setEditing(null)}>Cancel</Button>

@@ -384,3 +384,53 @@ export const useImportJob = (id: string | null, poll: boolean) =>
     enabled: Boolean(id),
     refetchInterval: poll ? 1500 : false,
   });
+
+// ---------------------------------------------------------------------------
+// Saved views (FR-CRM-26), CRM-side mail threads (FR-MAIL-17), typed activities
+// ---------------------------------------------------------------------------
+
+export interface SavedView {
+  id: string;
+  entityType: EntityType;
+  name: string;
+  ownerId: string;
+  visibility: 'private' | 'team' | 'company';
+  filters: Record<string, unknown>;
+  sort?: { field: string; direction: 'asc' | 'desc' } | null;
+  columns?: string[] | null;
+  isDefault: boolean;
+}
+
+export interface CrmThread {
+  id: string;
+  mailbox: { id: string; address: string; displayName: string };
+  subject: string;
+  snippet: string | null;
+  lastMessageAt: string;
+  status: string;
+  assigneeId: string | null;
+  canRead: boolean;
+}
+
+export const viewKeys = {
+  views: (entityType: EntityType) => ['crm', 'views', entityType] as const,
+  threads: (entityType: 'contact' | 'deal', id: string) => ['crm', 'threads', entityType, id] as const,
+  activitiesOfType: (entityType: string, entityId: string, type: string) => ['activities', entityType, entityId, type] as const,
+};
+
+export const useViews = (entityType: EntityType) =>
+  useQuery({ queryKey: viewKeys.views(entityType), queryFn: () => http.get<SavedView[]>('/crm/views', { entityType }), staleTime: 60_000 });
+
+export const useRecordThreads = (entityType: 'contact' | 'deal', id: string | null) =>
+  useQuery({
+    queryKey: viewKeys.threads(entityType, id ?? ''),
+    queryFn: () => http.get<CrmThread[]>(`/crm/${entityType}s/${id}/threads`),
+    enabled: Boolean(id),
+  });
+
+export const useActivitiesOfType = (entityType: EntityType, entityId: string | null, type: string) =>
+  useQuery({
+    queryKey: viewKeys.activitiesOfType(entityType, entityId ?? '', type),
+    queryFn: () => http.get<Page<Activity>>('/crm/activities', { entityType, entityId, type, limit: 100 }),
+    enabled: Boolean(entityId),
+  });

@@ -1,18 +1,21 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
-import { Plus, Download, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Plus, Download, Phone, Mail, Pencil, Trash2, Eye, UserPlus, Tag as TagIcon } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useIdParam } from '@/lib/useIdParam';
-import { useContacts, useContact, useAccounts, useCrmMutation, type Contact } from '@/lib/queries/crm';
-import {
-  Button, Card, Table, Th, Td, Badge, lifecycleTone, stageTone, Skeleton, TableSkeleton, EmptyState, ErrorBanner, Pagination, BulkBar, Drawer, Modal, Field, Input, Select, Tabs, Row, Avatar, Checkbox, SearchInput, useToast, PageHeader,
-} from '@/components/ui';
-import { OwnerSelect, OwnerFilter, TagFilter, TagList, TagPicker, ActivityTimeline, CustomFieldInputs, CustomFieldValues, ContactPointEditor, toPhones, toEmails, type ContactPoint } from '@/components/crm/shared';
+import { useContacts, useContact, useAccounts, useActivities, useCrmMutation, type Contact } from '@/lib/queries/crm';
+import { Button, Card, Badge, lifecycleTone, stageTone, Skeleton, EmptyState, Pagination, BulkBar, Modal, Field, Input, Select, Tabs, Avatar, Checkbox, useToast, PageHeader } from '@/components/ui';
+import { DataTable, Menu, AssociationCard, type Column, type SortState, type MenuItem } from '@/components/ui/advanced';
+import { OwnerSelect, TagFilter, TagList, TagPicker, CustomFieldInputs, ContactPointEditor, toPhones, toEmails, type ContactPoint } from '@/components/crm/shared';
+import { ListShell, OwnerChip, SelectChip, TagFilterChip, SearchChipInput, useMergedRows, type Filters } from '@/components/crm/list-shell';
+import { RecordPage, RecordHeader, KpiStrip, EditableProperties, ActivitiesTab, NotesTab, EmailsTab, MetaFooter } from '@/components/crm/record';
 import { money, fullName, relative, dateTime, phoneDisplay, titleCase, downloadText } from '@/lib/format';
 
 const LIFECYCLES = ['lead', 'prospect', 'customer', 'churned', 'partner'];
+const LIFECYCLE_OPTIONS = LIFECYCLES.map((l) => ({ value: l, label: titleCase(l) }));
 
 export default function ContactsPage() {
   return (
@@ -23,32 +26,50 @@ export default function ContactsPage() {
 }
 
 function Contacts() {
-  const { can } = useAuth();
+  const { can, me } = useAuth();
   const toast = useToast();
   const [id, setId] = useIdParam();
-  const [search, setSearch] = useState('');
-  const [ownerId, setOwnerId] = useState('');
-  const [tagId, setTagId] = useState('');
-  const [lifecycle, setLifecycle] = useState('');
+  const [filters, setFiltersState] = useState<Filters>({});
+  const [sort, setSort] = useState<SortState>({ key: 'lastActivityAt', direction: 'desc' });
   const [cursor, setCursor] = useState<string | undefined>();
   const [pages, setPages] = useState<Contact[][]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Contact | null | 'new'>(null);
   const [bulkOwner, setBulkOwner] = useState('');
   const [bulkTag, setBulkTag] = useState('');
 
-  const params = useMemo(() => ({ search: search || undefined, ownerId: ownerId || undefined, tagId: tagId || undefined, lifecycle: lifecycle || undefined, cursor, limit: 50 }), [search, ownerId, tagId, lifecycle, cursor]);
+  const reset = () => { setCursor(undefined); setPages([]); setSelected(new Set()); };
+  const setFilters = useCallback((f: Filters) => { setFiltersState(f); setCursor(undefined); setPages([]); setSelected(new Set()); }, []);
+  const setFilter = (k: string, v: string) => setFilters({ ...filters, [k]: v });
+  const onSort = (s: SortState) => { setSort(s); reset(); };
+
+  const params = useMemo(
+    () => ({ search: filters.search || undefined, ownerId: filters.ownerId || undefined, tagId: filters.tagId || undefined, lifecycle: filters.lifecycle || undefined, accountId: filters.accountId || undefined, sort: `${sort.key}:${sort.direction}`, cursor, limit: 50 }),
+    [filters, sort, cursor],
+  );
   const q = useContacts(params);
-  const rows = useMemo(() => {
-    const seen = new Set<string>();
-    return [...pages.flat(), ...(q.data?.items ?? [])].filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
-  }, [pages, q.data]);
-  const reset = () => { setCursor(undefined); setPages([]); setSelected([]); };
+  const rows = useMergedRows(pages, q.data?.items);
   const loadMore = () => { if (q.data?.nextCursor) { setPages((p) => [...p, q.data!.items]); setCursor(q.data.nextCursor); } };
 
-  const bulk = useCrmMutation((b: Record<string, unknown>) => http.post('/crm/contacts/bulk', { ids: selected, ...b }), [['contacts']]);
-  const runBulk = (b: Record<string, unknown>) => bulk.mutate(b, { onSuccess: () => { setSelected([]); toast.push('success', 'Done'); }, onError: (e) => toast.push('error', (e as Error).message) });
-  const exportCsv = () => http.text('/crm/contacts/export', { search: search || undefined, ownerId: ownerId || undefined, tagId: tagId || undefined, lifecycle: lifecycle || undefined }).then((t) => downloadText('contacts-export.csv', t)).catch((e) => toast.push('error', (e as Error).message));
+  const bulk = useCrmMutation((b: Record<string, unknown>) => http.post('/crm/contacts/bulk', { ids: [...selected], ...b }), [['contacts']]);
+  const runBulk = (b: Record<string, unknown>) => bulk.mutate(b, { onSuccess: () => { setSelected(new Set()); toast.push('success', 'Done'); }, onError: (e) => toast.push('error', (e as Error).message) });
+  const assignOne = useCrmMutation((a: { id: string; ownerId: string }) => http.post(`/crm/contacts/${a.id}/assign`, { ownerId: a.ownerId }), [['contacts']]);
+  const delOne = useCrmMutation((cid: string) => http.del(`/crm/contacts/${cid}`), [['contacts']]);
+  const exportCsv = () => http.text('/crm/contacts/export', { search: filters.search || undefined, ownerId: filters.ownerId || undefined, tagId: filters.tagId || undefined, lifecycle: filters.lifecycle || undefined }).then((t) => downloadText('contacts-export.csv', t)).catch((e) => toast.push('error', (e as Error).message));
+
+  if (id) return <ContactRecord id={id} onBack={() => setId(null)} onEdit={(c) => setEditing(c)} editing={editing} onCloseEdit={() => setEditing(null)} />;
+
+  const columns: Column<Contact>[] = [
+    { key: 'lastName', header: 'Name', sortable: true, locked: true, cell: (c) => <div className="flex items-center gap-2.5"><Avatar name={fullName(c)} size={26} /><div className="min-w-0"><div className="truncate font-semibold text-ink">{fullName(c)}</div><div className="truncate text-xs text-ink-3">{c.title ?? ''}</div></div></div> },
+    { key: 'account', header: 'Account', cell: (c) => c.account?.name ?? <span className="text-ink-3">—</span> },
+    { key: 'email', header: 'Email', cell: (c) => <span className="text-ink-2">{c.emails[0]?.emailLower ?? '—'}</span> },
+    { key: 'phone', header: 'Phone', mono: true, cell: (c) => <span className="text-ink-2">{c.phones[0] ? phoneDisplay(c.phones[0].phoneE164) : '—'}</span> },
+    { key: 'lifecycle', header: 'Lifecycle', sortable: true, cell: (c) => <Badge tone={lifecycleTone(c.lifecycle)}>{titleCase(c.lifecycle)}</Badge> },
+    { key: 'owner', header: 'Owner', cell: (c) => (c.owner ? <span className="flex items-center gap-2"><Avatar name={fullName(c.owner)} size={22} />{fullName(c.owner)}</span> : <span className="text-ink-3">Unassigned</span>) },
+    { key: 'tags', header: 'Tags', cell: (c) => <TagList tags={c.tags} /> },
+    { key: 'createdAt', header: 'Created', sortable: true, cell: (c) => <span className="text-ink-3">{relative(c.createdAt)}</span> },
+    { key: 'lastActivityAt', header: 'Last activity', sortable: true, right: true, cell: (c) => <span className="text-ink-3">{relative(c.lastActivityAt)}</span> },
+  ];
 
   return (
     <div>
@@ -57,112 +78,207 @@ function Contacts() {
         {can('crm.contacts.create') && <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New contact</Button>}
       </>} />
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SearchInput className="w-64" value={search} onChange={(v) => { setSearch(v); reset(); }} placeholder="Name, email, phone, account…" />
-        <div className="w-48"><OwnerFilter value={ownerId} onChange={(v) => { setOwnerId(v); reset(); }} /></div>
-        <div className="w-40"><TagFilter value={tagId} onChange={(v) => { setTagId(v); reset(); }} /></div>
-        <div className="w-40"><Select value={lifecycle} onChange={(e) => { setLifecycle(e.target.value); reset(); }}><option value="">All lifecycles</option>{LIFECYCLES.map((l) => <option key={l} value={l}>{titleCase(l)}</option>)}</Select></div>
-      </div>
-
-      <Card>
-        <BulkBar count={selected.length} onClear={() => setSelected([])}>
-          {can('crm.contacts.assign') && <><div className="w-52"><OwnerSelect value={bulkOwner} onChange={setBulkOwner} emptyLabel="Assign to…" /></div><Button size="sm" disabled={!bulkOwner} loading={bulk.isPending} onClick={() => runBulk({ action: 'assign', ownerId: bulkOwner })}>Assign</Button></>}
-          <div className="w-40"><TagFilter value={bulkTag} onChange={setBulkTag} /></div>
-          <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'add_tag', tagId: bulkTag })}>Add tag</Button>
-          <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'remove_tag', tagId: bulkTag })}>Remove tag</Button>
-          {can('crm.contacts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete ${selected.length} contacts?`) && runBulk({ action: 'delete' })}>Delete</Button>}
-        </BulkBar>
-        {q.isLoading && pages.length === 0 && <TableSkeleton cols={7} />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data && rows.length === 0 && <EmptyState title="No contacts match" body="Change the filters, import a CSV or create a contact." action={can('crm.contacts.create') ? <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New contact</Button> : undefined} />}
-        {rows.length > 0 && (
+      <ListShell
+        entityType="contact"
+        filters={filters}
+        onFilters={setFilters}
+        chips={
           <>
-            <Table>
-              <thead><tr>
-                <Th className="w-8"><Checkbox checked={selected.length === rows.length} onChange={(e) => setSelected(e.target.checked ? rows.map((r) => r.id) : [])} /></Th>
-                <Th>Name</Th><Th>Account</Th><Th>Email</Th><Th>Phone</Th><Th>Lifecycle</Th><Th>Owner</Th><Th>Tags</Th><Th right>Last activity</Th>
-              </tr></thead>
-              <tbody>
-                {rows.map((c) => (
-                  <tr key={c.id} className="cursor-pointer hover:bg-surface-2" onClick={() => setId(c.id)}>
-                    <Td><span onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.includes(c.id)} onChange={(e) => setSelected((s) => (e.target.checked ? [...s, c.id] : s.filter((x) => x !== c.id)))} /></span></Td>
-                    <Td><div className="flex items-center gap-2"><Avatar name={fullName(c)} size={24} /><div><div className="font-semibold">{fullName(c)}</div><div className="text-xs text-ink-3">{c.title ?? ''}</div></div></div></Td>
-                    <Td>{c.account?.name ?? <span className="text-ink-3">—</span>}</Td>
-                    <Td className="text-ink-2">{c.emails[0]?.emailLower ?? '—'}</Td>
-                    <Td mono className="text-ink-2">{c.phones[0] ? phoneDisplay(c.phones[0].phoneE164) : '—'}</Td>
-                    <Td><Badge tone={lifecycleTone(c.lifecycle)}>{titleCase(c.lifecycle)}</Badge></Td>
-                    <Td>{fullName(c.owner)}</Td>
-                    <Td><TagList tags={c.tags} /></Td>
-                    <Td right className="text-ink-3">{relative(c.lastActivityAt)}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-            <Pagination count={rows.length} hasMore={Boolean(q.data?.nextCursor)} onMore={loadMore} loading={q.isFetching} />
+            <SearchChipInput value={filters.search ?? ''} onChange={(v) => setFilter('search', v)} placeholder="Name, email, phone, account…" />
+            <OwnerChip value={filters.ownerId ?? ''} onChange={(v) => setFilter('ownerId', v)} />
+            <SelectChip label="Lifecycle" value={filters.lifecycle ?? ''} onChange={(v) => setFilter('lifecycle', v)} options={LIFECYCLE_OPTIONS} />
+            <TagFilterChip value={filters.tagId ?? ''} onChange={(v) => setFilter('tagId', v)} />
           </>
-        )}
-      </Card>
+        }
+      >
+        <Card>
+          <BulkBar count={selected.size} onClear={() => setSelected(new Set())}>
+            {can('crm.contacts.assign') && <><div className="w-52"><OwnerSelect value={bulkOwner} onChange={setBulkOwner} emptyLabel="Assign to…" /></div><Button size="sm" disabled={!bulkOwner} loading={bulk.isPending} onClick={() => runBulk({ action: 'assign', ownerId: bulkOwner })}>Assign</Button></>}
+            <div className="w-40"><TagFilter value={bulkTag} onChange={setBulkTag} /></div>
+            <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'add_tag', tagId: bulkTag })}>Add tag</Button>
+            <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'remove_tag', tagId: bulkTag })}>Remove tag</Button>
+            {can('crm.contacts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete ${selected.size} contacts?`) && runBulk({ action: 'delete' })}>Delete</Button>}
+          </BulkBar>
+          <DataTable
+            rows={rows}
+            columns={columns}
+            loading={q.isLoading && pages.length === 0}
+            error={q.isError ? (q.error as Error).message : null}
+            onRetry={() => q.refetch()}
+            sort={sort}
+            onSort={onSort}
+            selected={selected}
+            onSelect={setSelected}
+            onRowClick={(c) => setId(c.id)}
+            storageKey="crm.contacts"
+            empty={<EmptyState title="No contacts match" body="Change the filters, import a CSV or create a contact." action={can('crm.contacts.create') ? <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New contact</Button> : undefined} />}
+            rowActions={(c) => (
+              <Menu
+                items={([
+                  { label: 'Open', icon: <Eye size={14} />, onSelect: () => setId(c.id) },
+                  ...(can('crm.contacts.edit') ? [{ label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(c) }] : []),
+                  ...(can('crm.contacts.assign') && me ? [{ label: 'Assign to me', icon: <UserPlus size={14} />, onSelect: () => assignOne.mutate({ id: c.id, ownerId: me.id }, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                  { label: 'Add tag…', icon: <TagIcon size={14} />, onSelect: () => { setSelected(new Set([c.id])); } },
+                  ...(can('crm.contacts.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm(`Delete ${fullName(c)}?`) && delOne.mutate(c.id, { onSuccess: () => toast.push('success', 'Contact deleted'), onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                ] as MenuItem[])}
+              />
+            )}
+            footer={rows.length > 0 ? <Pagination count={rows.length} hasMore={Boolean(q.data?.nextCursor)} onMore={loadMore} loading={q.isFetching} /> : undefined}
+          />
+        </Card>
+      </ListShell>
 
-      <ContactDrawer id={id} onClose={() => setId(null)} onEdit={(c) => setEditing(c)} />
       {editing && <ContactFormModal contact={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-function ContactDrawer({ id, onClose, onEdit }: { id: string | null; onClose: () => void; onEdit: (c: Contact) => void }) {
+// ---------------------------------------------------------------------------
+// Record page
+// ---------------------------------------------------------------------------
+
+function ContactRecord({ id, onBack, onEdit, editing, onCloseEdit }: { id: string; onBack: () => void; onEdit: (c: Contact) => void; editing: Contact | null | 'new'; onCloseEdit: () => void }) {
   const { can } = useAuth();
   const toast = useToast();
   const q = useContact(id);
-  const [tab, setTab] = useState<'overview' | 'activities' | 'deals'>('overview');
+  const activities = useActivities('contact', id);
+  const [tab, setTab] = useState<'overview' | 'activities' | 'emails' | 'notes'>('overview');
   const [owner, setOwner] = useState('');
-  const assign = useCrmMutation((ownerId: string) => http.post(`/crm/contacts/${id}/assign`, { ownerId }), [['contacts'], ['activities']]);
+  const inv = [['contacts'], ['activities']];
+  const assign = useCrmMutation((ownerId: string) => http.post(`/crm/contacts/${id}/assign`, { ownerId }), inv);
   const del = useCrmMutation(() => http.del(`/crm/contacts/${id}`), [['contacts']]);
   const c = q.data;
+  const canEdit = can('crm.contacts.edit');
+  const deals = c?.deals ?? [];
+  const openDeals = deals.filter((d) => !d.wonAt && !d.lostAt);
+  const pipeline = openDeals.reduce((s, d) => s + Number(d.amount ?? 0), 0);
+  const won = deals.filter((d) => d.wonAt).reduce((s, d) => s + Number(d.amount ?? 0), 0);
+
   return (
-    <Drawer open={Boolean(id)} onClose={onClose} title={c ? fullName(c) : 'Contact'} subtitle={c ? [c.title, c.account?.name].filter(Boolean).join(' · ') || 'No account' : undefined}
-      actions={c && <>
-        {can('crm.contacts.edit') && <Button size="sm" icon={<Pencil size={13} />} onClick={() => onEdit(c)}>Edit</Button>}
-        {can('crm.contacts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => window.confirm('Delete this contact?') && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Contact deleted'); onClose(); } })}>Delete</Button>}
-      </>}>
-      {q.isLoading && <div className="space-y-3 p-5">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>}
-      {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-      {c && (
-        <div className="p-5">
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <div className="rounded-card border border-line p-3"><div className="text-xs text-ink-3">Lifecycle</div><div className="mt-1"><Badge tone={lifecycleTone(c.lifecycle)}>{titleCase(c.lifecycle)}</Badge></div></div>
-            <div className="rounded-card border border-line p-3"><div className="text-xs text-ink-3">Open deals</div><div className="mt-1 font-mono text-lg font-semibold">{(c.deals ?? []).filter((d) => !d.wonAt && !d.lostAt).length}</div></div>
-            <div className="rounded-card border border-line p-3"><div className="text-xs text-ink-3">Owner</div>
-              {can('crm.contacts.assign') ? <div className="mt-1 flex gap-1"><OwnerSelect value={owner || c.ownerId || ''} onChange={setOwner} allowEmpty={false} /><Button size="sm" disabled={!owner || owner === c.ownerId} loading={assign.isPending} onClick={() => assign.mutate(owner, { onSuccess: () => toast.push('success', 'Reassigned') })}>Set</Button></div> : <div className="mt-1 text-[13px] font-semibold">{fullName(c.owner)}</div>}
-            </div>
-          </div>
-          <Tabs value={tab} onChange={setTab} className="mb-4" tabs={[{ value: 'overview', label: 'Overview' }, { value: 'activities', label: 'Activities' }, { value: 'deals', label: 'Deals', count: c.deals?.length ?? 0 }]} />
-          {tab === 'overview' && (
-            <div className="space-y-4">
-              <div>
-                <Row label="Account">{c.account ? <a className="text-pri hover:underline" href={`/admin/crm/accounts?id=${c.account.id}`}>{c.account.name}</a> : '—'}</Row>
-                <Row label="Phones">{c.phones.length ? c.phones.map((p) => <span key={p.id} className="mr-3 inline-flex items-center gap-1 font-mono"><Phone size={11} />{phoneDisplay(p.phoneE164)} <span className="text-ink-3">{p.label}</span></span>) : '—'}</Row>
-                <Row label="Emails">{c.emails.length ? c.emails.map((e) => <span key={e.id} className="mr-3 inline-flex items-center gap-1"><Mail size={11} />{e.emailLower} <span className="text-ink-3">{e.label}</span></span>) : '—'}</Row>
-                <Row label="Address">{[c.address?.line1, c.address?.city, c.address?.state, c.address?.postalCode, c.address?.country].filter(Boolean).join(', ') || '—'}</Row>
-                <Row label="Preferences">{c.doNotCall && <Badge tone="red" className="mr-1">Do not call</Badge>}{c.doNotEmail && <Badge tone="red">Do not email</Badge>}{!c.doNotCall && !c.doNotEmail && 'None'}</Row>
-                <Row label="Tags"><TagList tags={c.tags} /></Row>
-                <Row label="Created">{dateTime(c.createdAt)}{c.leadId && <span className="ml-2 text-ink-3">from lead</span>}</Row>
-              </div>
-              <CustomFieldValues entityType="contact" values={c.custom} />
-            </div>
-          )}
-          {tab === 'activities' && <ActivityTimeline entityType="contact" entityId={c.id} canEdit={can('crm.contacts.edit')} />}
-          {tab === 'deals' && (
-            (c.deals ?? []).length === 0 ? <EmptyState title="No deals" body="Deals linked to this contact appear here." /> : (
-              <Table><thead><tr><Th>Deal</Th><Th>Stage</Th><Th right>Amount</Th><Th>Role</Th></tr></thead><tbody>
-                {c.deals!.map((d) => <tr key={d.id} className="hover:bg-surface-2"><Td><a className="font-semibold text-pri hover:underline" href={`/admin/crm/deals?id=${d.id}`}>{d.name}</a></Td><Td><Badge tone={stageTone(d.stage.type)}>{d.stage.name}</Badge></Td><Td right mono>{money(d.amount, d.currency)}</Td><Td className="text-ink-2">{d.role ?? (d.isPrimary ? 'Primary' : '—')}</Td></tr>)}
-              </tbody></Table>
-            )
-          )}
-        </div>
-      )}
-    </Drawer>
+    <RecordPage
+      onBack={onBack}
+      loading={q.isLoading}
+      error={q.isError ? (q.error as Error).message : null}
+      onRetry={() => q.refetch()}
+      header={
+        c && (
+          <RecordHeader
+            avatar={<Avatar name={fullName(c)} size={44} />}
+            title={fullName(c)}
+            subtitle={<span>{[c.title, c.account?.name].filter(Boolean).join(' · ') || 'No account'}</span>}
+            badges={
+              <>
+                <Badge tone={lifecycleTone(c.lifecycle)} dot>{titleCase(c.lifecycle)}</Badge>
+                {c.doNotCall && <Badge tone="red">Do not call</Badge>}
+                {c.doNotEmail && <Badge tone="red">Do not email</Badge>}
+                {c.tags.length > 0 && <TagList tags={c.tags} />}
+              </>
+            }
+            actions={
+              <>
+                {can('crm.contacts.assign') && (
+                  <div className="flex gap-1">
+                    <div className="w-44"><OwnerSelect value={owner || c.ownerId || ''} onChange={setOwner} allowEmpty={false} /></div>
+                    <Button disabled={!owner || owner === c.ownerId} loading={assign.isPending} onClick={() => assign.mutate(owner, { onSuccess: () => toast.push('success', 'Reassigned') })}>Assign</Button>
+                  </div>
+                )}
+                {can('crm.contacts.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => window.confirm('Delete this contact?') && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Contact deleted'); onBack(); } })}>Delete</Button>}
+              </>
+            }
+            primary={canEdit ? <Button variant="primary" icon={<Pencil size={13} />} onClick={() => onEdit(c)}>Edit</Button> : undefined}
+          />
+        )
+      }
+      left={
+        c && (
+          <EditableProperties
+            entityType="contact"
+            patchPath={`/crm/contacts/${c.id}`}
+            canEdit={canEdit}
+            invalidate={inv}
+            custom={c.custom}
+            properties={[
+              { key: 'firstName', label: 'First name', value: c.firstName, raw: c.firstName, editable: true },
+              { key: 'lastName', label: 'Last name', value: c.lastName, raw: c.lastName, editable: true },
+              { key: 'title', label: 'Title', value: c.title, raw: c.title ?? '', editable: true },
+              { key: 'lifecycle', label: 'Lifecycle', value: titleCase(c.lifecycle), raw: c.lifecycle, type: 'select', options: LIFECYCLE_OPTIONS, editable: true },
+              { key: 'account', label: 'Account', value: c.account ? <Link className="text-pri hover:underline" href={`/admin/crm/accounts?id=${c.account.id}`}>{c.account.name}</Link> : null },
+              { key: 'emails', label: 'Emails', value: c.emails.length ? <span className="space-y-0.5">{c.emails.map((e) => <span key={e.id} className="flex items-center gap-1"><Mail size={11} />{e.emailLower} <span className="text-ink-3">{e.label}</span></span>)}</span> : null },
+              { key: 'phones', label: 'Phones', value: c.phones.length ? <span className="space-y-0.5">{c.phones.map((p) => <span key={p.id} className="flex items-center gap-1 font-mono"><Phone size={11} />{phoneDisplay(p.phoneE164)} <span className="text-ink-3">{p.label}</span></span>)}</span> : null },
+              { key: 'address', label: 'Address', value: [c.address?.line1, c.address?.city, c.address?.state, c.address?.postalCode, c.address?.country].filter(Boolean).join(', ') || null },
+              { key: 'owner', label: 'Owner', value: c.owner ? fullName(c.owner) : 'Unassigned' },
+              { key: 'createdAt', label: 'Created', value: <span>{dateTime(c.createdAt)}{c.leadId && <span className="ml-1 text-ink-3">from lead</span>}</span> },
+            ]}
+            map={(key, value) => {
+              switch (key) {
+                case 'firstName': return value.trim() ? { firstName: value.trim() } : null;
+                case 'lastName': return { lastName: value };
+                case 'title': return { title: value || undefined };
+                case 'lifecycle': return { lifecycle: value };
+                default: return null;
+              }
+            }}
+          />
+        )
+      }
+      main={
+        c && (
+          <>
+            <Tabs value={tab} onChange={setTab} className="mb-4" tabs={[{ value: 'overview', label: 'Overview' }, { value: 'activities', label: 'Activities', count: activities.data?.items.length }, { value: 'emails', label: 'Emails' }, { value: 'notes', label: 'Notes' }]} />
+            {tab === 'overview' && (
+              <>
+                <KpiStrip items={[
+                  { label: 'Open deals', value: openDeals.length, hint: money(pipeline) + ' in pipeline' },
+                  { label: 'Won revenue', value: money(won), tone: won > 0 ? 'green' : undefined },
+                  { label: 'Activities', value: activities.data?.items.length ?? '—', hint: `${(activities.data?.items ?? []).filter((a) => a.status === 'planned').length} planned` },
+                  { label: 'Last activity', value: <span className="text-base">{relative(c.lastActivityAt)}</span> },
+                ]} />
+                <ActivitiesTab entityType="contact" entityId={c.id} canEdit={canEdit} />
+                <MetaFooter createdAt={c.createdAt} lastActivityAt={c.lastActivityAt} />
+              </>
+            )}
+            {tab === 'activities' && <ActivitiesTab entityType="contact" entityId={c.id} canEdit={canEdit} />}
+            {tab === 'emails' && <EmailsTab entityType="contact" entityId={c.id} />}
+            {tab === 'notes' && <NotesTab entityType="contact" entityId={c.id} canEdit={canEdit} />}
+            {editing && <ContactFormModal contact={editing === 'new' ? null : editing} onClose={onCloseEdit} />}
+          </>
+        )
+      }
+      right={
+        c && (
+          <>
+            <AssociationCard title="Account" emptyText="No account linked">
+              {c.account && (
+                <Link href={`/admin/crm/accounts?id=${c.account.id}`} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface-2">
+                  <Avatar name={c.account.name} size={24} />
+                  <span className="min-w-0"><span className="block truncate font-medium text-ink">{c.account.name}</span><span className="block truncate text-xs text-ink-3">{c.account.domain ?? ''}</span></span>
+                </Link>
+              )}
+            </AssociationCard>
+            <AssociationCard title="Deals" count={deals.length} emptyText="No deals yet">
+              {deals.length > 0 && (
+                <ul className="space-y-0.5">
+                  {deals.map((d) => (
+                    <li key={d.id}>
+                      <Link href={`/admin/crm/deals?id=${d.id}`} className="flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-surface-2">
+                        <span className="min-w-0"><span className="block truncate font-medium text-ink">{d.name}</span><Badge tone={stageTone(d.stage.type)}>{d.stage.name}</Badge></span>
+                        <span className="font-mono text-xs text-ink-2">{money(d.amount, d.currency)}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AssociationCard>
+          </>
+        )
+      }
+    />
   );
 }
+
+// ---------------------------------------------------------------------------
+// Form
+// ---------------------------------------------------------------------------
 
 function ContactFormModal({ contact, onClose }: { contact: Contact | null; onClose: () => void }) {
   const toast = useToast();
@@ -194,7 +310,7 @@ function ContactFormModal({ contact, onClose }: { contact: Contact | null; onClo
   return (
     <Modal open onClose={onClose} title={contact ? 'Edit contact' : 'New contact'} width={640} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!firstName.trim()} loading={save.isPending} onClick={submit}>{contact ? 'Save' : 'Create contact'}</Button></>}>
       <div className="space-y-4">
-        {dup && <div className="rounded-lg bg-amber-soft px-3 py-2 text-[13px] text-amber">{dup}<label className="mt-1 flex items-center gap-2"><input type="checkbox" checked={allowDup} onChange={(e) => setAllowDup(e.target.checked)} /> Create anyway</label></div>}
+        {dup && <div className="rounded-lg bg-amber-soft px-3 py-2 text-base text-amber-text">{dup}<label className="mt-1 flex items-center gap-2"><input type="checkbox" checked={allowDup} onChange={(e) => setAllowDup(e.target.checked)} /> Create anyway</label></div>}
         <div className="grid grid-cols-2 gap-3">
           <Field label="First name" required><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoFocus /></Field>
           <Field label="Last name"><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>

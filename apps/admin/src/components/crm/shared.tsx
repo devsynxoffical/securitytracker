@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { http } from '@/lib/api';
 import {
   useActivities,
+  useActivitiesOfType,
   useEmployees,
   useTags,
   useLostReasons,
@@ -17,7 +18,8 @@ import {
   type Tag,
   type CustomFieldDef,
 } from '@/lib/queries/crm';
-import { Button, Field, Input, Select, Textarea, Modal, Skeleton, EmptyState, ErrorBanner, TagChip, Badge, Checkbox, useToast } from '@/components/ui';
+import { Button, Field, Input, Select, Textarea, Modal, Skeleton, EmptyState, ErrorBanner, TagChip, Badge, Checkbox, useToast, type Tone } from '@/components/ui';
+import { TimelineItem } from '@/components/ui/advanced';
 import { fullName, dateTime, relative, fromLocalInput } from '@/lib/format';
 
 // ---------------------------------------------------------------------------
@@ -252,50 +254,71 @@ function describe(a: Activity): string {
   }
 }
 
-export function ActivityTimeline({ entityType, entityId, canEdit }: { entityType: EntityType; entityId: string; canEdit: boolean }) {
-  const q = useActivities(entityType, entityId);
-  const invalidate = [keys.activities(entityType, entityId), ['activities', 'agenda']];
+const toneFor: Record<string, Tone> = {
+  note: 'gray',
+  call: 'blue',
+  email: 'violet',
+  meeting: 'primary',
+  task: 'amber',
+  stage_changed: 'primary',
+  assigned: 'blue',
+  converted: 'green',
+  created: 'green',
+  created_from_lead: 'green',
+  imported: 'gray',
+  field_changed: 'gray',
+  tag_added: 'gray',
+  tag_removed: 'gray',
+};
+
+export function ActivityTimeline({ entityType, entityId, canEdit, onlyType }: { entityType: EntityType; entityId: string; canEdit: boolean; onlyType?: string }) {
+  const all = useActivities(entityType, onlyType ? null : entityId);
+  const typed = useActivitiesOfType(entityType, onlyType ? entityId : null, onlyType ?? '');
+  const q = onlyType ? typed : all;
+  const invalidate = [keys.activities(entityType, entityId), ['activities']];
   const setStatus = useCrmMutation((a: { id: string; status: string }) => http.patch(`/crm/activities/${a.id}`, { status: a.status }), invalidate);
+  const items = q.data?.items ?? [];
 
   return (
     <div className="space-y-4">
-      {canEdit && <ActivityComposer entityType={entityType} entityId={entityId} />}
+      {canEdit && <ActivityComposer entityType={entityType} entityId={entityId} fixedType={onlyType === 'note' ? 'note' : undefined} />}
       {q.isLoading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12" />
+            <Skeleton key={i} className="h-14" />
           ))}
         </div>
       )}
       {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-      {q.data && q.data.items.length === 0 && <EmptyState title="No activity yet" body="Notes, calls, meetings and changes will appear here." />}
-      {q.data && q.data.items.length > 0 && (
-        <ol className="relative space-y-3 border-l border-line-2 pl-5">
-          {q.data.items.map((a) => (
-            <li key={a.id} className="relative">
-              <span className="absolute -left-[27px] top-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-line bg-surface text-ink-3">{icon[a.type] ?? <Pencil size={14} />}</span>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 text-[13px]">
-                    <span className="font-semibold text-ink">{a.subject || describe(a)}</span>
-                    {a.status && <Badge tone={a.status === 'done' ? 'green' : a.status === 'cancelled' ? 'gray' : 'amber'}>{a.status}</Badge>}
-                    {a.dueAt && a.status === 'planned' && <span className="text-xs text-ink-3">due {dateTime(a.dueAt)}</span>}
-                  </div>
-                  {a.body && <p className="mt-0.5 whitespace-pre-wrap text-[13px] text-ink-2">{a.body}</p>}
-                  {a.subject && a.type !== 'note' && <div className="text-xs text-ink-3">{describe(a)}</div>}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
+      {q.data && items.length === 0 && <EmptyState title={onlyType === 'note' ? 'No notes yet' : 'No activity yet'} body={onlyType === 'note' ? 'Notes you write here stay on the record.' : 'Notes, calls, meetings and changes will appear here.'} />}
+      {items.length > 0 && (
+        <ol>
+          {items.map((a) => (
+            <TimelineItem
+              key={a.id}
+              tone={toneFor[a.type] ?? 'gray'}
+              icon={icon[a.type] ?? <Pencil size={14} />}
+              title={
+                <span className="flex flex-wrap items-center gap-2">
+                  <span>{a.subject || describe(a)}</span>
+                  {a.status && <Badge tone={a.status === 'done' ? 'green' : a.status === 'cancelled' ? 'gray' : 'amber'}>{a.status}</Badge>}
+                  {a.dueAt && a.status === 'planned' && <span className="text-xs font-normal text-ink-3">due {dateTime(a.dueAt)}</span>}
+                </span>
+              }
+              meta={
+                <span className="flex items-center gap-2">
                   {a.status === 'planned' && canEdit && (
                     <Button size="sm" onClick={() => setStatus.mutate({ id: a.id, status: 'done' })} icon={<Check size={12} />}>
                       Done
                     </Button>
                   )}
-                  <span className="text-xs text-ink-3" title={dateTime(a.occurredAt)}>
-                    {relative(a.occurredAt)}
-                  </span>
-                </div>
-              </div>
-            </li>
+                  <span title={dateTime(a.occurredAt)}>{relative(a.occurredAt)}</span>
+                </span>
+              }
+            >
+              {a.body && <p className="whitespace-pre-wrap">{a.body}</p>}
+              {a.subject && a.type !== 'note' && <div className="text-xs text-ink-3">{describe(a)}</div>}
+            </TimelineItem>
           ))}
         </ol>
       )}
@@ -305,9 +328,9 @@ export function ActivityTimeline({ entityType, entityId, canEdit }: { entityType
 
 type ActType = 'note' | 'call' | 'meeting' | 'task' | 'email';
 
-export function ActivityComposer({ entityType, entityId }: { entityType: EntityType; entityId: string }) {
+export function ActivityComposer({ entityType, entityId, fixedType }: { entityType: EntityType; entityId: string; fixedType?: ActType }) {
   const toast = useToast();
-  const [type, setType] = useState<ActType>('note');
+  const [type, setType] = useState<ActType>(fixedType ?? 'note');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [due, setDue] = useState('');
@@ -347,13 +370,13 @@ export function ActivityComposer({ entityType, entityId }: { entityType: EntityT
 
   return (
     <div className="rounded-card border border-line bg-surface-2 p-3">
-      <div className="mb-2 flex flex-wrap gap-1">
+      {!fixedType && <div className="mb-2 flex flex-wrap gap-1">
         {(['note', 'call', 'meeting', 'task', 'email'] as ActType[]).map((t) => (
           <button key={t} type="button" onClick={() => setType(t)} className={clsx('flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold capitalize', type === t ? 'bg-pri-soft text-pri-2' : 'text-ink-2 hover:bg-surface')}>
             {icon[t]} {t}
           </button>
         ))}
-      </div>
+      </div>}
       {type !== 'note' && <Input className="mb-2" placeholder={type === 'task' ? 'Task title' : 'Subject'} value={subject} onChange={(e) => setSubject(e.target.value)} />}
       <Textarea placeholder={type === 'note' ? 'Write a note…' : 'Details (optional)'} value={body} onChange={(e) => setBody(e.target.value)} />
       {schedulable && (

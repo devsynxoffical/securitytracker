@@ -7,6 +7,7 @@ import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCustomFields, useEmployees, usePipelines, useSources, useTags, useImportJob, useCrmMutation, type ImportJob } from '@/lib/queries/crm';
 import { Button, Card, Field, Select, Segmented, Table, Th, Td, Badge, Skeleton, ErrorBanner, EmptyState, Checkbox, useToast, PageHeader, KpiCard } from '@/components/ui';
+import { Section } from '@/components/ui/advanced';
 import { OwnerSelect } from '@/components/crm/shared';
 import { fullName, titleCase } from '@/lib/format';
 
@@ -94,9 +95,9 @@ export default function ImportPage() {
       <ol className="mb-4 flex items-center gap-2 text-xs">
         {STEPS.map((s, i) => (
           <li key={s.key} className="flex items-center gap-2">
-            <span className={clsx('flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-semibold', i < idx ? 'bg-green text-white' : i === idx ? 'bg-pri text-white' : 'bg-gray-soft text-ink-3')}>{i < idx ? '✓' : i + 1}</span>
+            <span className={clsx('flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-semibold transition-colors', i < idx ? 'bg-green text-white' : i === idx ? 'bg-pri text-white ring-[3px] ring-pri-soft' : 'bg-gray-soft text-ink-3')}>{i < idx ? '✓' : i + 1}</span>
             <span className={clsx('font-semibold', i === idx ? 'text-ink' : 'text-ink-3')}>{s.label}</span>
-            {i < STEPS.length - 1 && <span className="mx-1 h-px w-8 bg-line" />}
+            {i < STEPS.length - 1 && <span className={clsx('mx-1 h-px w-8', i < idx ? 'bg-green' : 'bg-line')} />}
           </li>
         ))}
       </ol>
@@ -152,7 +153,9 @@ export default function ImportPage() {
 
         {step === 'options' && (
           <div>
-            <div className="grid grid-cols-2 gap-5 p-5">
+            <div className="p-5">
+            <Section title="Matching and ownership">
+            <div className="grid grid-cols-2 gap-5">
               <Field label="Duplicates" hint="Matched on phone/email (leads, contacts) or name/domain (accounts).">
                 <Select value={dupMode} onChange={(e) => setDupMode(e.target.value as typeof dupMode)}>
                   <option value="skip">Skip duplicate rows</option>
@@ -175,6 +178,10 @@ export default function ImportPage() {
                   </div>
                 </Field>
               )}
+            </div>
+            </Section>
+            <Section title="Applied to every imported record">
+            <div className="grid grid-cols-2 gap-5">
               <Field label="Add tags to every record" className="col-span-2">
                 <div className="flex flex-wrap gap-2">
                   {tags.data?.map((t) => <Checkbox key={t.id} label={t.name} checked={tagIds.includes(t.id)} onChange={(ev) => setTagIds(ev.target.checked ? [...tagIds, t.id] : tagIds.filter((x) => x !== t.id))} />)}
@@ -186,6 +193,8 @@ export default function ImportPage() {
                 <Field label="Pipeline" required><Select value={pipeline?.id ?? ''} onChange={(e) => { setPipelineId(e.target.value); setStageId(''); }}>{pipelines.data?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
                 <Field label="Stage" required><Select value={effectiveStage} onChange={(e) => setStageId(e.target.value)}>{pipeline?.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>
               </>}
+            </div>
+            </Section>
             </div>
             <Footer onBack={() => setStep('map')} next={<Button variant="primary" onClick={() => setStep('review')} icon={<ArrowRight size={14} />} disabled={(ownerMode === 'fixed' && !fixedOwner) || (ownerMode === 'round_robin' && rrOwners.length === 0) || (entity === 'lead' && !effectiveStage)}>Review</Button>} />
           </div>
