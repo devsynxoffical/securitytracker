@@ -1,3 +1,4 @@
+import { resolveJwtSecret } from '../common/crypto.util';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -15,7 +16,7 @@ import { ClockService } from '../common/clock.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'company-os-dev-jwt-secret-key-32-chars-min',
+        secret: resolveJwtSecret(configService.get<string>('JWT_SECRET')),
         signOptions: { expiresIn: '15m' },
       }),
       inject: [ConfigService],

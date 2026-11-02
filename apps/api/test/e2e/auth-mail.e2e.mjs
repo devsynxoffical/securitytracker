@@ -26,6 +26,8 @@ const employees = arr((await call('GET', '/employees')).body); const dan = emplo
 
 // mail collaboration on demo mailbox
 r = await call('GET', '/mail/mailboxes'); const mb = arr(r.body).find((m) => m.address === 'demo-sales@example.com'); check('mail: demo mailbox listed', Boolean(mb), short(r.body));
+// Repeated runs assign every demo conversation; unassign one first so the suite is self-resetting.
+{ const all = await call('GET', `/mail/mailboxes/${mb.id}/conversations?view=all&limit=50`); const assigned = arr(all.body).find((c) => c.assigneeId); if (assigned && !arr((await call('GET', `/mail/mailboxes/${mb.id}/conversations?view=unassigned`)).body).length) await call('POST', `/mail/mailboxes/${mb.id}/threads/${assigned.id}/assign`, { assigneeId: null }); }
 r = await call('GET', `/mail/mailboxes/${mb.id}/conversations/counts`); check('mail: counts', r.status === 200 && r.body.unassigned >= 1, short(r.body));
 r = await call('GET', `/mail/mailboxes/${mb.id}/conversations?view=unassigned`); const conv = arr(r.body)[0]; check('mail: unassigned list', r.status === 200 && conv, short(r.body));
 r = await call('POST', `/mail/mailboxes/${mb.id}/threads/${conv.id}/assign`, { assigneeId: dan.id }); check('mail: assign to Daniyal', r.status === 201 && r.body.assigneeId === dan.id, short(r.body));

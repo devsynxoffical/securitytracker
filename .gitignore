@@ -49,3 +49,4 @@ WorkPulse-Mac-Universal.zip
 # Production env files
 infra/.env.prod
 .env.prod
+*.zip

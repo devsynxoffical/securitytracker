@@ -28,7 +28,7 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { resolveExportPolicy } from './guards/export-policy.guard';
 import { ClockService } from '../common/clock.service';
-import { CryptoUtil } from '../common/crypto.util';
+import { CryptoUtil, resolveEncryptionKey } from '../common/crypto.util';
 import { RedisService } from '../common/redis.service';
 import { MailerService } from '../common/mailer.service';
 import { buildMeShiftPolicy, loadMeSchedule } from '../attendance/schedule-info';
@@ -401,7 +401,7 @@ export class AuthService {
       };
     }
 
-    const secretKeyHex = this.configService.get<string>('ENCRYPTION_SECRET') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    const secretKeyHex = this.encryptionKey();
     const totpSecret = CryptoUtil.decryptField(employee.totpSecretEnc!, secretKeyHex);
 
     const isValidTotp = CryptoUtil.verifyTotp(totpSecret, dto.totpCode);
@@ -479,7 +479,7 @@ export class AuthService {
   }
 
   private encryptionKey(): string {
-    return this.configService.get<string>('ENCRYPTION_SECRET') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    return resolveEncryptionKey(this.configService.get<string>('ENCRYPTION_SECRET'));
   }
 
   private assertTotp(employee: { totpSecretEnc: string | null }, code: string): void {

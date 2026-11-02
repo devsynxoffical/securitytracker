@@ -1,3 +1,4 @@
+import { resolveEncryptionKey } from '../common/crypto.util';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ImapFlow } from 'imapflow';
@@ -372,7 +373,7 @@ export class ImapClientFactory {
   constructor(private readonly config: ConfigService) {}
 
   private key(): string {
-    return this.config.get<string>('ENCRYPTION_SECRET') || this.config.get<string>('ENCRYPTION_KEY') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    return resolveEncryptionKey(this.config.get<string>('ENCRYPTION_SECRET') || this.config.get<string>('ENCRYPTION_KEY'));
   }
 
   encryptPassword(password: string): string {

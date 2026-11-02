@@ -51,19 +51,20 @@ conn.on('ready', () => {
 
       // Run unzip command in SSH shell
       const cmd = `
-        mkdir -p domains/roofingclients.us/public_html 2>/dev/null || true
-        # Determine public_html location
-        TARGET_DIR="public_html"
-        if [ -d "domains/roofingclients.us/public_html" ]; then
-          TARGET_DIR="domains/roofingclients.us/public_html"
+        TARGET_DIR="/home/u880916130/domains/roofingclients.us/public_html"
+        mkdir -p "$TARGET_DIR" 2>/dev/null || true
+        ZIP_FILE=$(find /home/u880916130/ -name deploy_public_html.zip -type f 2>/dev/null | head -n 1)
+        echo "Found zip file at: $ZIP_FILE"
+        if [ -n "$ZIP_FILE" ]; then
+          rm -rf /tmp/wp_deploy 2>/dev/null || true
+          mkdir -p /tmp/wp_deploy
+          unzip -o "$ZIP_FILE" -d /tmp/wp_deploy/
+          cp -r /tmp/wp_deploy/public/* "$TARGET_DIR/"
+          rm -rf /tmp/wp_deploy/ "$ZIP_FILE" 2>/dev/null || true
+          echo "DEPLOY_COMPLETE"
+        else
+          echo "Error: deploy_public_html.zip not found"
         fi
-        echo "Target directory is: $TARGET_DIR"
-        
-        # Unzip into target directory
-        unzip -o deploy_public_html.zip -d /tmp/wp_deploy/
-        cp -r /tmp/wp_deploy/public/* "$TARGET_DIR/"
-        rm -rf /tmp/wp_deploy/ deploy_public_html.zip
-        echo "DEPLOY_COMPLETE"
       `;
 
       conn.exec(cmd, (err, stream) => {

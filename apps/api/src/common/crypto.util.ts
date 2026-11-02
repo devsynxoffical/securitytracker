@@ -140,3 +140,24 @@ export class CryptoUtil {
     return Buffer.from(out);
   }
 }
+
+/**
+ * Field-encryption key (AES-256-GCM, 64 hex chars). Production must set ENCRYPTION_SECRET; the development
+ * default below exists only so a fresh checkout boots, and it is refused when NODE_ENV is production.
+ */
+export function resolveEncryptionKey(configured?: string | null): string {
+  if (configured && configured.trim()) return configured.trim();
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_SECRET is not set. Generate one with: openssl rand -hex 32');
+  }
+  return '0123456789abcdef'.repeat(4);
+}
+
+/** JWT signing secret: required in production, a fixed development value otherwise (same rule as the encryption key). */
+export function resolveJwtSecret(configured?: string | null): string {
+  if (configured && configured.trim()) return configured.trim();
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET is not set. Generate one with: openssl rand -base64 48');
+  }
+  return 'company-os-dev-jwt-secret-key-32-chars-min';
+}

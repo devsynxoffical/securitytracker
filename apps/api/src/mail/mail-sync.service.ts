@@ -1,3 +1,4 @@
+import { resolveEncryptionKey } from '../common/crypto.util';
 import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
@@ -216,7 +217,7 @@ export class MailSyncService {
   }
 
   private encryptionKey(): string {
-    return this.config.get<string>('ENCRYPTION_SECRET') || this.config.get<string>('ENCRYPTION_KEY') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    return resolveEncryptionKey(this.config.get<string>('ENCRYPTION_SECRET') || this.config.get<string>('ENCRYPTION_KEY'));
   }
 
   private async store(mailboxId: string, address: string, meta: GmailMessageMeta, result: SyncResult) {

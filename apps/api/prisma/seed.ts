@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { CryptoUtil } from '../src/common/crypto.util';
+import { CryptoUtil, resolveEncryptionKey } from '../src/common/crypto.util';
 import { SystemRoleNames } from '@company-os/contracts';
 import { ensureDefaultRoles, seedCompanyDefaults } from '../src/setup/default-roles';
 
@@ -205,7 +205,7 @@ async function main() {
   // 9. DEMO MAILBOX (development only, SEED_DEMO_MAILBOX=true). Synthetic example.com data so the
   //    shared inbox can be exercised without Google credentials. tokenStatus 'demo' blocks send/sync.
   if (process.env.SEED_DEMO_MAILBOX === 'true') {
-    const encKey = process.env.ENCRYPTION_SECRET || process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    const encKey = resolveEncryptionKey(process.env.ENCRYPTION_SECRET || process.env.ENCRYPTION_KEY);
     const demoMailbox = await prisma.mailbox.upsert({
       where: { address: 'demo-sales@example.com' },
       update: { tokenStatus: 'demo' },

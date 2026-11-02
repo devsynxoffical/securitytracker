@@ -1,3 +1,4 @@
+import { resolveEncryptionKey } from '../common/crypto.util';
 import {
   Injectable,
   Logger,
@@ -64,10 +65,7 @@ export class MailService {
     private readonly syncTrigger: MailSyncTrigger,
     private readonly imap: ImapClientFactory,
   ) {
-    this.encryptionKey =
-      this.config.get<string>('ENCRYPTION_SECRET') ||
-      this.config.get<string>('ENCRYPTION_KEY') ||
-      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    this.encryptionKey = resolveEncryptionKey(this.config.get<string>('ENCRYPTION_SECRET') || this.config.get<string>('ENCRYPTION_KEY'));
   }
 
   /**

@@ -32,12 +32,15 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/company_os
-      JWT_SECRET: ci-only-jwt-secret-not-for-production-use
-      ENCRYPTION_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
       NEXT_PUBLIC_API_URL: /api/v1
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v4
+
+      - name: Throwaway secrets for this run (never literals in the repository)
+        run: |
+          echo "JWT_SECRET=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - uses: pnpm/action-setup@v4
         with:

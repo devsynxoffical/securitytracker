@@ -1,5 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// Fonts are bundled so the app renders identically offline and needs no external stylesheet (CSP: style-src 'self').
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import App from './App';
 import './index.css';
 

@@ -1,3 +1,4 @@
+import { resolveJwtSecret } from '../../common/crypto.util';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -17,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         (req) => req?.cookies?.['companyos_session'],
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'company-os-dev-jwt-secret-key-32-chars-min',
+      secretOrKey: resolveJwtSecret(configService.get<string>('JWT_SECRET')),
     });
   }
 
