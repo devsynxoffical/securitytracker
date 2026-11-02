@@ -85,7 +85,7 @@ import {
   ArrowUp,
   ChevronLeft,
 } from 'lucide-react';
-import { AdminApiClient } from '../../apiClient';
+import { AdminApiClient } from '../../../apiClient';
 
 type AdminNavSection =
   | 'dashboard'
@@ -125,10 +125,10 @@ export default function AdminControlCenter() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Authentication & Credentials Gate State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // the /admin layout gate already enforces a real session
   const [authChecked, setAuthChecked] = useState<boolean>(false);
-  const [emailInput, setEmailInput] = useState('admin@devsynx.com');
-  const [passwordInput, setPasswordInput] = useState('SuperAdmin123!');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [totpInput, setTotpInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -166,10 +166,6 @@ export default function AdminControlCenter() {
         throw new Error('Please enter both email and password.');
       }
 
-      // Verify authorized administrator credentials
-      const isSuperAdmin = (cleanEmail === 'admin@devsynx.com' && cleanPassword === 'SuperAdmin123!') ||
-                           (cleanEmail === 'admin@workpulse.io' && cleanPassword === 'Admin2026!');
-
       let backendAuthSuccessful = false;
       try {
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500));
@@ -183,10 +179,7 @@ export default function AdminControlCenter() {
         // Offline or backend timeout - fall through to credential check
       }
 
-      if (backendAuthSuccessful || isSuperAdmin) {
-        if (!backendAuthSuccessful) {
-          AdminApiClient.setAuth('simulated-superadmin-token');
-        }
+      if (backendAuthSuccessful) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('workpulse_admin_auth', 'true');
         }
@@ -317,6 +310,8 @@ export default function AdminControlCenter() {
   const [toasts, setToasts] = useState<
     { id: string; message: string; type: 'success' | 'error' | 'info'; title?: string }[]
   >([]);
+
+  const addToast = (t: { type: 'success' | 'error' | 'info'; title?: string; message: string }) => showToast(t.message, t.type, t.title);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', title?: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;

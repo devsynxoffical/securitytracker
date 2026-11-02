@@ -1,40 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #F0F2F5;
+  --bg: #F5F6F3;
   --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
-  --line: #E2E8F0;
-  --line-2: #EDF2F7;
-  --ink: #1E293B;
-  --ink-2: #475569;
-  --ink-3: #94A3B8;
-  --sidebar-grad-from: #10B981;
-  --sidebar-grad-via: #16A34A;
-  --sidebar-grad-to: #65A30D;
-  --pri: #2563EB;
-  --pri-hover: #1D4ED8;
-  --pri-soft: #EFF6FF;
-  --emerald: #10B981;
-  --emerald-soft: #ECFDF5;
-  --amber: #F59E0B;
-  --amber-soft: #FFFBEB;
-  --rose: #E11D48;
-  --rose-soft: #FFF1F2;
-  --blue: #2563EB;
-  --blue-soft: #EFF6FF;
-  --dark-pill: #1E293B;
-  --r: 12px;
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --surface-2: #FAFBF9;
+  --line: #E4E7E1;
+  --line-2: #EEF0EC;
+  --ink: #151A1E;
+  --ink-2: #4A535B;
+  --ink-3: #8A939B;
+  --pri: #0F6B5C;
+  --pri-hover: #0B5548;
+  --pri-soft: #E3F1EE;
+  --green: #1E8E5A;
+  --green-soft: #E4F4EB;
+  --amber: #B26A00;
+  --amber-soft: #FCF0DA;
+  --red: #C2362B;
+  --red-soft: #FBE7E4;
+  --blue: #2459C4;
+  --blue-soft: #E6EDFB;
+  --violet: #6B46C1;
+  --violet-soft: #EEE8FA;
+  --r: 10px;
+  --shadow-card: 0 1px 2px rgba(21, 26, 30, 0.05);
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink);
@@ -43,7 +41,7 @@ body {
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-feature-settings: "tnum";
 }
 

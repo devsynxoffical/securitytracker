@@ -68,16 +68,14 @@ export class AdminApiClient {
     return {} as T;
   }
 
-  // Auto-authenticate as Admin if not already authenticated
+  /** Legacy console runs behind the /admin layout gate; it reuses the session token stored there. */
   static async ensureAuth() {
-    if (!this.getAuthToken()) {
+    if (!this.getAuthToken() && typeof window !== 'undefined') {
       try {
-        const res = await this.login('admin@devsynx.com', 'SuperAdmin123!');
-        if (res?.tokens?.accessToken) {
-          this.setAuth(res.tokens.accessToken);
-        }
-      } catch (e) {
-        // API backend is offline or running on separate instance
+        const t = window.sessionStorage.getItem('companyos.admin.token');
+        if (t) this.token = t;
+      } catch {
+        /* storage blocked */
       }
     }
   }
