@@ -13,7 +13,7 @@ Operational companion to 02 section 5 and `infra/README.md`. Follow it top to bo
 | (Optional) Google Cloud project | Gmail mailboxes (10 section 3) | Not needed for IMAP/SMTP mailboxes (Hostinger, GoDaddy, Zoho, Outlook) |
 | (Optional) Code signing certificates | Signed Windows installer and notarised Mac app; otherwise users click through SmartScreen / Gatekeeper once | Section 9 |
 
-Rotate every credential that ever touched a chat, a script or git history before going live. The deploy scripts read `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PASSWORD` from the environment only.
+Rotate every credential that ever touched a chat, a script or git history before going live. The old FTP/SSH deploy scripts for shared hosting are gone; the only deployment paths are this guide (VPS) and section 11 (web hosting for the static site).
 
 ## 2. DNS
 
@@ -145,3 +145,30 @@ Signing: unsigned builds work but Windows SmartScreen and macOS Gatekeeper show 
 | Start shift on the desktop | Attendance shows the employee as present; Tracking → Team activity updates within a minute |
 | Mail → Mailboxes → Connect IMAP | "Test connection" passes against the real provider; first sync fills the inbox |
 | Forgot password on `/admin` | mail arrives through `SMTP_*`; link opens the reset form |
+
+## 11. Hostinger web hosting for the website and admin panel, VPS for the API
+
+Hostinger's Web and Cloud plans run a single Node.js process without PostgreSQL, Redis, inbound WebSockets or background workers, so the API, worker and database cannot live there. They can serve the public site and the admin panel, which are a static export, while the API runs on the VPS from sections 2 to 7.
+
+hPanel → Websites → your domain → Deployments → Deployment settings:
+
+| Setting | Value |
+|---|---|
+| Repository / branch | this repository, `main` |
+| Root directory | `./` |
+| Build command | `build` (the root script builds the contracts and the admin static export; no turbo, no native modules) |
+| Output directory | `apps/admin/out` |
+| Application type | Static |
+| Node version | 22 |
+
+hPanel → Environment variables (build-time, used by Next.js):
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | `https://api.company.com/api/v1` (the VPS) |
+| `NEXT_PUBLIC_DOWNLOADS_URL` | `https://updates.company.com/latest.json` |
+
+On the VPS set `UPDATES_CORS_ORIGIN=https://roofingclients.us` (your web host origin) in `infra/.env.prod` so the install page may read the release manifest, and leave `GOOGLE_REDIRECT_URI` and `ADMIN_ORIGIN` pointing at the site users open. The static export ships its own `.htaccess` (apps/admin/public) for clean routes on Apache and LiteSpeed. Redeploy from hPanel after every merge to `main`, or enable automatic deployments.
+
+The desktop app talks to `api.company.com` directly; it never needs the web host.
+

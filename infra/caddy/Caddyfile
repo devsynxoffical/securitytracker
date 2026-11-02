@@ -62,5 +62,5 @@ updates.{$DOMAIN} {
 		browse off
 	}
 	header Cache-Control "public, max-age=300"
-	header Access-Control-Allow-Origin "https://admin.{$DOMAIN}"
+	header Access-Control-Allow-Origin "{$UPDATES_CORS_ORIGIN}"
 }
