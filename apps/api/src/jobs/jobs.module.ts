@@ -6,11 +6,13 @@ import { HrModule } from '../hr/hr.module';
 import { MailModule } from '../mail/mail.module';
 import { JobRegistry } from './job-registry';
 import { ShiftJobsService } from './shift-jobs.service';
+import { ShiftReminderJobsService } from './shift-reminder-jobs.service';
 import { AttendanceJobsService } from './attendance-jobs.service';
 import { ReminderJobsService } from './reminder-jobs.service';
 import { HrJobsService } from './hr-jobs.service';
 import { MailJobsService } from './mail-jobs.service';
 import { MaintenanceJobsService } from './maintenance-jobs.service';
+import { ChatJobsService } from './chat-jobs.service';
 import { JobsController } from './jobs.controller';
 
 /**
@@ -21,7 +23,7 @@ import { JobsController } from './jobs.controller';
 @Module({
   imports: [ScheduleModule.forRoot(), NotificationsModule, AttendanceModule, MailModule, HrModule],
   controllers: [JobsController],
-  providers: [JobRegistry, ShiftJobsService, AttendanceJobsService, ReminderJobsService, HrJobsService, MailJobsService, MaintenanceJobsService],
+  providers: [JobRegistry, ShiftJobsService, ShiftReminderJobsService, AttendanceJobsService, ReminderJobsService, HrJobsService, MailJobsService, MaintenanceJobsService, ChatJobsService],
   exports: [JobRegistry, MailJobsService],
 })
 export class JobsModule {}

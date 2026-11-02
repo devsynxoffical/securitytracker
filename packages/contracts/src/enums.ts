@@ -1,6 +1,7 @@
 export const EmployeeStatus = {
   INVITED: 'invited',
   ACTIVE: 'active',
+  SUSPENDED: 'suspended',
   DISABLED: 'disabled',
 } as const;
 export type EmployeeStatusType = (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
@@ -336,3 +337,12 @@ export const MailProvider = {
   IMAP: 'imap',
 } as const;
 export type MailProviderValue = (typeof MailProvider)[keyof typeof MailProvider];
+
+// ---- Data containment (08 section 9, FR-SEC-20)
+export const DataExportPolicies = ['disabled', 'super_admin', 'permission'] as const;
+export type DataExportPolicy = (typeof DataExportPolicies)[number];
+export const DataExportPolicy = {
+  DISABLED: 'disabled',
+  SUPER_ADMIN: 'super_admin',
+  PERMISSION: 'permission',
+} as const;

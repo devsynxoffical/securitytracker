@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Bell, Sun, Moon, Monitor, ChevronRight, Check } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Monitor, ChevronRight, Check, MessageSquare } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clsx } from 'clsx';
 import { http } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import { useUnread, useChatRealtime } from '@/lib/queries/chat';
 import { useTheme, type Theme } from '@/lib/theme';
 import { Kbd, Menu, Tooltip, DensityToggle } from '@/components/ui/advanced';
 import { Button } from '@/components/ui';
@@ -43,6 +45,9 @@ export function Topbar() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { theme, setTheme, density, setDensity } = useTheme();
   const qc = useQueryClient();
+  const { can } = useAuth();
+  const chatAllowed = can('chat.use');
+  useChatRealtime(chatAllowed);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -106,11 +111,26 @@ export function Topbar() {
             }
             items={[themeItem('light', 'Light', <Sun size={14} />), themeItem('dark', 'Dark', <Moon size={14} />), themeItem('system', 'System', <Monitor size={14} />)]}
           />
+          {chatAllowed && <ChatBadge active={pathname.startsWith('/admin/chat')} />}
           <NotificationsBell items={list} unread={unread} onRead={(ids) => markRead.mutate(ids)} loading={notifications.isLoading} />
         </div>
       </header>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
+  );
+}
+
+/** FR-CHAT-06: unread chat total next to notifications; realtime via /ws, 10 s polling when the socket is down. */
+function ChatBadge({ active }: { active: boolean }) {
+  const unread = useUnread(true);
+  const total = unread.data?.total ?? 0;
+  return (
+    <Tooltip label="Chat" side="bottom">
+      <Link href="/admin/chat" aria-label={`Chat, ${total} unread`} className={clsx('relative inline-flex rounded-md border border-line bg-surface p-1.5 hover:text-ink', active ? 'text-pri' : 'text-ink-3')}>
+        <MessageSquare size={15} />
+        {total > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-pri px-1 font-mono text-[10px] font-semibold text-white">{total > 9 ? '9+' : total}</span>}
+      </Link>
+    </Tooltip>
   );
 }
 

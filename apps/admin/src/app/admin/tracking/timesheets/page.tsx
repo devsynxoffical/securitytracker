@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Download, Plus, Check, X, Timer, Clock, Activity, Hand, Coffee } from 'lucide-react';
 import { http, qs, type ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { useTimesheet, useTeamTimesheet, useManualTime, useTrackingMutation, type TimesheetRow, type Totals, type ManualTime, type TeamTimesheet } from '@/lib/queries/tracking';
 import { Card, PageHeader, Button, Modal, Field, Input, Textarea, Badge, useToast, Avatar, TableSkeleton, Segmented, type Tone } from '@/components/ui';
 import { KpiTile, DataTable, ViewTabs, type Column } from '@/components/ui/advanced';
@@ -25,6 +26,7 @@ export default function TimesheetsPage() {
 
 function TimesheetsInner() {
   const { me, can } = useAuth();
+  const exportAllowed = useExportAllowed();
   const toast = useToast();
   const [mode, setMode] = useState<Mode>('employee');
   const [employeeId, setEmployeeId] = useIdParam('employeeId');
@@ -56,7 +58,7 @@ function TimesheetsInner() {
         subtitle="Tracked, active, idle and approved manual time per day. Activity % is active ÷ (active + idle)."
         actions={
           <>
-            {mode !== 'approvals' && <Button size="sm" icon={<Download size={14} />} onClick={exportCsv}>CSV</Button>}
+            {exportAllowed && mode !== 'approvals' && <Button size="sm" icon={<Download size={14} />} onClick={exportCsv}>CSV</Button>}
             <Button size="sm" variant="primary" icon={<Plus size={14} />} onClick={() => setAddOpen(true)}>Add time</Button>
           </>
         }

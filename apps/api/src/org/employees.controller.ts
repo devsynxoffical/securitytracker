@@ -16,10 +16,12 @@ import {
   CreateEmployeeSchema,
   UpdateEmployeeSchema,
   DisableEmployeeSchema,
+  SuspendEmployeeSchema,
 } from '@company-os/contracts';
 import { EmployeesService } from './employees.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('employees')
@@ -36,6 +38,7 @@ export class EmployeesController {
   /** FR-HR-15: directory export. Declared before ':id'. Audited by the interceptor (export URL). */
   @Get('export')
   @RequirePermission('employees.view')
+  @ExportGuarded()
   async exportEmployees(@Req() req: any, @Res() res: Response, @Query('status') status?: string) {
     const rows = await this.employeesService.listEmployees(req.scopeFilter, status);
     const csv = toCsv([
@@ -104,6 +107,28 @@ export class EmployeesController {
   ) {
     const dto = DisableEmployeeSchema.parse(body);
     return this.employeesService.disableEmployee(id, user.companyId, dto);
+  }
+
+  /** FR-SEC-24: immediate revocation. Keeps assignments, targets and mailboxes (unlike disable). */
+  @Post(':id/suspend')
+  @RequirePermission('employees.disable')
+  async suspendEmployee(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
+  ) {
+    const dto = SuspendEmployeeSchema.parse(body);
+    return this.employeesService.suspendEmployee(id, user.companyId, user.id, dto);
+  }
+
+  /** FR-SEC-26: back to active; devices stay revoked and must be approved again. */
+  @Post(':id/restore')
+  @RequirePermission('employees.disable')
+  async restoreEmployee(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.employeesService.restoreEmployee(id, user.companyId);
   }
 
   @Post(':id/enable')

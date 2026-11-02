@@ -104,6 +104,10 @@ export const PermissionKeys = [
   'mail.logs.view',
   'mail.templates.manage',
 
+  // Chat (22)
+  'chat.use',
+  'chat.manage',
+
   // HR
   'hr.leave.manage',
   'hr.profiles.view',

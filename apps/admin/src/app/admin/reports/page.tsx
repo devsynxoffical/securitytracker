@@ -4,7 +4,7 @@ import { Suspense, useMemo, useState } from 'react';
 import { Download, BarChart3 } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useReport, useDepartments, useTeams } from '@/lib/queries/platform';
+import { useReport, useDepartments, useTeams, useExportAllowed } from '@/lib/queries/platform';
 import { useEmployees } from '@/lib/queries/crm';
 import { Button, Card, Skeleton, EmptyState, ErrorBanner, PageHeader, Segmented, Badge } from '@/components/ui';
 import { DataTable, FilterChip, type Column } from '@/components/ui/advanced';
@@ -32,6 +32,7 @@ const PRESETS: Array<{ label: string; range: () => [string, string] }> = [
 
 function Reports() {
   const { can } = useAuth();
+  const exportAllowed = useExportAllowed();
   const [kind, setKind] = useState<Kind>('attendance');
   const [from, to, setPeriod] = usePeriod(29);
   const [employeeId, setEmployeeId] = useState('');
@@ -73,7 +74,7 @@ function Reports() {
 
   return (
     <div>
-      <PageHeader title="Reports" subtitle="Attendance, productivity, CRM and calls for your scope." actions={can('reports.export') ? <Button icon={<Download size={14} />} loading={exporting} onClick={exportCsv} disabled={!q.data || q.data.totalRecords === 0}>Export CSV</Button> : undefined} />
+      <PageHeader title="Reports" subtitle="Attendance, productivity, CRM and calls for your scope." actions={exportAllowed && can('reports.export') ? <Button icon={<Download size={14} />} loading={exporting} onClick={exportCsv} disabled={!q.data || q.data.totalRecords === 0}>Export CSV</Button> : undefined} />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Segmented value={kind} onChange={setKind} options={[{ value: 'attendance', label: 'Attendance' }, { value: 'productivity', label: 'Productivity' }, { value: 'crm', label: 'CRM' }, { value: 'calls', label: 'Calls' }]} />
         <span className="mx-1 h-5 w-px bg-line" />
@@ -121,7 +122,7 @@ function Reports() {
           onRetry={() => q.refetch()}
           storageKey={`report-${kind}`}
           empty={<EmptyState icon={<BarChart3 size={28} />} title="No data for this period" body="Widen the date range or clear the filters." />}
-          footer={q.data && q.data.data.length > 500 ? <div className="border-t border-line px-4 py-2 text-xs text-ink-3">Showing the first 500 rows. Export CSV for the full report.</div> : undefined}
+          footer={q.data && q.data.data.length > 500 ? <div className="border-t border-line px-4 py-2 text-xs text-ink-3">Showing the first 500 rows.{exportAllowed ? ' Export CSV for the full report.' : ''}</div> : undefined}
         />
       </Card>
     </div>

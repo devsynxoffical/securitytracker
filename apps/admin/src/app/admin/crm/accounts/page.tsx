@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Plus, Download, Pencil, Trash2, Globe, Phone, Eye, UserPlus } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { useIdParam } from '@/lib/useIdParam';
 import { useAccounts, useAccount, useActivities, useCrmMutation, type Account } from '@/lib/queries/crm';
 import { Button, Card, Badge, lifecycleTone, stageTone, Skeleton, EmptyState, Pagination, BulkBar, Modal, Field, Input, Select, Tabs, Avatar, useToast, PageHeader } from '@/components/ui';
@@ -30,6 +31,7 @@ function AccountsPage() {
 
 function Accounts() {
   const { can, me } = useAuth();
+  const exportAllowed = useExportAllowed();
   const toast = useToast();
   const [id, setId] = useIdParam();
   const [filters, setFiltersState] = useState<Filters>({});
@@ -73,7 +75,7 @@ function Accounts() {
   return (
     <div>
       <PageHeader title="Accounts" subtitle={`${rows.length} shown`} actions={<>
-        {can('crm.accounts.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
+        {exportAllowed && can('crm.accounts.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
         {can('crm.accounts.create') && <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New account</Button>}
       </>} />
       <ListShell

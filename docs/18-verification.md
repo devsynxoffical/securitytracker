@@ -15,6 +15,7 @@ Re-run everything: `pnpm test` (unit), `pnpm --filter @company-os/api test:e2e` 
 | FR-AUTH-04 Device signature | Login proves device key; desktop refresh bound to approved device | auth.service.spec | - | - | Desktop app |
 | FR-AUTH-08 Sessions | List and revoke sessions per employee, scope-filtered | security.sessions.spec (6) | modules (sessions list) | security sessions page | - |
 | F16 Offboarding | Disable with reassignment preview | employees.service (existing) | - | profile disable modal | - |
+| FR-SEC-20 to 27 Data containment and suspension | Export policy guard on every export route (3 policies), `/me` carries the policy, mail attachment download needs policy != disabled, suspend revokes sessions and devices and pushes `session.revoked`, JWT strategy rejects non-active, login refused with ACCOUNT_SUSPENDED, restore keeps devices revoked | export-policy.guard.spec (7), security.suspend.spec (7: strategy, suspend/restore rules, desktop and admin login) | security (35: disabled -> 403 on seven routes, super_admin -> 200 + audit, permission -> 200, suspend, status filter, refused admin login, restore, audit) | CRM flow (Export hidden while disabled, download under super_admin), People flow (Suspend access modal, Suspended badge, Restore access), settings Data containment select | Desktop wipe on `session.revoked` (FR-SEC-22, FR-SEC-25) |
 | F17 Lost device | Revoke device, wipe on next contact | devices.service | modules (devices list) | devices page | Desktop app |
 | Roles and permissions | Matrix edit, R1 to R5 guards, scope resolution own/team/department/all | rbac.guard.spec, crm-objects (allowed and denied per scope), hr.service.spec, tracking-admin.spec, tasks.service.spec | every suite runs as Super Admin; scope denial covered in unit tests | roles page | - |
 | Audit log | Every write audited through the interceptor; exports audited | - | crm (audit entries present) | audit page with before/after | - |
@@ -73,6 +74,8 @@ Re-run everything: `pnpm test` (unit), `pnpm --filter @company-os/api test:e2e` 
 | Job | Unit | API e2e |
 |---|---|---|
 | shift-heartbeat-check, attendance-close, activity-rollup, followup-reminder, hr-leave-rebalance, hr-document-expiry, mail-unsnooze, gmail-watch-renew, gmail-sync, retention-purge, partition-maintenance, target-progress | jobs.spec (11) | auth-mail (status, manual run) |
+| shift-start-reminder, shift-end-reminder, break-overrun (F5 rule 15, idempotent per notification key) | shift-reminder-jobs.spec (4) | modules (manual run ok) |
+| F5/F8 schedule-aware attendance: wall time to UTC (Karachi, Berlin DST), cross-midnight end, attendance date window, status matrix (holiday, weekly off, leave, absent, late, half day, present, left early, early start and clip, break allowance, unscheduled, short shift), start flags, heartbeat `shift_closed` reasons, events on a closed shift, shift policy settings | schedule.util.spec (9), attendance.service.spec (16), shifts.service.spec (11), settings.service.spec (4) | modules (policy round trip and range check, /me schedule and shiftPolicy, heartbeat shift_closed) |
 
 Known inert jobs, visible on `/jobs/status`: `partition-maintenance` (segments table is not partitioned in Prisma), `target-progress` snapshots (no `target_progress` table in the schema). Both are documented limitations, not placeholders.
 

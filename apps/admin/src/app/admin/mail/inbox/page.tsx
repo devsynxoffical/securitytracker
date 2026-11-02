@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { useIdParam } from '@/lib/useIdParam';
 import { useMailboxes, useConversations, useCounts, useThread, useComments, useThreadEvents, useMailMutation, type Conversation, type View, type Mailbox } from '@/lib/queries/mail';
 import { useSearch } from '@/lib/queries/crm';
+import { useExportPolicy } from '@/lib/queries/platform';
 import { Button, Card, Badge, Skeleton, EmptyState, ErrorBanner, Pagination, Textarea, SearchInput, Modal, useToast, PageHeader, Avatar, Tabs } from '@/components/ui';
 import { Menu, Tooltip, TimelineItem } from '@/components/ui/advanced';
 import { AssigneeSelect, SnoozeModal, StatusBadge } from '@/components/mail/shared';
@@ -130,6 +131,8 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
   const toast = useToast();
   const perms = mailbox.permissions ?? [];
   const can = (p: string) => perms.includes(p);
+  // FR-SEC-23: attachment download needs the mailbox permission and an export policy other than disabled.
+  const downloadAllowed = useExportPolicy() !== 'disabled';
   const thread = useThread(mailbox.id, threadId);
   const comments = useComments(mailbox.id, threadId);
   const events = useThreadEvents(mailbox.id, threadId);
@@ -254,7 +257,7 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
                       <div className="truncate text-xs text-ink-3">to {it.m.toAddrs.join(', ')}{it.m.ccAddrs.length ? ` · cc ${it.m.ccAddrs.join(', ')}` : ''}</div>
                     </div>
                   </div>
-                  <MessageBody mailboxId={mailbox.id} message={it.m} expanded={isExpanded(it.m.id)} onExpand={() => setExpanded((s) => new Set(s).add(it.m.id))} canDownload={can('download')} />
+                  <MessageBody mailboxId={mailbox.id} message={it.m} expanded={isExpanded(it.m.id)} onExpand={() => setExpanded((s) => new Set(s).add(it.m.id))} canDownload={downloadAllowed && can('download')} />
                   {!isExpanded(it.m.id) && it.m.hasAttachments && <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-ink-2"><Paperclip size={12} /> Has attachments</div>}
                 </article>
               ) : (

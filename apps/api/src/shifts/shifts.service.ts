@@ -6,14 +6,30 @@ import {
 } from '@nestjs/common';
 import {
   ShiftEventsBatchDto,
+  ShiftEventsResponseDto,
   HeartbeatDto,
   HeartbeatResponseDto,
+  ClosedShiftDto,
+  ShiftClosedReason,
+  ShiftClosedReasonType,
+  ShiftEndReason,
   ShiftEventType,
+  ShiftFlag,
   ShiftState,
   ErrorCodes,
+  shiftPolicyFrom,
 } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
+import { ScheduleLike, isWorkday, localDateToDbDate, resolveAttendanceDate } from '../attendance/schedule.util';
+
+const EARLY_START_MS = 60 * 60_000;
+
+interface ShiftContext {
+  timezone: string;
+  minShiftMinutes: number;
+  schedule: ScheduleLike | null;
+}
 
 @Injectable()
 export class ShiftsService {
@@ -30,13 +46,15 @@ export class ShiftsService {
     deviceId: string,
     companyId: string,
     dto: ShiftEventsBatchDto,
-  ) {
+  ): Promise<ShiftEventsResponseDto> {
     // Sort events chronologically
     const sortedEvents = [...dto.events].sort(
       (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
     );
 
     const processedShiftIds: string[] = [];
+    const acknowledgedEventIds: string[] = [];
+    let closedShift: ClosedShiftDto | null = null;
 
     for (const event of sortedEvents) {
       // 1. Check idempotency on clientEventId
@@ -44,6 +62,7 @@ export class ShiftsService {
         where: { clientEventId: event.clientEventId },
       });
       if (existingEvent) {
+        acknowledgedEventIds.push(event.clientEventId);
         continue;
       }
 
@@ -73,16 +92,20 @@ export class ShiftsService {
         }
 
         // Determine attendance date per F8 (binds night shifts crossing midnight to scheduled start date)
-        const attendanceDate = await this.resolveAttendanceDate(employeeId, companyId, eventTime);
+        const ctx = await this.shiftContext(employeeId, companyId, eventTime);
+        const resolved = resolveAttendanceDate(eventTime, ctx.schedule, ctx.timezone);
+        const flags = startFlags(eventTime, resolved, ctx);
+        if (event.monotonicOffsetMs) flags.push(ShiftFlag.OFFLINE_START);
 
         const newShift = await this.prisma.shift.create({
           data: {
             employeeId,
             deviceId,
-            attendanceDate,
+            attendanceDate: localDateToDbDate(resolved.date),
             startedAt: eventTime,
             state: ShiftState.WORKING,
             lastHeartbeatAt: this.clock.now(),
+            flags,
           },
         });
 
@@ -98,6 +121,7 @@ export class ShiftsService {
         });
 
         processedShiftIds.push(newShift.id);
+        acknowledgedEventIds.push(event.clientEventId);
       } else {
         // Requires open shift
         const activeShift = await this.prisma.shift.findFirst({
@@ -108,9 +132,16 @@ export class ShiftsService {
         });
 
         if (!activeShift) {
-          // If event arrives for an already ended shift, record event idempotently if shift exists
+          // The shift the client refers to is closed (auto-close, other device, admin). Acknowledge the
+          // event so the client drops it and tell it why the shift is gone.
+          acknowledgedEventIds.push(event.clientEventId);
+          if (!closedShift) {
+            const last = await this.prisma.shift.findFirst({ where: { employeeId }, orderBy: { startedAt: 'desc' } });
+            if (last && last.state === ShiftState.ENDED) closedShift = this.describeClosed(last, deviceId);
+          }
           continue;
         }
+        acknowledgedEventIds.push(event.clientEventId);
 
         if (event.type === ShiftEventType.BREAK_START) {
           await this.prisma.$transaction([
@@ -188,16 +219,21 @@ export class ShiftsService {
             totalBreakSeconds += Math.max(0, Math.floor((end.getTime() - b.startedAt.getTime()) / 1000));
           }
 
+          const ctx = await this.shiftContext(employeeId, companyId, activeShift.startedAt);
+          const endFlags = [...activeShift.flags];
+          if (ctx.minShiftMinutes > 0 && durationSeconds < ctx.minShiftMinutes * 60 && !endFlags.includes(ShiftFlag.SHORT_SHIFT)) endFlags.push(ShiftFlag.SHORT_SHIFT);
+
           await this.prisma.$transaction([
             this.prisma.shift.update({
               where: { id: activeShift.id },
               data: {
                 state: ShiftState.ENDED,
                 endedAt: eventTime,
-                endReason: 'manual',
+                endReason: ShiftEndReason.MANUAL,
                 durationSeconds,
                 breakSeconds: totalBreakSeconds,
                 lastHeartbeatAt: this.clock.now(),
+                flags: endFlags,
               },
             }),
             ...(openBreak
@@ -228,33 +264,52 @@ export class ShiftsService {
     return {
       success: true,
       processedEventsCount: sortedEvents.length,
+      acknowledgedEventIds,
       currentShift: await this.getCurrentShift(employeeId),
+      closedShift,
     };
   }
 
   /**
-   * Heartbeat from desktop client (F5 rule 2).
+   * Heartbeat from desktop client (F5 rule 2). When the client still believes a shift is open that the
+   * server has closed, the response carries a `shift_closed` command with the reason.
    */
   async heartbeat(
     employeeId: string,
     deviceId: string,
     dto: HeartbeatDto,
   ): Promise<HeartbeatResponseDto> {
+    const commands: HeartbeatResponseDto['commands'] = [];
     if (dto.shiftId) {
-      await this.prisma.shift.updateMany({
-        where: { id: dto.shiftId, employeeId },
-        data: {
-          lastHeartbeatAt: this.clock.now(),
-          deviceId,
-        },
-      });
+      const shift = await this.prisma.shift.findFirst({ where: { id: dto.shiftId, employeeId } });
+      if (shift && shift.state !== ShiftState.ENDED) {
+        await this.prisma.shift.update({
+          where: { id: shift.id },
+          data: { lastHeartbeatAt: this.clock.now(), deviceId },
+        });
+      } else {
+        const closed = shift ? this.describeClosed(shift, deviceId) : { id: dto.shiftId, endedAt: null, reason: ShiftClosedReason.ENDED };
+        commands.push({ type: 'shift_closed', shiftId: closed.id, endedAt: closed.endedAt, reason: closed.reason });
+      }
     }
 
     return {
       serverTime: this.clock.nowIso(),
       configVersion: 1,
-      commands: [],
+      commands,
     };
+  }
+
+  /** Reason a closed shift is gone, derived from its flags, end reason and the device that ended it. */
+  private describeClosed(
+    shift: { id: string; endedAt: Date | null; endReason: string | null; flags: string[]; deviceId: string },
+    requestingDeviceId: string,
+  ): ClosedShiftDto {
+    let reason: ShiftClosedReasonType = ShiftClosedReason.ENDED;
+    if (shift.flags.includes('no_heartbeat')) reason = ShiftClosedReason.AUTO_CLOSED_NO_HEARTBEAT;
+    else if (shift.flags.includes('max_length')) reason = ShiftClosedReason.AUTO_CLOSED_MAX_LENGTH;
+    else if (shift.endReason === ShiftEndReason.ADMIN || shift.deviceId !== requestingDeviceId) reason = ShiftClosedReason.ENDED_ELSEWHERE;
+    return { id: shift.id, endedAt: shift.endedAt ? shift.endedAt.toISOString() : null, reason };
   }
 
   async getCurrentShift(employeeId: string) {
@@ -286,25 +341,42 @@ export class ShiftsService {
     };
   }
 
-  /**
-   * Resolves attendance date based on schedule proximity or UTC date (F8).
-   */
-  private async resolveAttendanceDate(
-    employeeId: string,
-    companyId: string,
-    startTime: Date,
-  ): Promise<Date> {
-    const activeSchedule = await this.prisma.employeeSchedule.findFirst({
-      where: {
-        employeeId,
-        effectiveFrom: { lte: startTime },
-        OR: [{ effectiveTo: null }, { effectiveTo: { gte: startTime } }],
-      },
-      include: { schedule: true },
-    });
-
-    // Default UTC date string
-    const dateStr = startTime.toISOString().split('T')[0]!;
-    return new Date(`${dateStr}T00:00:00.000Z`);
+  /** Company timezone, shift policy and the schedule effective at `at` (F8 inputs). */
+  private async shiftContext(employeeId: string, companyId: string, at: Date): Promise<ShiftContext> {
+    const [company, assignment] = await Promise.all([
+      this.prisma.company.findUnique({ where: { id: companyId }, select: { timezone: true, settings: true } }),
+      this.prisma.employeeSchedule.findFirst({
+        where: {
+          employeeId,
+          effectiveFrom: { lte: at },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: at } }],
+        },
+        include: { schedule: true },
+        orderBy: { effectiveFrom: 'desc' },
+      }),
+    ]);
+    return {
+      timezone: company?.timezone || 'UTC',
+      minShiftMinutes: shiftPolicyFrom(company?.settings).minShiftMinutes,
+      schedule: assignment?.schedule ?? null,
+    };
   }
+}
+
+/**
+ * Flags set when a shift starts (03 F5): `unscheduled` without a schedule or outside the F8 window,
+ * `early_start` more than 60 min before the scheduled start, `outside_schedule` on a non-workday or
+ * after the scheduled end.
+ */
+export function startFlags(startedAt: Date, resolved: ReturnType<typeof resolveAttendanceDate>, ctx: ShiftContext): string[] {
+  const flags: string[] = [];
+  if (!ctx.schedule) return [ShiftFlag.UNSCHEDULED];
+  if (resolved.unscheduled || !resolved.window) {
+    flags.push(ShiftFlag.UNSCHEDULED);
+    if (!isWorkday(resolved.date, ctx.schedule)) flags.push(ShiftFlag.OUTSIDE_SCHEDULE);
+    return flags;
+  }
+  if (startedAt.getTime() < resolved.window.start.getTime() - EARLY_START_MS) flags.push(ShiftFlag.EARLY_START);
+  if (startedAt.getTime() > resolved.window.end.getTime()) flags.push(ShiftFlag.OUTSIDE_SCHEDULE);
+  return flags;
 }

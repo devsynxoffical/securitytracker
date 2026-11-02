@@ -77,6 +77,8 @@ r = await call('GET', `/hr/leave-calendar?month=${d1.slice(0, 7)}`); check('hr: 
 r = await call('GET', '/hr/out-today'); check('hr: out today', r.status === 200, short(r.body));
 r = await call('POST', '/holidays/import', { holidays: [{ date: `${new Date().getFullYear()}-12-25`, name: 'Christmas' }] }); check('hr: holidays import', r.status === 201 || r.status === 200, short(r.body));
 r = await call('GET', `/attendance/sheet?month=${today.slice(0, 7)}`); check('hr: attendance sheet', r.status === 200, short(r.body));
+// FR-SEC-20: exports are off by default; enable the Super Admin policy for the CSV checks below.
+r = await call('PATCH', '/settings', { dataExportPolicy: 'super_admin' }); check('settings: export policy super_admin', r.status === 200 && r.body.dataExportPolicy === 'super_admin', short(r.body));
 r = await call('GET', `/attendance/sheet?month=${today.slice(0, 7)}&format=csv`); check('hr: attendance sheet csv', r.status === 200 && r.text.includes(','), r.text.slice(0, 80));
 r = await call('GET', '/attendance/corrections?status=pending'); check('hr: corrections list', r.status === 200, short(r.body));
 r = await call('PATCH', `/hr/profiles/${other.id}`, { designation: 'Senior BDR', employmentType: 'full_time', emergencyContact: { name: 'Pat', phone: '555' } });
@@ -97,6 +99,19 @@ r = await call('POST', '/jobs/hr-celebrations/run', {}); check('hr: celebrations
 r = await call('GET', '/hr/org-chart'); check('hr: org chart', r.status === 200, short(r.body));
 r = await call('GET', '/employees/export'); check('hr: employees export csv', r.status === 200 && r.text.includes(','), r.text.slice(0, 60));
 r = await call('GET', `/employees/${other.id}/schedules`); check('hr: employee schedules', r.status === 200, short(r.body));
+// Schedule-aware attendance and shift policy (03 F5, F8)
+r = await call('PATCH', '/settings', { autoStartShiftOnLogin: true, endReminderMinutes: 20, minShiftMinutes: 7, countEarlyStart: false });
+check('shift policy: patch', r.status === 200 && r.body.autoStartShiftOnLogin === true && r.body.endReminderMinutes === 20 && r.body.minShiftMinutes === 7 && r.body.countEarlyStart === false, short(r.body));
+r = await call('GET', '/settings'); check('shift policy: round trip', r.status === 200 && r.body.autoStartShiftOnLogin === true && r.body.minShiftMinutes === 7, short(r.body));
+r = await call('PATCH', '/settings', { autoStartWindowMinutesBefore: 500 }); check('shift policy: out of range rejected', r.status === 400, short(r.body));
+r = await call('PATCH', '/settings', { autoStartShiftOnLogin: false, endReminderMinutes: 15, minShiftMinutes: 5, countEarlyStart: true }); check('shift policy: restore defaults', r.status === 200 && r.body.autoStartShiftOnLogin === false, short(r.body));
+r = await call('GET', '/me'); check('me: shiftPolicy present', r.status === 200 && r.body.shiftPolicy && typeof r.body.shiftPolicy.breakAllowanceMinutes === 'number' && typeof r.body.shiftPolicy.idleThresholdSeconds === 'number' && r.body.shiftPolicy.minShiftMinutes === 5, short(r.body?.shiftPolicy));
+check('me: schedule key present (null or resolved today/next)', r.status === 200 && 'schedule' in r.body && (r.body.schedule === null || (r.body.schedule.today && typeof r.body.schedule.today.isWorkday === 'boolean' && 'next' in r.body.schedule)), short(r.body?.schedule));
+r = await call('POST', '/shifts/heartbeat', { state: 'WORKING', clientClock: new Date().toISOString(), queueSize: 0, shiftId: '00000000-0000-4000-8000-000000000001' });
+check('heartbeat: closed/unknown shift returns shift_closed command', r.status === 200 && Array.isArray(r.body.commands) && r.body.commands[0]?.type === 'shift_closed' && r.body.commands[0]?.reason === 'ended' && r.body.serverTime, short(r.body));
+r = await call('POST', '/jobs/shift-start-reminder/run', {}); check('jobs: shift-start-reminder ok', r.status < 300 && r.body?.lastOutcome === 'ok', short(r.body));
+r = await call('POST', '/jobs/shift-end-reminder/run', {}); check('jobs: shift-end-reminder ok', r.status < 300 && r.body?.lastOutcome === 'ok', short(r.body));
+r = await call('POST', '/jobs/break-overrun/run', {}); check('jobs: break-overrun ok', r.status < 300 && r.body?.lastOutcome === 'ok', short(r.body));
 
 // ---------------- TRACKING ----------------
 r = await call('GET', `/tracking/timesheet?employeeId=${other.id}&from=${today}&to=${today}`); check('trk: timesheet', r.status === 200, short(r.body));
@@ -108,8 +123,12 @@ r = await call('GET', `/tracking/uncategorised?from=${today}&to=${today}&type=ap
 r = await call('POST', '/tracking/uncategorised/categorise', { items: [{ type: 'app', pattern: `smoke-${suffix}.exe`, category: 'productive' }] }); check('trk: categorise creates rule', r.status === 201, short(r.body));
 r = await call('GET', '/tracking/productivity-rules'); const rule = arr(r.body).find((x) => x.pattern === `smoke-${suffix}.exe`); check('trk: rule listed', Boolean(rule), short(r.body));
 if (rule) { r = await call('PATCH', `/tracking/productivity-rules/${rule.id}`, { category: 'neutral' }); check('trk: rule patch', r.status === 200 && r.body.category === 'neutral', short(r.body)); }
-const s1 = new Date(); s1.setUTCHours(1 + (Math.floor(suffix / 1000) % 4), Math.floor(suffix / 1000) % 60, 0, 0); const s2 = new Date(s1.getTime() + 20 * 60e3);
-r = await call('POST', '/tracking/manual-time', { employeeId: other.id, date: today, startedAt: s1.toISOString(), endedAt: s2.toISOString(), reason: 'client visit' });
+// 60 disjoint 20-minute slots across the UTC day; try the next slot when a previous run already used this one.
+let s1 = new Date(), s2 = new Date(); r = { status: 0, body: null };
+for (let attempt = 0; attempt < 6 && r.status !== 201; attempt++) {
+  const slot = (Math.floor(suffix / 1000) + attempt) % 60; s1 = new Date(); s1.setUTCHours(Math.floor(slot / 3), (slot % 3) * 20, 0, 0); s2 = new Date(s1.getTime() + 20 * 60e3);
+  r = await call('POST', '/tracking/manual-time', { employeeId: other.id, date: today, startedAt: s1.toISOString(), endedAt: s2.toISOString(), reason: 'client visit' });
+}
 check('trk: manual time pending', r.status === 201 && r.body.status === 'pending' && r.body.durationS === 1200, short(r.body)); const mt = r.body;
 r = await call('POST', '/tracking/manual-time', { employeeId: other.id, date: today, startedAt: s1.toISOString(), endedAt: s2.toISOString(), reason: 'again' });
 check('trk: manual time overlap rejected', r.status >= 400 && r.body?.error?.code === 'MANUAL_TIME_OVERLAP', short(r.body));

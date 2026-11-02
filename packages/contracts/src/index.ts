@@ -17,3 +17,4 @@ export * from './mail.js';
 export * from './targets.js';
 export * from './notifications.js';
 export * from './reports.js';
+export * from './chat.js';

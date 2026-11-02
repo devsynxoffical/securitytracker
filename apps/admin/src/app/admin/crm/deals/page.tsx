@@ -8,6 +8,7 @@ import { Plus, Download, Kanban, List, Pencil, Trash2, Check, Eye, UserPlus, Cal
 import { clsx } from 'clsx';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { useIdParam } from '@/lib/useIdParam';
 import { useDeals, useDeal, useBoard, usePipelines, useAccounts, useContacts, useActivities, useCrmMutation, type Deal, type Pipeline, type Stage } from '@/lib/queries/crm';
 import { Button, Card, Badge, stageTone, Skeleton, EmptyState, ErrorBanner, Pagination, BulkBar, Modal, Field, Input, Select, Tabs, Avatar, Segmented, useToast, PageHeader } from '@/components/ui';
@@ -36,6 +37,7 @@ function DealsPage() {
 
 function Deals() {
   const { can, me } = useAuth();
+  const exportAllowed = useExportAllowed();
   const toast = useToast();
   const [id, setId] = useIdParam();
   const [view, setView] = useState<'board' | 'list'>('board');
@@ -83,7 +85,7 @@ function Deals() {
     <div>
       <PageHeader title="Deals" subtitle={pipeline?.name} actions={<>
         <Segmented value={view} onChange={setView} options={[{ value: 'board', label: <span className="flex items-center gap-1"><Kanban size={13} /> Board</span> }, { value: 'list', label: <span className="flex items-center gap-1"><List size={13} /> List</span> }]} />
-        {can('crm.deals.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
+        {exportAllowed && can('crm.deals.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
         {can('crm.deals.create') && pipeline && <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New deal</Button>}
       </>} />
 

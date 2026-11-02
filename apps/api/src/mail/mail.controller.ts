@@ -18,6 +18,7 @@ import { MailService } from './mail.service.js';
 import { JwtAuthGuard, Public } from '../auth/guards/jwt-auth.guard.js';
 import { RbacGuard } from '../auth/guards/rbac.guard.js';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator.js';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator.js';
 import {
   SendMailSchema,
   SaveDraftSchema,
@@ -102,6 +103,7 @@ export class MailController {
   @Get('mailboxes/:id/messages/:messageId/attachments/:partId')
   @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermission('mail.use')
+  @ExportGuarded({ anyEnabledPolicy: true })
   async getAttachment(
     @Request() req: any,
     @Param('id') mailboxId: string,

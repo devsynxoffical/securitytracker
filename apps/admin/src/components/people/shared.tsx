@@ -3,7 +3,7 @@
 import { confirmDialog } from '@/components/platform/confirm';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pencil, Plus, Trash2, FileText, CheckCircle2, Circle, KeyRound, UserX, UserCheck, ListTodo, Monitor, Users, CalendarCheck, Activity, Mail, Phone } from 'lucide-react';
+import { Pencil, Plus, Trash2, FileText, CheckCircle2, Circle, KeyRound, UserX, UserCheck, ListTodo, Monitor, Users, CalendarCheck, Activity, Mail, Phone, ShieldOff, ShieldCheck } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
@@ -58,6 +58,7 @@ export function requestTone(status: string): Tone {
 }
 
 export function employeeTone(status: string): Tone {
+  // invited and suspended are both amber (suspended is temporary, FR-SEC-24)
   return status === 'active' ? 'green' : status === 'disabled' ? 'red' : 'amber';
 }
 
@@ -182,6 +183,7 @@ function EmployeeRecord({ profile: p, onClose }: { profile: Profile; onClose: ()
   const [tab, setTab] = useState<ProfileTab>('overview');
   const [editing, setEditing] = useState(false);
   const [disabling, setDisabling] = useState(false);
+  const [suspending, setSuspending] = useState(false);
   const [starting, setStarting] = useState<'onboarding' | 'offboarding' | null>(null);
   const departments = useDepartments();
   const teams = useTeams();
@@ -191,6 +193,7 @@ function EmployeeRecord({ profile: p, onClose }: { profile: Profile; onClose: ()
   const saveEmployee = usePeopleMutation((body: Record<string, unknown>) => http.patch(`/employees/${p.id}`, body), PEOPLE_ALL);
   const reset = usePeopleMutation(() => http.post<{ temporaryPassword?: string }>(`/employees/${p.id}/reset-password`), PEOPLE_ALL);
   const enable = usePeopleMutation(() => http.post(`/employees/${p.id}/enable`), PEOPLE_ALL);
+  const restore = usePeopleMutation(() => http.post(`/employees/${p.id}/restore`), PEOPLE_ALL);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   const onSaveProfile = async (key: string, value: string) => {
@@ -276,7 +279,14 @@ function EmployeeRecord({ profile: p, onClose }: { profile: Profile; onClose: ()
       primary={
         p.status === 'disabled'
           ? can('employees.edit') && <Button size="sm" variant="primary" icon={<UserCheck size={13} />} loading={enable.isPending} onClick={() => enable.mutate(undefined, { onSuccess: () => toast.push('success', 'Employee re-enabled'), onError: (e) => toast.push('error', (e as Error).message) })}>Enable</Button>
-          : can('employees.disable') && notSelf && <Button size="sm" variant="danger-outline" icon={<UserX size={13} />} onClick={() => setDisabling(true)}>Disable</Button>
+          : p.status === 'suspended'
+            ? can('employees.disable') && <Button size="sm" variant="primary" icon={<ShieldCheck size={13} />} loading={restore.isPending} onClick={() => restore.mutate(undefined, { onSuccess: () => toast.push('success', 'Access restored. Devices must be approved again.'), onError: (e) => toast.push('error', (e as Error).message) })}>Restore access</Button>
+            : can('employees.disable') && notSelf && (
+              <>
+                <Button size="sm" variant="danger-outline" icon={<ShieldOff size={13} />} onClick={() => setSuspending(true)}>Suspend access</Button>
+                <Button size="sm" variant="danger-outline" icon={<UserX size={13} />} onClick={() => setDisabling(true)}>Disable</Button>
+              </>
+            )
       }
     />
   );
@@ -346,6 +356,7 @@ function EmployeeRecord({ profile: p, onClose }: { profile: Profile; onClose: ()
       <RecordLayout header={header} left={left} main={main} right={right} />
       {editing && <ProfileEditModal profile={p} onClose={() => setEditing(false)} />}
       {disabling && <DisableModal profile={p} onClose={() => setDisabling(false)} onDone={onClose} />}
+      {suspending && <SuspendModal profile={p} onClose={() => setSuspending(false)} />}
       {starting && <StartChecklistModal employeeId={p.id} kind={starting} joinDate={p.joinDate} onClose={() => setStarting(null)} />}
       {tempPassword && (
         <Modal open onClose={() => setTempPassword(null)} title="Password reset" width={440} footer={<Button variant="primary" onClick={() => setTempPassword(null)}>Done</Button>}>
@@ -712,6 +723,21 @@ function DisableModal({ profile: p, onClose, onDone }: { profile: Profile; onClo
       <div className="mt-3 space-y-3">
         <Field label="Reassign leads to"><EmployeeSelect value={leadsOwnerId} onChange={setLeadsOwner} emptyLabel="Keep unassigned" /></Field>
         <Field label="Reassign tasks to"><EmployeeSelect value={tasksAssigneeId} onChange={setTasksAssignee} emptyLabel="Keep unassigned" /></Field>
+      </div>
+    </Modal>
+  );
+}
+
+/** FR-SEC-24: suspend access. Unlike disable, nothing is reassigned; the employee reappears unchanged on restore. */
+function SuspendModal({ profile: p, onClose }: { profile: Profile; onClose: () => void }) {
+  const toast = useToast();
+  const [reason, setReason] = useState('');
+  const suspend = usePeopleMutation((b: Record<string, unknown>) => http.post(`/employees/${p.id}/suspend`, b), PEOPLE_ALL);
+  return (
+    <Modal open onClose={onClose} title={`Suspend access for ${fullName(p)}`} width={480} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="danger" disabled={!reason.trim()} loading={suspend.isPending} onClick={() => suspend.mutate({ reason: reason.trim() }, { onSuccess: () => { toast.push('success', 'Access suspended'); onClose(); }, onError: (e) => toast.push('error', (e as Error).message) })}>Suspend access</Button></>}>
+      <p className="text-base text-ink-2">All sessions and devices are revoked right away and the desktop app signs out. Leads, tasks, targets and mailboxes stay assigned. Restore access later from this record; devices must be approved again (FR-SEC-24, FR-SEC-26).</p>
+      <div className="mt-3">
+        <Field label="Reason" required hint="Recorded in the audit log."><Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} autoFocus /></Field>
       </div>
     </Modal>
   );

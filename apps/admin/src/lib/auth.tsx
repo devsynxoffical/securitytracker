@@ -14,6 +14,8 @@ export interface Me {
   overrides?: Array<{ permissionKey: string; effect: string; scope: string }>;
   department?: { id: string; name: string } | null;
   team?: { id: string; name: string } | null;
+  /** FR-SEC-20/21: company data containment policy, used to hide export controls. */
+  dataExportPolicy?: 'disabled' | 'super_admin' | 'permission';
 }
 
 /** Result of the first login step (F3 / FR-AUTH-07). */

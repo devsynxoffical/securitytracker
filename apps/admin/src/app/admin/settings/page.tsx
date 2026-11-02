@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Save, Building2, Clock, MonitorSmartphone, ShieldCheck, RotateCcw } from 'lucide-react';
+import { Save, Building2, Clock, CalendarClock, MonitorSmartphone, ShieldCheck, RotateCcw, Lock } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCrmMutation } from '@/lib/queries/crm';
@@ -50,7 +50,17 @@ export default function SettingsPage() {
       maxShiftHours: form.maxShiftHours,
       heartbeatTimeoutMinutes: form.heartbeatTimeoutMinutes,
       captureWindowTitles: form.captureWindowTitles,
+      autoStartShiftOnLogin: form.autoStartShiftOnLogin,
+      autoStartWindowMinutesBefore: form.autoStartWindowMinutesBefore,
+      autoEndShiftOnShutdown: form.autoEndShiftOnShutdown,
+      countEarlyStart: form.countEarlyStart,
+      endReminderMinutes: form.endReminderMinutes,
+      startReminderEnabled: form.startReminderEnabled,
+      breakReminderAtAllowance: form.breakReminderAtAllowance,
+      minShiftMinutes: form.minShiftMinutes,
+      longIdlePrompt: form.longIdlePrompt,
       adminIpAllowlist: form.adminIpAllowlist.split(/\s+/).map((s) => s.trim()).filter(Boolean),
+      dataExportPolicy: form.dataExportPolicy,
     };
     save.mutate(body, { onSuccess: () => toast.push('success', 'Settings saved'), onError: (e) => setError((e as Error).message) });
   };
@@ -64,7 +74,7 @@ export default function SettingsPage() {
       {form && (
         <div className="grid grid-cols-[220px_1fr] gap-6">
           <nav className="sticky top-20 self-start space-y-0.5 text-sm">
-            {[['company', 'Company', Building2], ['shifts', 'Shifts & tracking', Clock], ['devices', 'Devices', MonitorSmartphone], ['access', 'Admin access', ShieldCheck]].map(([id, label, Icon]) => (
+            {[['company', 'Company', Building2], ['shifts', 'Shifts & tracking', Clock], ['policy', 'Shift policy', CalendarClock], ['devices', 'Devices', MonitorSmartphone], ['access', 'Admin access', ShieldCheck], ['containment', 'Data containment', Lock]].map(([id, label, Icon]) => (
               <a key={id as string} href={`#${id}`} className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink">
                 {(() => { const I = Icon as typeof Building2; return <I size={14} className="text-ink-3" />; })()}
                 {label as string}
@@ -112,6 +122,31 @@ export default function SettingsPage() {
                 </Section>
               </div>
             </Card></div>
+            <div id="policy" className="scroll-mt-20"><Card title="Shift policy">
+              <div className="p-5">
+                <Section title="Start and end">
+                  <div className="space-y-2">
+                    <PolicyToggle label="Auto-start shift on login" hint="Off by default (F3): the employee presses Start shift. On, the app starts the shift when login falls inside the window before the scheduled start." checked={form.autoStartShiftOnLogin} onChange={(v) => set('autoStartShiftOnLogin', v)} />
+                    <PolicyToggle label="Auto-end shift on shutdown" hint="Off by default (F5 rule 8): shutdown closes the segment and the shift resumes on wake. On, the app sends End shift on shutdown." checked={form.autoEndShiftOnShutdown} onChange={(v) => set('autoEndShiftOnShutdown', v)} />
+                    <PolicyToggle label="Count early start" hint="On: time before the scheduled start counts as working time. Off: it is stored but excluded from the day and flagged early_clipped." checked={form.countEarlyStart} onChange={(v) => set('countEarlyStart', v)} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <Field label="Auto-start window (min before start)" hint="0 to 180. Only used when auto-start is on."><Input type="number" min={0} max={180} value={form.autoStartWindowMinutesBefore} onChange={(e) => set('autoStartWindowMinutesBefore', num(e.target.value))} className="font-mono" /></Field>
+                    <Field label="Minimum shift (min)" hint="Shifts shorter than this are flagged short_shift (0 disables)."><Input type="number" min={0} max={60} value={form.minShiftMinutes} onChange={(e) => set('minShiftMinutes', num(e.target.value))} className="font-mono" /></Field>
+                  </div>
+                </Section>
+                <Section title="Reminders">
+                  <div className="space-y-2">
+                    <PolicyToggle label="Start reminder" hint="After scheduled start + grace the employee is reminded once; after 60 minutes the manager is told." checked={form.startReminderEnabled} onChange={(v) => set('startReminderEnabled', v)} />
+                    <PolicyToggle label="Break reminder at allowance" hint="One notice per break when break time passes the break allowance above." checked={form.breakReminderAtAllowance} onChange={(v) => set('breakReminderAtAllowance', v)} />
+                    <PolicyToggle label="Long idle prompt" hint="On return from a long idle the app asks: Break or Working away from PC (F5 rule 6)." checked={form.longIdlePrompt} onChange={(v) => set('longIdlePrompt', v)} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <Field label="End reminder (min after scheduled end)" hint="0 to 240. The employee is reminded once per open shift."><Input type="number" min={0} max={240} value={form.endReminderMinutes} onChange={(e) => set('endReminderMinutes', num(e.target.value))} className="font-mono" /></Field>
+                  </div>
+                </Section>
+              </div>
+            </Card></div>
             <div id="devices" className="scroll-mt-20"><Card title="Devices">
               <div className="grid grid-cols-2 gap-4 p-5">
                 <Field label="Approval mode" hint="FR-DEV-02">
@@ -129,6 +164,22 @@ export default function SettingsPage() {
                 <Field label="IP allowlist" hint="One IP or CIDR per line. Empty allows every address (FR-AUTH-11)."><Textarea rows={5} value={form.adminIpAllowlist} onChange={(e) => set('adminIpAllowlist', e.target.value)} placeholder="203.0.113.10&#10;198.51.100.0/24" className="font-mono text-xs" /></Field>
               </div>
             </Card></div>
+            <div id="containment" className="scroll-mt-20"><Card title="Data containment">
+              <div className="p-5">
+                <Field label="Data export policy" hint="Applies to every export: CRM, employees, attendance sheet, reports, timesheets and mail attachment downloads (FR-SEC-20). Import stays available. The desktop app never exports.">
+                  <Select value={form.dataExportPolicy} onChange={(e) => set('dataExportPolicy', e.target.value as Form['dataExportPolicy'])} aria-label="Data export policy">
+                    <option value="disabled">Disabled (default) — no exports, buttons hidden</option>
+                    <option value="super_admin">Super Admin only — each export is audited</option>
+                    <option value="permission">By permission — whoever holds an export permission</option>
+                  </Select>
+                </Field>
+                <p className="mt-2 text-xs text-ink-3">
+                  {form.dataExportPolicy === 'disabled' && 'Company data stays inside the system. Export endpoints answer 403 EXPORT_DISABLED and the panel hides every Export button.'}
+                  {form.dataExportPolicy === 'super_admin' && 'Only the Super Admin role can export; every export writes an audit entry. Other roles see no Export buttons.'}
+                  {form.dataExportPolicy === 'permission' && 'Role permissions such as crm.deals.export and reports.export decide. Review the roles matrix before enabling.'}
+                </p>
+              </div>
+            </Card></div>
           </div>
         </div>
       )}
@@ -139,6 +190,18 @@ export default function SettingsPage() {
           <Button variant="primary" icon={<Save size={14} />} loading={save.isPending} disabled={!dirty} onClick={submit}>Save changes</Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function PolicyToggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between rounded-card border border-line bg-surface-2/60 px-3 py-2.5">
+      <span>
+        <span className="block text-base font-semibold text-ink">{label}</span>
+        <span className="block text-xs text-ink-3">{hint}</span>
+      </span>
+      <Toggle checked={checked} onChange={onChange} />
     </div>
   );
 }

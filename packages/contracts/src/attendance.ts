@@ -56,3 +56,63 @@ export const DecideLeaveSchema = z.object({
   comment: z.string().optional(),
 });
 export type DecideLeaveDto = z.infer<typeof DecideLeaveSchema>;
+
+/**
+ * Company shift policy (03 F3, F5; 06 section 7 settings). Stored in companies.settings and
+ * delivered to the desktop app on /me as `shiftPolicy`.
+ */
+export const ShiftPolicySchema = z.object({
+  autoStartShiftOnLogin: z.boolean().default(false),
+  autoStartWindowMinutesBefore: z.number().int().min(0).max(180).default(30),
+  autoEndShiftOnShutdown: z.boolean().default(false),
+  countEarlyStart: z.boolean().default(true),
+  endReminderMinutes: z.number().int().min(0).max(240).default(15),
+  startReminderEnabled: z.boolean().default(true),
+  breakReminderAtAllowance: z.boolean().default(true),
+  minShiftMinutes: z.number().int().min(0).max(60).default(5),
+  longIdlePrompt: z.boolean().default(true),
+});
+export type ShiftPolicyDto = z.infer<typeof ShiftPolicySchema>;
+export const SHIFT_POLICY_DEFAULTS: ShiftPolicyDto = ShiftPolicySchema.parse({});
+
+/** Reads the shift policy out of a company settings json, falling back to defaults per key. */
+export function shiftPolicyFrom(settings: unknown): ShiftPolicyDto {
+  const src = (settings && typeof settings === 'object' ? settings : {}) as Record<string, unknown>;
+  const out: Record<string, unknown> = { ...SHIFT_POLICY_DEFAULTS };
+  for (const key of Object.keys(ShiftPolicySchema.shape) as Array<keyof ShiftPolicyDto>) {
+    const parsed = ShiftPolicySchema.shape[key].safeParse(src[key]);
+    if (src[key] !== undefined && parsed.success) out[key] = parsed.data;
+  }
+  return out as ShiftPolicyDto;
+}
+
+/** /me payload: the effective policy plus the tracking thresholds the desktop needs alongside it. */
+export const MeShiftPolicySchema = ShiftPolicySchema.extend({
+  breakAllowanceMinutes: z.number().int().nonnegative(),
+  idleThresholdSeconds: z.number().int().positive(),
+  longIdleThresholdSeconds: z.number().int().positive(),
+});
+export type MeShiftPolicyDto = z.infer<typeof MeShiftPolicySchema>;
+
+/** /me payload: the employee's effective schedule resolved for today in the company timezone. */
+export const MeScheduleSchema = z.object({
+  scheduleId: z.string().uuid(),
+  name: z.string(),
+  timezone: z.string(),
+  workdays: z.array(z.number().int().min(1).max(7)),
+  startTime: z.string(),
+  endTime: z.string(),
+  graceMinutes: z.number().int().nonnegative(),
+  today: z.object({
+    date: z.string().date(),
+    isWorkday: z.boolean(),
+    isHoliday: z.boolean(),
+    onLeave: z.boolean(),
+    scheduledStartAt: z.string().datetime().nullable(),
+    scheduledEndAt: z.string().datetime().nullable(),
+  }),
+  next: z
+    .object({ date: z.string().date(), scheduledStartAt: z.string().datetime(), scheduledEndAt: z.string().datetime() })
+    .nullable(),
+});
+export type MeScheduleDto = z.infer<typeof MeScheduleSchema>;

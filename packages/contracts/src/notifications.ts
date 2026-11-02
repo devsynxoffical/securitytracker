@@ -16,6 +16,7 @@ export const NotificationType = {
   LEAVE_REQUESTED: 'leave_requested',
   LEAVE_DECIDED: 'leave_decided',
   SHIFT_AUTO_CLOSED: 'shift_auto_closed',
+  SHIFT_REMINDER: 'shift_reminder',
   SECURITY_ALERT: 'security_alert',
   ANNOUNCEMENT: 'announcement',
 } as const;

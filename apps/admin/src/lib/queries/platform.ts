@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { http, type Page } from '../api';
+import { useAuth } from '../auth';
 import type { Person } from './crm';
 
 // Types mirrored from the API (security, settings, reports, targets).
@@ -119,6 +120,8 @@ export interface TargetProgress {
   assigneeType?: string;
 }
 
+export type DataExportPolicy = 'disabled' | 'super_admin' | 'permission';
+
 export interface CompanySettings {
   id: string;
   name: string;
@@ -133,6 +136,18 @@ export interface CompanySettings {
   heartbeatTimeoutMinutes: number;
   captureWindowTitles: boolean;
   adminIpAllowlist: string[];
+  /** Data containment (08 section 9, FR-SEC-20). */
+  dataExportPolicy: DataExportPolicy;
+  /** Shift policy (03 F3, F5), mirrored from ShiftPolicySchema in packages/contracts. */
+  autoStartShiftOnLogin: boolean;
+  autoStartWindowMinutesBefore: number;
+  autoEndShiftOnShutdown: boolean;
+  countEarlyStart: boolean;
+  endReminderMinutes: number;
+  startReminderEnabled: boolean;
+  breakReminderAtAllowance: boolean;
+  minShiftMinutes: number;
+  longIdlePrompt: boolean;
   updatedAt: string;
 }
 
@@ -176,6 +191,26 @@ export const useTargets = (p: Query) => useQuery({ queryKey: pkeys.targets(p), q
 export const useTargetProgress = (employeeId: string | null) =>
   useQuery({ queryKey: pkeys.targetProgress(employeeId ?? ''), queryFn: () => http.get<TargetProgress[]>(`/targets/employee/${employeeId}`), enabled: Boolean(employeeId) });
 export const useSettings = (enabled = true) => useQuery({ queryKey: pkeys.settings, queryFn: () => http.get<CompanySettings>('/settings'), enabled });
+
+/**
+ * FR-SEC-21: whether the signed-in admin may export at all. Export buttons are hidden (not disabled)
+ * when this is false. `/me` carries the policy for everyone; `/settings` (5 min cache) refreshes it
+ * for admins who can manage settings so a change shows without re-login.
+ */
+export function useExportAllowed(): boolean {
+  const { me } = useAuth();
+  const policy = useExportPolicy();
+  if (!me || policy === 'disabled') return false;
+  if (policy === 'super_admin') return me.role.name === 'Super Admin';
+  return true;
+}
+
+/** The effective `dataExportPolicy` for the signed-in admin (FR-SEC-23 needs only "not disabled"). */
+export function useExportPolicy(): DataExportPolicy {
+  const { me, can } = useAuth();
+  const settings = useQuery({ queryKey: pkeys.settings, queryFn: () => http.get<CompanySettings>('/settings'), enabled: Boolean(me) && can('settings.manage'), staleTime: 5 * 60_000 });
+  return settings.data?.dataExportPolicy ?? me?.dataExportPolicy ?? 'disabled';
+}
 export const useReport = <T,>(kind: string, p: Query, enabled = true) =>
   useQuery({ queryKey: pkeys.report(kind, p), queryFn: () => http.get<{ totalRecords: number; data: T[] }>(`/reports/${kind}`, p), enabled });
 export const useLiveAttendance = (enabled = true) =>

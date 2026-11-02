@@ -10,6 +10,7 @@ import {
 import { AccountsService } from './accounts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { PermissionsService } from '../auth/permissions.service';
 import { CrmExportService } from './crm-export.service';
@@ -32,6 +33,7 @@ export class AccountsController {
   /** FR-CRM-29. Declared before ':id' so 'export' is not read as an id. */
   @Get('export')
   @RequirePermission('crm.accounts.export')
+  @ExportGuarded()
   async export(@Req() req: any, @Query() query: unknown, @Res() res: Response) {
     this.exporter.send(res, 'accounts', await this.exporter.accountsCsv(req.scopeFilter, query));
   }

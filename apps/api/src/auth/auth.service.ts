@@ -26,10 +26,12 @@ import {
   ResetPasswordDto,
 } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
+import { resolveExportPolicy } from './guards/export-policy.guard';
 import { ClockService } from '../common/clock.service';
 import { CryptoUtil } from '../common/crypto.util';
 import { RedisService } from '../common/redis.service';
 import { MailerService } from '../common/mailer.service';
+import { buildMeShiftPolicy, loadMeSchedule } from '../attendance/schedule-info';
 
 const RESET_TTL_SECONDS = 30 * 60;
 
@@ -154,6 +156,15 @@ export class AuthService {
       throw new ForbiddenException({
         code: ErrorCodes.ACCOUNT_DISABLED,
         message: 'Account is disabled',
+      });
+    }
+
+    // FR-SEC-25: sign-in is refused while suspended
+    if (employee.status === 'suspended') {
+      await this.logLoginEvent(employee.id, dto.identifier, null, ip, 'desktop', 'suspended');
+      throw new ForbiddenException({
+        code: ErrorCodes.ACCOUNT_SUSPENDED,
+        message: 'Your access was suspended. Contact your administrator.',
       });
     }
 
@@ -347,6 +358,15 @@ export class AuthService {
       });
     }
 
+    // FR-SEC-24/25: suspended accounts cannot open an admin session either
+    if (employee.status === 'suspended') {
+      await this.logLoginEvent(employee.id, dto.email, null, ip, 'admin', 'suspended');
+      throw new ForbiddenException({
+        code: ErrorCodes.ACCOUNT_SUSPENDED,
+        message: 'Your access was suspended. Contact your administrator.',
+      });
+    }
+
     // Password verification
     const passwordValid = await argon2.verify(employee.passwordHash, dto.password);
     if (!passwordValid) {
@@ -483,7 +503,7 @@ export class AuthService {
       throw new UnauthorizedException({ code: ErrorCodes.UNAUTHORIZED, message: 'Temporary token is not valid for this step' });
     }
     const employee = await this.prisma.employee.findFirst({
-      where: { id: payload.sub, status: { not: 'disabled' }, deletedAt: null },
+      where: { id: payload.sub, status: { notIn: ['disabled', 'suspended'] }, deletedAt: null },
       include: { company: true, role: true },
     });
     if (!employee) throw new UnauthorizedException({ code: ErrorCodes.ACCOUNT_DISABLED, message: 'Account unavailable' });
@@ -672,10 +692,15 @@ export class AuthService {
         department: true,
         team: true,
         permissionOverrides: true,
+        company: { select: { timezone: true, settings: true } },
       },
     });
 
     if (!employee) throw new NotFoundException('Employee not found');
+
+    const timezone = employee.company.timezone || 'UTC';
+    const schedule = await loadMeSchedule(this.prisma, employeeId, employee.companyId, timezone, this.clock.now());
+    const shiftPolicy = buildMeShiftPolicy(employee.company.settings);
 
     // Get open shift if any
     const openShift = await this.prisma.shift.findFirst({
@@ -722,6 +747,10 @@ export class AuthService {
             currentBreak: openShift.breaks[0] || null,
           }
         : null,
+      schedule,
+      shiftPolicy,
+      /** FR-SEC-21: lets every client hide export controls without the settings permission. */
+      dataExportPolicy: resolveExportPolicy(employee.company.settings),
     };
   }
 

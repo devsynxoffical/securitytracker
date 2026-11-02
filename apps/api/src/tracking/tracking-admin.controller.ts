@@ -20,6 +20,7 @@ import { TrackingReportsService } from './reports.service';
 import { ManualTimeService } from './manual-time.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { PermissionsService } from '../auth/permissions.service';
 
@@ -38,6 +39,7 @@ export class TrackingAdminController {
 
   @Get('timesheet')
   @RequirePermission('tracking.view_summary')
+  @ExportGuarded({ csvOnly: true })
   async timesheet(@Req() req: any, @Query() query: unknown, @Res({ passthrough: true }) res: Response) {
     const q = TimesheetQuerySchema.parse(query);
     const data = await this.timesheets.timesheet(req.scopeFilter, q);
@@ -51,6 +53,7 @@ export class TrackingAdminController {
 
   @Get('timesheet/team')
   @RequirePermission('tracking.view_summary')
+  @ExportGuarded({ csvOnly: true })
   async teamTimesheet(@Req() req: any, @Query() query: unknown, @Res({ passthrough: true }) res: Response) {
     const q = TeamTimesheetQuerySchema.parse(query);
     const data = await this.timesheets.teamTimesheet(req.scopeFilter, q);

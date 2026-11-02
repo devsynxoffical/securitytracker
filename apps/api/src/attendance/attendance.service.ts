@@ -14,7 +14,7 @@ import {
   AttendanceSheetQueryDto,
   RequestCorrectionDto,
   DecideCorrectionDto,
-  AttendanceStatus,
+  shiftPolicyFrom,
 } from '@company-os/contracts';
 import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -22,6 +22,9 @@ import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { ScopeFilter } from '../auth/guards/rbac.guard';
 import { assertEmployeeInScope, dateUtc, isoDate, addDays, monthRange, isoWeekday, csvLine } from '../hr/hr.util';
+import { SETTINGS_DEFAULTS } from '../settings/settings.service';
+import { evaluateAttendance } from './attendance.rules';
+import { dbDateToLocalDate, localDateToDbDate } from './schedule.util';
 
 @Injectable()
 export class AttendanceService {
@@ -403,101 +406,75 @@ export class AttendanceService {
   }
 
   /**
-   * Daily Attendance computation rule engine (F8).
+   * Daily attendance computation (F8). `date` is the attendance date as stored (UTC midnight of the
+   * local YYYY-MM-DD). Inputs: effective schedule assignment, company timezone and policy, holidays,
+   * approved leave and the shifts bound to this attendance date.
    */
   async computeDailyAttendance(
     employeeId: string,
     date: Date,
     isCorrected = false,
   ) {
-    const dateOnly = new Date(date.toISOString().split('T')[0]! + 'T00:00:00.000Z');
+    const localDate = dbDateToLocalDate(date);
+    const dateOnly = localDateToDbDate(localDate);
 
-    const [shifts, holiday, leave] = await Promise.all([
-      this.prisma.shift.findMany({
-        where: { employeeId, attendanceDate: dateOnly },
-      }),
-      this.prisma.holiday.findFirst({
-        where: { date: dateOnly },
-      }),
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { companyId: true, company: { select: { timezone: true, settings: true } } },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+    const policy = shiftPolicyFrom(employee.company.settings);
+    const settings = (employee.company.settings ?? {}) as Record<string, unknown>;
+    const breakAllowanceMinutes = typeof settings.breakAllowanceMinutes === 'number' ? settings.breakAllowanceMinutes : SETTINGS_DEFAULTS.breakAllowanceMinutes;
+
+    const [shifts, holiday, leave, assignment] = await Promise.all([
+      this.prisma.shift.findMany({ where: { employeeId, attendanceDate: dateOnly } }),
+      this.prisma.holiday.findFirst({ where: { companyId: employee.companyId, date: dateOnly } }),
       this.prisma.leaveRequest.findFirst({
-        where: {
-          employeeId,
-          status: 'approved',
-          dateFrom: { lte: dateOnly },
-          dateTo: { gte: dateOnly },
-        },
+        where: { employeeId, status: 'approved', dateFrom: { lte: dateOnly }, dateTo: { gte: dateOnly } },
+      }),
+      this.prisma.employeeSchedule.findFirst({
+        where: { employeeId, effectiveFrom: { lte: dateOnly }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: dateOnly } }] },
+        include: { schedule: true },
+        orderBy: { effectiveFrom: 'desc' },
       }),
     ]);
 
-    let totalWorkingSeconds = 0;
-    let totalActiveSeconds = 0;
-    let totalIdleSeconds = 0;
-    let totalBreakSeconds = 0;
-    let totalOfflineSeconds = 0;
-    let checkInAt: Date | null = null;
-    let checkOutAt: Date | null = null;
-    const flags: string[] = isCorrected ? ['corrected'] : [];
+    const result = evaluateAttendance({
+      date: localDate,
+      timezone: employee.company.timezone || 'UTC',
+      schedule: assignment?.schedule ?? null,
+      isHoliday: Boolean(holiday),
+      onLeave: Boolean(leave),
+      shifts,
+      breakAllowanceMinutes,
+      minShiftMinutes: policy.minShiftMinutes,
+      countEarlyStart: policy.countEarlyStart,
+      corrected: isCorrected,
+    });
 
-    for (const s of shifts) {
-      totalWorkingSeconds += s.durationSeconds - s.breakSeconds - s.offlineSeconds;
-      totalActiveSeconds += s.activeSeconds;
-      totalIdleSeconds += s.idleSeconds;
-      totalBreakSeconds += s.breakSeconds;
-      totalOfflineSeconds += s.offlineSeconds;
-
-      if (!checkInAt || s.startedAt < checkInAt) checkInAt = s.startedAt;
-      if (s.endedAt && (!checkOutAt || s.endedAt > checkOutAt)) checkOutAt = s.endedAt;
-    }
-
-    let status: string = AttendanceStatus.PRESENT;
-
-    if (shifts.length === 0) {
-      if (holiday) {
-        status = AttendanceStatus.HOLIDAY;
-      } else if (leave) {
-        status = AttendanceStatus.ON_LEAVE;
-      } else {
-        status = AttendanceStatus.ABSENT;
-      }
-    } else {
-      if (totalBreakSeconds > 3600) {
-        flags.push('break_exceeded');
-      }
-    }
+    const data = {
+      status: result.status,
+      scheduleId: result.scheduleId,
+      checkInAt: result.checkInAt,
+      checkOutAt: result.checkOutAt,
+      workingSeconds: result.workingSeconds,
+      activeSeconds: result.activeSeconds,
+      idleSeconds: result.idleSeconds,
+      breakSeconds: result.breakSeconds,
+      offlineSeconds: result.offlineSeconds,
+      scheduledStartAt: result.scheduledStartAt,
+      scheduledEndAt: result.scheduledEndAt,
+      lateSeconds: result.lateSeconds,
+      earlySeconds: result.earlySeconds,
+      flags: result.flags,
+      computedAt: this.clock.now(),
+    };
 
     return this.prisma.attendanceDay.upsert({
-      where: {
-        employeeId_date: {
-          employeeId,
-          date: dateOnly,
-        },
-      },
-      update: {
-        status,
-        checkInAt,
-        checkOutAt,
-        workingSeconds: totalWorkingSeconds,
-        activeSeconds: totalActiveSeconds,
-        idleSeconds: totalIdleSeconds,
-        breakSeconds: totalBreakSeconds,
-        offlineSeconds: totalOfflineSeconds,
-        flags,
-        computedAt: this.clock.now(),
-      },
-      create: {
-        employeeId,
-        date: dateOnly,
-        status,
-        checkInAt,
-        checkOutAt,
-        workingSeconds: totalWorkingSeconds,
-        activeSeconds: totalActiveSeconds,
-        idleSeconds: totalIdleSeconds,
-        breakSeconds: totalBreakSeconds,
-        offlineSeconds: totalOfflineSeconds,
-        flags,
-        computedAt: this.clock.now(),
-      },
+      where: { employeeId_date: { employeeId, date: dateOnly } },
+      update: data,
+      create: { employeeId, date: dateOnly, ...data },
     });
   }
 }

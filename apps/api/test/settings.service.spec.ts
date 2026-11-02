@@ -33,6 +33,22 @@ describe('Company settings', () => {
     expect(() => CompanySettingsSchema.parse({ weekStart: 0 })).toThrow();
   });
 
+  it('exposes shift policy defaults and validates the policy keys (03 F3, F5)', async () => {
+    const res = await svc.get(COMPANY);
+    expect(res.autoStartShiftOnLogin).toBe(false);
+    expect(res.autoStartWindowMinutesBefore).toBe(30);
+    expect(res.countEarlyStart).toBe(true);
+    expect(res.endReminderMinutes).toBe(15);
+    expect(res.minShiftMinutes).toBe(5);
+    expect(res.longIdlePrompt).toBe(true);
+    expect(() => CompanySettingsSchema.parse({ autoStartWindowMinutesBefore: 181 })).toThrow();
+    expect(() => CompanySettingsSchema.parse({ minShiftMinutes: 61 })).toThrow();
+    expect(() => CompanySettingsSchema.parse({ endReminderMinutes: -1 })).toThrow();
+    await svc.update(COMPANY, { autoStartShiftOnLogin: true, endReminderMinutes: 30 });
+    const data = prisma.company.update.mock.calls[0][0].data;
+    expect(data.settings).toEqual({ idleThresholdSeconds: 240, autoStartShiftOnLogin: true, endReminderMinutes: 30 });
+  });
+
   it('update writes columns and merges json keys without dropping others', async () => {
     await svc.update(COMPANY, { timezone: 'Asia/Karachi', deviceLimitPerEmployee: 2 });
     const data = prisma.company.update.mock.calls[0][0].data;

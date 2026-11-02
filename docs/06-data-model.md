@@ -109,6 +109,10 @@ CRM contacts, accounts, deals, activities, tags, custom fields, saved views and 
 | app_releases | version, channel (pilot, stable), mandatory, min_supported, notes, installer_key, signature, published_at |
 | settings | key, value jsonb (company-level overrides of defaults) |
 
+Settings keys stored on `companies.settings` (camelCase in the API, defaults in brackets): `idleThresholdSeconds` [300], `longIdleThresholdSeconds` [1800], `breakAllowanceMinutes` [60], `deviceApprovalMode` [manual], `deviceLimitPerEmployee` [1], `maxShiftHours` [16], `heartbeatTimeoutMinutes` [10], `captureWindowTitles` [off], `adminIpAllowlist` [[]]. Shift policy (03 F3, F5; `ShiftPolicySchema` in packages/contracts, delivered on `/me` as `shiftPolicy`): `autoStartShiftOnLogin` [off], `autoStartWindowMinutesBefore` [30, 0..180], `autoEndShiftOnShutdown` [off], `countEarlyStart` [on], `endReminderMinutes` [15, 0..240], `startReminderEnabled` [on], `breakReminderAtAllowance` [on], `minShiftMinutes` [5, 0..60], `longIdlePrompt` [on]. `timezone` and `week_start` are columns.
+
+`attendance_days` additionally stores `scheduled_start_at`, `scheduled_end_at` (timestamptz, the F8 window in UTC), `late_s` and `early_s` (nullable, migration 0004_attendance_schedule).
+
 `audit_logs` and `lead_timeline`: the application database role has INSERT and SELECT only. No UPDATE or DELETE grants.
 
 ## 8. Retention defaults

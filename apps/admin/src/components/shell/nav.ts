@@ -33,6 +33,7 @@ import {
   KeyRound,
   ScrollText,
   Bell,
+  MessageSquare,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -127,6 +128,11 @@ export const NAV: NavGroup[] = [
       { label: 'Labels', href: '/admin/mail/labels', icon: Tags, permission: 'mail.use' },
       { label: 'Logs', href: '/admin/mail/logs', icon: ScrollText, permission: 'mail.logs.view' },
     ],
+  },
+  {
+    key: 'chat',
+    label: 'Chat',
+    items: [{ label: 'Chat', href: '/admin/chat', icon: MessageSquare, permission: 'chat.use' }],
   },
   {
     key: 'reports',

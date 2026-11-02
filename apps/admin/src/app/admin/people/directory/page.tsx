@@ -7,13 +7,14 @@ import { Download, Plus, Users, KeyRound, UserX, ExternalLink, Clock, Plane, Use
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useIdParam } from '@/lib/useIdParam';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { useEmployeesList, useRoles, useDepartments, useTeams, useLive, useOutToday, useCorrections, usePeopleMutation, PEOPLE_ALL, type EmployeeRow } from '@/lib/queries/people';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Modal, PageHeader, SearchInput, Select, Skeleton, useToast } from '@/components/ui';
 import { DataTable, FilterChip, KpiTile, Tooltip, ViewTabs, type Column, type SortState } from '@/components/ui/advanced';
 import { DepartmentSelect, TeamSelect, EmployeeDrawer, EmployeeSelect, OptionList, employeeTone } from '@/components/people/shared';
 import { dateOnly, downloadText, fullName, relative, titleCase } from '@/lib/format';
 
-type View = 'all' | 'active' | 'invited' | 'disabled';
+type View = 'all' | 'active' | 'invited' | 'suspended' | 'disabled';
 
 function DirectoryPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Directory /></Suspense>;
@@ -21,6 +22,7 @@ function DirectoryPage() {
 
 function Directory() {
   const { can, me } = useAuth();
+  const exportAllowed = useExportAllowed();
   const toast = useToast();
   const [id, setId] = useIdParam();
   const [view, setView] = useState<View>('all');
@@ -44,7 +46,7 @@ function Directory() {
   const [tempPassword, setTempPassword] = useState<{ name: string; password: string } | null>(null);
 
   const all = q.data ?? [];
-  const counts = { all: all.length, active: all.filter((e) => e.status === 'active').length, invited: all.filter((e) => e.status === 'invited').length, disabled: all.filter((e) => e.status === 'disabled').length };
+  const counts = { all: all.length, active: all.filter((e) => e.status === 'active').length, invited: all.filter((e) => e.status === 'invited').length, suspended: all.filter((e) => e.status === 'suspended').length, disabled: all.filter((e) => e.status === 'disabled').length };
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
     const list = all.filter((e) =>
@@ -90,7 +92,7 @@ function Directory() {
   return (
     <div>
       <PageHeader title="Directory" subtitle="Everyone in the company, their role, team and status" actions={<>
-        {can('reports.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
+        {exportAllowed && can('reports.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
         {can('employees.create') && <Button variant="primary" icon={<Plus size={14} />} onClick={() => setCreating(true)}>New employee</Button>}
       </>} />
 
@@ -103,7 +105,7 @@ function Directory() {
 
       <Card>
         <ViewTabs value={view} onChange={(v) => { setView(v); setSelected(new Set()); }} views={[
-          { value: 'all', label: 'All', count: counts.all }, { value: 'active', label: 'Active', count: counts.active }, { value: 'invited', label: 'Invited', count: counts.invited }, { value: 'disabled', label: 'Disabled', count: counts.disabled },
+          { value: 'all', label: 'All', count: counts.all }, { value: 'active', label: 'Active', count: counts.active }, { value: 'invited', label: 'Invited', count: counts.invited }, { value: 'suspended', label: 'Suspended', count: counts.suspended }, { value: 'disabled', label: 'Disabled', count: counts.disabled },
         ]} />
         <div className="flex flex-wrap items-center gap-2 border-b border-line-2 px-3 py-2.5">
           <SearchInput className="w-64" value={search} onChange={setSearch} placeholder="Name, code, email, role…" />

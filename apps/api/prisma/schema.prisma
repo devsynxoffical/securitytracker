@@ -430,21 +430,26 @@ model ShiftEvent {
 }
 
 model AttendanceDay {
-  id             String    @id @default(uuid()) @db.Uuid
-  employeeId     String    @map("employee_id") @db.Uuid
-  date           DateTime  @db.Date
-  scheduleId     String?   @map("schedule_id") @db.Uuid
-  status         String    @default("present") // present, late, half_day, absent, on_leave, weekly_off, holiday
-  checkInAt      DateTime? @map("check_in_at") @db.Timestamptz()
-  checkOutAt     DateTime? @map("check_out_at") @db.Timestamptz()
-  workingSeconds Int       @default(0) @map("working_s")
-  activeSeconds  Int       @default(0) @map("active_s")
-  idleSeconds    Int       @default(0) @map("idle_s")
-  breakSeconds   Int       @default(0) @map("break_s")
-  offlineSeconds Int       @default(0) @map("offline_s")
-  manualSeconds  Int       @default(0) @map("manual_s")
-  flags          String[]  @default([])
-  computedAt     DateTime  @default(now()) @map("computed_at") @db.Timestamptz()
+  id               String    @id @default(uuid()) @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  date             DateTime  @db.Date
+  scheduleId       String?   @map("schedule_id") @db.Uuid
+  status           String    @default("present") // present, late, half_day, absent, on_leave, weekly_off, holiday
+  checkInAt        DateTime? @map("check_in_at") @db.Timestamptz()
+  checkOutAt       DateTime? @map("check_out_at") @db.Timestamptz()
+  workingSeconds   Int       @default(0) @map("working_s")
+  activeSeconds    Int       @default(0) @map("active_s")
+  idleSeconds      Int       @default(0) @map("idle_s")
+  breakSeconds     Int       @default(0) @map("break_s")
+  offlineSeconds   Int       @default(0) @map("offline_s")
+  manualSeconds    Int       @default(0) @map("manual_s")
+  flags            String[]  @default([])
+  // F8 schedule context: scheduled window in UTC, lateness at check-in, early leave at check-out.
+  scheduledStartAt DateTime? @map("scheduled_start_at") @db.Timestamptz()
+  scheduledEndAt   DateTime? @map("scheduled_end_at") @db.Timestamptz()
+  lateSeconds      Int?      @map("late_s")
+  earlySeconds     Int?      @map("early_s")
+  computedAt       DateTime  @default(now()) @map("computed_at") @db.Timestamptz()
 
   employee Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
@@ -1801,4 +1806,70 @@ model AppRelease {
 
   @@index([companyId, channel])
   @@map("app_releases")
+}
+
+// ---------------------------------------------------------------------------
+// Internal chat (22-internal-chat-spec.md section 4)
+// ---------------------------------------------------------------------------
+
+model ChatChannel {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  kind          String // company, department, team, group, direct
+  name          String
+  departmentId  String?   @map("department_id") @db.Uuid
+  teamId        String?   @map("team_id") @db.Uuid
+  /// direct channels: `min(employeeId):max(employeeId)`; company channel: `company`
+  directKey     String?   @map("direct_key")
+  createdBy     String?   @map("created_by") @db.Uuid
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz()
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+
+  members  ChatMember[]
+  messages ChatMessage[]
+
+  @@unique([companyId, kind, departmentId])
+  @@unique([companyId, kind, teamId])
+  @@unique([companyId, directKey])
+  @@index([companyId, lastMessageAt])
+  @@map("chat_channels")
+}
+
+model ChatMember {
+  channelId         String   @map("channel_id") @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  joinedAt          DateTime @default(now()) @map("joined_at") @db.Timestamptz()
+  lastReadMessageId String?  @map("last_read_message_id") @db.Uuid
+  muted             Boolean  @default(false)
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, employeeId])
+  @@index([employeeId])
+  @@map("chat_members")
+}
+
+model ChatMessage {
+  /// uuid v7, assigned by the service so ids are time-ordered cursors
+  id        String                   @id @db.Uuid
+  channelId String                   @map("channel_id") @db.Uuid
+  authorId  String                   @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]                 @default([]) @db.Uuid
+  recordRef Json?                    @map("record_ref")
+  /// Idempotency-Key of the desktop or admin write (AGENTS.md rule 11)
+  clientKey String?                  @map("client_key")
+  editedAt  DateTime?                @map("edited_at") @db.Timestamptz()
+  deletedAt DateTime?                @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime                 @default(now()) @db.Timestamptz()
+  /// generated column (GENERATED ALWAYS AS ... STORED in 0005_chat); Prisma models the expression as a default
+  search    Unsupported("tsvector")? @default(dbgenerated("to_tsvector('simple'::regconfig, body)"))
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, clientKey])
+  @@index([channelId, id(sort: Desc)])
+  @@index([search], type: Gin)
+  @@map("chat_messages")
 }

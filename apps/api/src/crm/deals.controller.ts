@@ -11,6 +11,7 @@ import {
 import { DealsService } from './deals.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { PermissionsService } from '../auth/permissions.service';
 import { CrmExportService } from './crm-export.service';
@@ -40,6 +41,7 @@ export class DealsController {
   /** FR-CRM-29. Declared before ':id' so 'export' is not read as an id. */
   @Get('export')
   @RequirePermission('crm.deals.export')
+  @ExportGuarded()
   async export(@Req() req: any, @Query() query: unknown, @Res() res: Response) {
     this.exporter.send(res, 'deals', await this.exporter.dealsCsv(req.scopeFilter, query));
   }

@@ -34,7 +34,7 @@ Error body:
 |---|---|
 | 400 | Validation failed (`VALIDATION_ERROR` with field list) |
 | 401 | Not authenticated, token expired, session revoked |
-| 403 | Authenticated but permission missing |
+| 403 | Authenticated but permission missing; `EXPORT_DISABLED` when the company export policy forbids the export (08 section 9); `ACCOUNT_SUSPENDED` on sign-in while suspended |
 | 404 | Not found or outside scope |
 | 409 | State conflict |
 | 422 | Business rule violated |
@@ -68,6 +68,8 @@ Error body:
 | POST | /employees/:id/reset-password |
 | GET | /employees/:id/offboarding-preview |
 | POST | /employees/:id/disable (body: reassignment map), /employees/:id/enable |
+| POST | /employees/:id/suspend (body: `{ reason }`) -> status `suspended`, all sessions and approved devices revoked, `session.revoked` pushed (FR-SEC-24); /employees/:id/restore -> status `active`, devices stay revoked (FR-SEC-26). Permission `employees.disable`. 409 when the state does not fit, 403 for self or the last Super Admin |
+| GET | /employees/export (CSV, export policy applies) |
 | CRUD | /departments, /teams |
 | CRUD | /roles, PUT /roles/:id/permissions |
 | GET | /permissions (catalog) |
@@ -179,9 +181,21 @@ Contacts, accounts, deals, activities, conversion, CRM config, search and dashbo
 | GET | /reports/attendance, /reports/time, /reports/apps, /reports/productivity, /reports/crm, /reports/calls, /reports/targets (each accepts `format=csv`) |
 | GET | /dashboard/admin, /dashboard/me |
 | GET | /audit-logs, /security-alerts, POST /security-alerts/:id/ack |
-| GET, PATCH | /settings |
+| GET, PATCH | /settings (includes `dataExportPolicy`: `disabled` default, `super_admin`, `permission`) |
 | GET | /releases/latest?channel= (desktop), CRUD /releases (admin) |
 | GET | /health, /health/ready |
+
+### Export policy (08 section 9, FR-SEC-20)
+
+Every export route is marked `@ExportGuarded()` and passes through `ExportPolicyGuard` after the JWT and RBAC guards: `GET /crm/accounts/export`, `/crm/contacts/export`, `/crm/deals/export`, `/employees/export`, `/attendance/sheet?format=csv`, `/reports/*?format=csv`, `/tracking/timesheet?format=csv`, `/tracking/timesheet/team?format=csv`, and `GET /mail/mailboxes/:id/messages/:messageId/attachments/:partId` (any policy other than `disabled`, plus the mailbox `download` permission, FR-SEC-23).
+
+| `dataExportPolicy` | Result |
+|---|---|
+| `disabled` (default) | 403 `{ "error": { "code": "EXPORT_DISABLED" } }`; JSON variants of the same routes keep working |
+| `super_admin` | Only the Super Admin role; each export writes an audit entry with `action = export` and the URL. Other roles get 403 `EXPORT_DISABLED` |
+| `permission` | The route's `@RequirePermission` (for example `crm.deals.export`, `reports.export`) decides |
+
+`GET /me` carries `dataExportPolicy` so every client can hide export controls (FR-SEC-21).
 
 ## 10. WebSocket
 

@@ -21,8 +21,10 @@ import { JobsModule } from './jobs/jobs.module';
 import { FilesModule } from './files/files.module';
 import { SetupModule } from './setup/setup.module';
 import { SettingsModule } from './settings/settings.module';
+import { ChatModule } from './chat/chat.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RbacGuard } from './auth/guards/rbac.guard';
+import { ExportPolicyGuard } from './auth/guards/export-policy.guard';
 import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
 
 @Module({
@@ -49,6 +51,7 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
     FilesModule,
     SetupModule,
     SettingsModule,
+    ChatModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -59,6 +62,10 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
     {
       provide: APP_GUARD,
       useClass: RbacGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ExportPolicyGuard,
     },
     {
       provide: APP_INTERCEPTOR,

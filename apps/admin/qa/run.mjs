@@ -16,6 +16,17 @@ const iso = (d) => d.toISOString().slice(0, 10);
 const inDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
 const nextMonday = () => { const d = new Date(today); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7) + 7 * (Number(S) % 30)); return d; };
 
+/** FR-SEC-20/21: exports are off by default and the panel hides every Export button. Flows that export switch the policy on first. */
+async function setExportPolicy(value) {
+  await go(page, 'settings');
+  const sel = page.getByLabel('Data export policy').first();
+  await sel.waitFor({ timeout: 6000 });
+  if ((await sel.inputValue()) === value) return;
+  await sel.selectOption(value);
+  await vis(page.getByRole('button', { name: /^Save/ })).last().click();
+  await wait(1200);
+}
+
 // ------------------------------------------------------------------ CRM
 let leadId = '';
 await run('CRM: create lead via modal', async () => {
@@ -140,7 +151,13 @@ await run('CRM: create contact, bulk assign, column chooser, filter chip, save v
   await sv.getByRole('button', { name: /Save/ }).last().click();
   await wait(1000);
   await page.getByText(`QA view ${S}`).first().waitFor({ timeout: 5000 });
+  step('export hidden while policy disabled');
+  await setExportPolicy('disabled');
+  await go(page, 'crm/contacts');
+  if (await page.getByRole('button', { name: 'Export' }).count()) throw new Error('Export button visible while exports are disabled');
   step('export');
+  await setExportPolicy('super_admin');
+  await go(page, 'crm/contacts');
   const dl = page.waitForEvent('download', { timeout: 8000 });
   await page.getByRole('button', { name: 'Export' }).first().click();
   const file = await dl;
@@ -260,6 +277,26 @@ await run('People: create employee, open profile, inline edit designation', asyn
   await noRawError(page);
 });
 
+await run('People: suspend and restore access (FR-SEC-24, FR-SEC-26)', async () => {
+  await go(page, 'people/directory');
+  await page.getByText(empName).first().waitFor({ timeout: 6000 });
+  await page.getByText(empName).first().click();
+  await wait(1200);
+  const dr = drawerEl();
+  step('suspend');
+  await dr.getByRole('button', { name: 'Suspend access' }).click();
+  const d = dialog();
+  await d.getByLabel('Reason').fill(`QA suspension ${S}`);
+  await d.getByRole('button', { name: 'Suspend access' }).click();
+  await wait(1200);
+  await dr.getByText('Suspended').first().waitFor({ timeout: 5000 });
+  step('restore');
+  await dr.getByRole('button', { name: 'Restore access' }).click();
+  await wait(1200);
+  await dr.getByText('Active', { exact: true }).first().waitFor({ timeout: 5000 });
+  await page.keyboard.press('Escape');
+  await noRawError(page);
+});
 await run('People: request leave and approve it', async () => {
   await go(page, 'people/leave');
   await page.getByRole('button', { name: 'New request' }).first().click();
@@ -419,6 +456,30 @@ await run('Mail: delete label goes through confirm modal (no browser dialog)', a
   await noRawError(page);
 });
 
+// ------------------------------------------------------------------ CHAT (22)
+await run('Chat: open channel, send a message, see it rendered', async () => {
+  await go(page, 'chat');
+  step('channel list');
+  await page.getByRole('list', { name: 'Channels' }).waitFor({ timeout: 8000 });
+  const first = page.getByRole('list', { name: 'Channels' }).getByRole('button').first();
+  await first.click();
+  await wait(800);
+  step('composer');
+  const box = page.getByLabel('Message');
+  await box.waitFor({ timeout: 6000 });
+  await box.fill(`QA chat hello ${S}`);
+  await page.keyboard.press('Enter');
+  await wait(1200);
+  step('message visible');
+  await page.getByText(`QA chat hello ${S}`).first().waitFor({ timeout: 6000 });
+  step('mentions filter and badge');
+  await page.getByRole('button', { name: 'Mentions' }).click();
+  await wait(400);
+  await page.getByRole('button', { name: 'Mentions' }).click();
+  await page.getByRole('link', { name: /^Chat, \d+ unread$/ }).waitFor({ timeout: 4000 });
+  await noRawError(page);
+});
+
 // ------------------------------------------------------------------ SECURITY / SETTINGS
 await run('Security: sessions list, alerts page, company settings save', async () => {
   await go(page, 'security/sessions');
@@ -433,7 +494,8 @@ await run('Security: sessions list, alerts page, company settings save', async (
   step('settings');
   const brk = page.getByLabel('Break allowance (min)');
   await brk.waitFor({ timeout: 6000 });
-  await brk.fill(String(60 + (Number(S) % 3)));
+  const currentBreak = Number(await brk.inputValue()) || 60;
+  await brk.fill(String(currentBreak === 60 ? 61 : 60)); // always a change, so Save enables
   step('settings save');
   await vis(page.getByRole('button', { name: /^Save/ })).last().click();
   await wait(1200);

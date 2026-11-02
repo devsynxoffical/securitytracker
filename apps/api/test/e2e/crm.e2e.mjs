@@ -147,6 +147,8 @@ r = await call('GET', `/crm/search?q=Smoke`);
 check('search', r.status === 200 && r.body.accounts.length >= 1 && r.body.contacts.length >= 1 && r.body.deals.length >= 1, JSON.stringify(r.body).slice(0, 200));
 r = await call('GET', '/crm/dashboard');
 check('dashboard', r.status === 200 && r.body.kpis.wonThisMonth >= 1 && Array.isArray(r.body.byStage), JSON.stringify(r.body.kpis));
+// FR-SEC-20: exports are off by default; the suite runs as Super Admin, so enable the Super Admin policy first.
+r = await call('PATCH', '/settings', { dataExportPolicy: 'super_admin' }); check('settings: export policy super_admin', r.status === 200 && r.body.dataExportPolicy === 'super_admin', JSON.stringify(r.body).slice(0, 200));
 r = await call('GET', '/crm/deals/export?status=won');
 check('export csv', r.status === 200 && r.text.startsWith('Name,Account,Pipeline') && r.text.includes(`Smoke Deal ${suffix}`), r.text.slice(0, 120));
 r = await call('POST', '/crm/views', { entityType: 'deal', name: `My won deals ${suffix}`, visibility: 'private', filters: { status: 'won' } });

@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { DataExportPolicies, SHIFT_POLICY_DEFAULTS, ShiftPolicySchema } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 
 /**
  * Company settings (06 section 7 `settings`, stored on companies.settings jsonb plus the
  * timezone and week_start columns). Keys are an allowlist; unknown keys are rejected.
- * Defined locally because packages/contracts is owned by the foundation pass; the admin
- * settings page mirrors this field list.
+ * The shift policy keys (03 F3, F5) come from ShiftPolicySchema in packages/contracts so the
+ * desktop app and /me share one definition; the admin settings page mirrors this field list.
  */
 export const CompanySettingsSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -22,7 +23,9 @@ export const CompanySettingsSchema = z.object({
   heartbeatTimeoutMinutes: z.number().int().min(1).max(120).optional(),
   captureWindowTitles: z.boolean().optional(),
   adminIpAllowlist: z.array(z.string().min(1).max(64)).max(50).optional(),
-});
+  /** 08 section 9 FR-SEC-20: data containment. */
+  dataExportPolicy: z.enum(DataExportPolicies).optional(),
+}).merge(ShiftPolicySchema.partial());
 export type CompanySettingsDto = z.infer<typeof CompanySettingsSchema>;
 
 export const SETTINGS_DEFAULTS = {
@@ -35,6 +38,8 @@ export const SETTINGS_DEFAULTS = {
   heartbeatTimeoutMinutes: 10,
   captureWindowTitles: false,
   adminIpAllowlist: [] as string[],
+  dataExportPolicy: 'disabled' as (typeof DataExportPolicies)[number],
+  ...SHIFT_POLICY_DEFAULTS,
 };
 
 const JSON_KEYS = Object.keys(SETTINGS_DEFAULTS) as Array<keyof typeof SETTINGS_DEFAULTS>;

@@ -5,6 +5,7 @@ import { Download, CalendarDays } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useIdParam } from '@/lib/useIdParam';
 import { useSheet, useDepartments, useTeams } from '@/lib/queries/people';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { Avatar, Card, Button, EmptyState, ErrorBanner, PageHeader, Skeleton, useToast } from '@/components/ui';
 import { FilterChip, KpiTile, Tooltip } from '@/components/ui/advanced';
 import { MonthPicker, EmployeeDrawer, attendanceDot, hours, thisMonth, isWeekend, monthLabel, ATTENDANCE_LEGEND, OptionList } from '@/components/people/shared';
@@ -16,6 +17,7 @@ export default function AttendanceSheetPage() {
 
 function AttendanceSheet() {
   const toast = useToast();
+  const exportAllowed = useExportAllowed();
   const [id, setId] = useIdParam();
   const [month, setMonth] = useState(thisMonth());
   const [departmentId, setDepartmentId] = useState('');
@@ -39,7 +41,7 @@ function AttendanceSheet() {
 
   return (
     <div>
-      <PageHeader title="Attendance sheet" subtitle={`${monthLabel(month)} · one row per employee, one column per day (F8)`} actions={<Button icon={<Download size={14} />} onClick={exportCsv}>Export CSV</Button>} />
+      <PageHeader title="Attendance sheet" subtitle={`${monthLabel(month)} · one row per employee, one column per day (F8)`} actions={exportAllowed ? <Button icon={<Download size={14} />} onClick={exportCsv}>Export CSV</Button> : undefined} />
       <div className="mb-4 grid grid-cols-5 gap-3">
         <KpiTile label="Employees" value={totals.rows} loading={q.isLoading} />
         <KpiTile label="Attendance rate" value={totals.rate === null ? '—' : `${totals.rate}%`} tone={totals.rate === null ? undefined : totals.rate >= 90 ? 'green' : totals.rate >= 75 ? 'amber' : 'red'} loading={q.isLoading} />

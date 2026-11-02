@@ -15,6 +15,7 @@ import {
 import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 /** Schedules, holidays, attendance days, sheet, corrections (03 F8, F9; 15 FR-HR-05 to 09). Leave lives in hr/leave.controller. */
@@ -108,6 +109,7 @@ export class AttendanceController {
   }
   @Get('attendance/sheet')
   @RequirePermission('attendance.view')
+  @ExportGuarded({ csvOnly: true })
   async sheet(@Req() req: any, @Query() query: unknown, @Res({ passthrough: true }) res: Response) {
     const q = AttendanceSheetQuerySchema.parse(query);
     const sheet = await this.attendanceService.sheet(req.scopeFilter, q);

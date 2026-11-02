@@ -29,8 +29,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       include: { role: true },
     });
 
-    if (!employee || employee.status === 'disabled') {
-      throw new UnauthorizedException('Account is disabled or not found');
+    // FR-SEC-24: any non-active employee (suspended, disabled, invited) is rejected on every request.
+    if (!employee || employee.status !== 'active') {
+      throw new UnauthorizedException('Account is not active');
     }
 
     if (sessionId) {

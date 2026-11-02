@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Plus, Download, Phone, Mail, Pencil, Trash2, Eye, UserPlus, Tag as TagIcon } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useExportAllowed } from '@/lib/queries/platform';
 import { useIdParam } from '@/lib/useIdParam';
 import { useContacts, useContact, useAccounts, useActivities, useCrmMutation, type Contact } from '@/lib/queries/crm';
 import { Button, Card, Badge, lifecycleTone, stageTone, Skeleton, EmptyState, Pagination, BulkBar, Modal, Field, Input, Select, Tabs, Avatar, Checkbox, useToast, PageHeader } from '@/components/ui';
@@ -29,6 +30,7 @@ function ContactsPage() {
 
 function Contacts() {
   const { can, me } = useAuth();
+  const exportAllowed = useExportAllowed();
   const toast = useToast();
   const [id, setId] = useIdParam();
   const [filters, setFiltersState] = useState<Filters>({});
@@ -76,7 +78,7 @@ function Contacts() {
   return (
     <div>
       <PageHeader title="Contacts" subtitle={`${rows.length} shown`} actions={<>
-        {can('crm.contacts.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
+        {exportAllowed && can('crm.contacts.export') && <Button icon={<Download size={14} />} onClick={exportCsv}>Export</Button>}
         {can('crm.contacts.create') && <Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing('new')}>New contact</Button>}
       </>} />
 

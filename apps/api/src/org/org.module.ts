@@ -9,8 +9,11 @@ import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
+  imports: [NotificationsModule, ChatModule],
   controllers: [
     EmployeesController,
     DepartmentsController,
