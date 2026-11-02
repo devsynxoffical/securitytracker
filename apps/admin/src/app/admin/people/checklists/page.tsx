@@ -188,7 +188,7 @@ function StartModal({ onClose }: { onClose: () => void }) {
     <Modal open onClose={onClose} title="Start checklist" width={480} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!employeeId} loading={start.isPending} onClick={() => start.mutate({ employeeId, kind, templateId: templateId || undefined, anchorDate: anchorDate || undefined }, { onSuccess: () => { toast.push('success', 'Checklist started'); onClose(); }, onError: (e) => toast.push('error', (e as Error).message) })}>Start</Button></>}>
       <div className="space-y-3">
         <Field label="Employee" required><EmployeeSelect value={employeeId} onChange={setEmployeeId} emptyLabel="Choose…" /></Field>
-        <Field label="Kind">
+        <Field label="Kind" group>
           <div className="flex gap-1.5">{(['onboarding', 'offboarding'] as const).map((k) => <button key={k} type="button" onClick={() => { setKind(k); setTemplateId(''); }} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${kind === k ? 'border-pri bg-pri-soft text-pri-2' : 'border-line bg-surface text-ink-2 hover:text-ink'}`}>{k === 'onboarding' ? <UserCheck size={13} /> : <UserX size={13} />}{titleCase(k)}</button>)}</div>
         </Field>
         <Field label="Template"><Select value={templateId} onChange={(e) => setTemplateId(e.target.value)}><option value="">Default for {kind}</option>{(templates.data ?? []).filter((t) => t.kind === kind).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></Field>

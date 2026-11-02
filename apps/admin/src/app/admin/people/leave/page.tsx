@@ -341,7 +341,7 @@ function RequestModal({ onClose }: { onClose: () => void }) {
     <Modal open onClose={onClose} title="New leave request" width={520} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!leaveTypeId || !dateFrom || !dateTo || !reason.trim()} loading={create.isPending} onClick={() => create.mutate({ employeeId: employeeId || undefined, leaveTypeId, dateFrom, dateTo: halfDay ? dateFrom : dateTo, halfDay, reason }, { onSuccess: () => { toast.push('success', 'Leave requested'); onClose(); }, onError: (e) => toast.push('error', (e as Error).message) })}>Submit</Button></>}>
       <div className="space-y-3">
         {can('attendance.approve') && <Field label="Employee"><EmployeeSelect value={employeeId} onChange={setEmployeeId} emptyLabel="Myself" /></Field>}
-        <Field label="Leave type" required>
+        <Field label="Leave type" required group>
           <div className="flex flex-wrap gap-1.5">
             {(types.data ?? []).map((t) => <button key={t.id} type="button" onClick={() => setLeaveTypeId(t.id)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition ${leaveTypeId === t.id ? 'border-pri bg-pri-soft text-pri-2' : 'border-line bg-surface text-ink-2 hover:text-ink'}`}><span className="h-2 w-2 rounded-full" style={{ background: t.colour }} />{t.name}{!t.paid && <span className="text-2xs normal-case tracking-normal text-ink-3">unpaid</span>}</button>)}
           </div>
