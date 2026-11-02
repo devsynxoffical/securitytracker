@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>CompanyOS.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- SQLite queue (09 section 4). Pinned. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CompanyOS.Shared/CompanyOS.Shared.csproj" />
+  </ItemGroup>
+</Project>

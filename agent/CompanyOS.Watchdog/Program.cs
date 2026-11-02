@@ -1,42 +1,18 @@
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using CompanyOS.Watchdog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace CompanyOS.Watchdog
-{
-    /// <summary>
-    /// Session 0 Windows Service that supervises the User Session Agent.
-    /// Ensures high availability, tamper recovery, and clean restarts.
-    /// </summary>
-    public class Program
-    {
-        private static bool _serviceRunning = true;
-        private static readonly string AgentExePath = @"C:\Program Files\CompanyOS\agent\CompanyOS.Agent.exe";
-
-        public static async Task Main(string[] args)
-        {
-            Console.WriteLine("[CompanyOS.Watchdog] Starting Session 0 Watchdog Service...");
-
-            while (_serviceRunning)
-            {
-                try
-                {
-                    var processes = Process.GetProcessesByName("CompanyOS.Agent");
-                    if (processes.Length == 0 && File.Exists(AgentExePath))
-                    {
-                        Console.WriteLine("[CompanyOS.Watchdog] Agent process missing. Relaunching in active user session...");
-                        // In production: uses WTSQueryUserToken + CreateProcessAsUser to launch in the logged-in session
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[CompanyOS.Watchdog] Health check exception: {ex.Message}");
-                }
-
-                await Task.Delay(10000); // 10 second supervision interval per spec
-            }
-        }
-    }
-}
+/// <summary>
+/// CompanyOS.Watchdog Windows service (09 section 6). Install:
+///   sc.exe create CompanyOSWatchdog binPath= "C:\Program Files\CompanyOS\agent\CompanyOS.Watchdog.exe" start= auto obj= LocalSystem
+///   sc.exe failure CompanyOSWatchdog reset= 86400 actions= restart/5000/restart/10000/restart/30000
+/// Runs as LocalSystem in session 0; needs SeTcbPrivilege (LocalSystem has it) for WTSQueryUserToken.
+/// Configuration: appsettings.json next to the exe, section "Watchdog" (see WatchdogOptions).
+/// </summary>
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddWindowsService(o => o.ServiceName = "CompanyOSWatchdog");
+builder.Logging.AddEventLog(o => { o.SourceName = "CompanyOS Watchdog"; o.LogName = "Application"; });
+builder.Services.Configure<WatchdogOptions>(builder.Configuration.GetSection("Watchdog"));
+builder.Services.AddHostedService<AgentSupervisor>();
+await builder.Build().RunAsync();
