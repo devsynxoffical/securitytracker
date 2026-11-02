@@ -11,7 +11,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { MailService } from './mail.service.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { JwtAuthGuard, Public } from '../auth/guards/jwt-auth.guard.js';
 import { RbacGuard } from '../auth/guards/rbac.guard.js';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator.js';
 import {
@@ -24,12 +24,14 @@ import {
 } from '@company-os/contracts';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { PermissionsService } from '../auth/permissions.service.js';
+import { MailSyncService } from './mail-sync.service.js';
 
 @Controller('mail')
 export class MailController {
   constructor(
     private readonly mailService: MailService,
     private readonly permissions: PermissionsService,
+    private readonly mailSync: MailSyncService,
   ) {}
 
   @Get('oauth/url')
@@ -39,6 +41,8 @@ export class MailController {
     return this.mailService.getConnectUrl(req.user.companyId, req.user.id);
   }
 
+  /** Google redirects here without our JWT; the signed state carries the admin identity. */
+  @Public()
   @Get('oauth/callback')
   async handleOAuthCallback(
     @Query('code') code: string,
@@ -47,9 +51,20 @@ export class MailController {
     return this.mailService.handleOAuthCallback(code, state);
   }
 
+  /** Pub/Sub push: authenticated by the OIDC token when GMAIL_PUSH_AUDIENCE is set (10 section 3). */
+  @Public()
   @Post('google/push')
-  async handleGooglePush(@Body() body: any) {
-    return this.mailService.handlePushWebhook(body);
+  async handleGooglePush(@Body() body: any, @Headers('authorization') authorization?: string) {
+    return this.mailService.handlePushWebhook(body, authorization);
+  }
+
+  /** Manual sync trigger for admins (FR-MAIL-20). Runs inline and returns counts. */
+  @Get('mailboxes/:id/sync')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.accounts.manage')
+  async syncMailbox(@Request() req: any, @Param('id') mailboxId: string) {
+    const mailbox = await this.mailService.getCompanyMailbox(req.user.companyId, mailboxId);
+    return this.mailSync.syncMailbox(mailbox.id);
   }
 
   @Get('mailboxes')

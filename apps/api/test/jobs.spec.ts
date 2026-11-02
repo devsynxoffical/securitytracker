@@ -176,12 +176,13 @@ describe('MailJobsService', () => {
     const prisma = prismaMock();
     const { clock, config, registry } = deps();
     const conversations: any = { unsnoozeDue: vi.fn().mockResolvedValue({ reopened: 3 }) };
-    const svc = new MailJobsService(prisma, clock, config, conversations, registry);
+    const mailSync: any = { configured: () => false, renewExpiringWatches: vi.fn(), syncMailbox: vi.fn() };
+    const trigger: any = { setHandler: vi.fn() };
+    const svc = new MailJobsService(prisma, clock, config, conversations, registry, mailSync, trigger);
     expect(await svc.unsnooze()).toEqual({ reopened: 3 });
     prisma.mailbox.findMany.mockResolvedValue([{ id: UUID(5) }]);
     expect(await svc.enqueueAll()).toEqual({ mailboxes: 1, enqueued: 0, queueAvailable: false });
-    prisma.mailbox.count.mockResolvedValue(2);
-    expect(await svc.watchRenew()).toMatchObject({ expiringWithin24h: 2, renewed: 0 });
+    expect(await svc.watchRenew()).toMatchObject({ renewed: 0, skipped: true });
   });
 });
 

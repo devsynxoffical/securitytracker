@@ -7,13 +7,16 @@ import { MailConfigService } from './mail-config.service.js';
 import { MailConfigController } from './mail-config.controller.js';
 import { CrmThreadsController } from './crm-threads.controller.js';
 import { PermissionsService } from '../auth/permissions.service.js';
+import { GmailClientFactory } from './gmail-client.js';
+import { MailSyncService } from './mail-sync.service.js';
+import { MailSyncTrigger, MAIL_SYNC_TOKEN } from './mail-sync.trigger.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { TargetsModule } from '../targets/targets.module.js';
 
 @Module({
   imports: [NotificationsModule, TargetsModule],
   controllers: [MailConfigController, MailController, ConversationsController, CrmThreadsController],
-  providers: [MailService, ConversationsService, MailConfigService, PermissionsService],
-  exports: [MailService, ConversationsService],
+  providers: [MailService, ConversationsService, MailConfigService, PermissionsService, GmailClientFactory, MailSyncService, MailSyncTrigger, { provide: MAIL_SYNC_TOKEN, useExisting: MailSyncService }],
+  exports: [MailService, ConversationsService, MailSyncService, MailSyncTrigger],
 })
 export class MailModule {}

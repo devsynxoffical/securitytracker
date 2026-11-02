@@ -32,7 +32,7 @@ function services(prisma: any) {
   const notifications: any = { sendNotification: vi.fn().mockResolvedValue({}) };
   const gateway: any = { emitToUser: vi.fn() };
   const targets: any = { recordMetricEvent: vi.fn() };
-  const mail = new MailService(prisma, clock, config, { get: vi.fn(), set: vi.fn() } as any, gateway, targets);
+  const mail = new MailService(prisma, clock, config, { get: vi.fn(), set: vi.fn() } as any, gateway, targets, { configured: () => false, oauth: () => null, forRefreshToken: vi.fn() } as any, { trigger: vi.fn().mockResolvedValue(false), setHandler: vi.fn() } as any);
   const conversations = new ConversationsService(prisma, clock, notifications, mail);
   const mailConfig = new MailConfigService(prisma, clock, config);
   return { clock, notifications, mail, conversations, mailConfig };

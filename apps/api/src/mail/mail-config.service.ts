@@ -98,7 +98,7 @@ export class MailConfigService {
     const items = rows.map((m) => {
       const staleSync = m.lastSyncAt ? now.getTime() - m.lastSyncAt.getTime() > 15 * 60_000 : true;
       const watchExpired = m.watchExpiresAt ? m.watchExpiresAt.getTime() < now.getTime() : true;
-      const health = m.tokenStatus !== 'ok' ? 'error' : staleSync || watchExpired ? 'warning' : 'ok';
+      const health = m.tokenStatus === 'demo' ? 'demo' : m.tokenStatus !== 'ok' ? 'error' : staleSync || watchExpired ? 'warning' : 'ok';
       return { ...m, assignmentsCount: m._count.assignments, threadsCount: m._count.threads, staleSync, watchExpired, health };
     });
     return { items, googleConfigured: this.googleConfigured() };

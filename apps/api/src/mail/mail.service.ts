@@ -22,6 +22,9 @@ import {
   NotificationType,
 } from '@company-os/contracts';
 import { Prisma } from '@prisma/client';
+import { UnprocessableEntityException } from '@nestjs/common';
+import { GmailClient, GmailClientFactory, buildRawMessage } from './gmail-client.js';
+import { MailSyncTrigger, DEMO_TOKEN_STATUS } from './mail-sync.trigger.js';
 
 @Injectable()
 export class MailService {
@@ -35,8 +38,11 @@ export class MailService {
     private readonly redis: RedisService,
     private readonly gateway: NotificationsGateway,
     private readonly targetsService: TargetsService,
+    private readonly gmail: GmailClientFactory,
+    private readonly syncTrigger: MailSyncTrigger,
   ) {
     this.encryptionKey =
+      this.config.get<string>('ENCRYPTION_SECRET') ||
       this.config.get<string>('ENCRYPTION_KEY') ||
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   }
@@ -69,52 +75,58 @@ export class MailService {
   }
 
   /**
-   * Exchanges authorization code for refresh token, verifies domain, and stores encrypted.
+   * Exchanges the authorization code for a refresh token, reads the mailbox profile and stores
+   * the token encrypted (10 section 4.1). Then starts the watch and the initial sync.
    */
   async handleOAuthCallback(code: string, state: string) {
     const parts = state.split('.');
     if (parts.length < 2) {
       throw new BadRequestException('Invalid OAuth state parameter');
     }
-
     const statePayload = Buffer.from(parts[1]!, 'base64').toString('utf-8');
-    const [companyId, adminId] = statePayload.split(':');
-
-    if (!companyId || !adminId) {
+    const [companyId, adminId, issuedAt] = statePayload.split(':');
+    if (!companyId || !adminId || CryptoUtil.sha256(statePayload) !== parts[0]) {
       throw new BadRequestException('Invalid OAuth state format');
     }
+    if (issuedAt && this.clock.now().getTime() - Number(issuedAt) > 15 * 60_000) {
+      throw new BadRequestException('OAuth state expired, start the connection again');
+    }
+    const oauth = this.gmail.oauth();
+    if (!oauth) {
+      throw new UnprocessableEntityException('Google OAuth client is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)');
+    }
 
-    // Encrypt refresh token (for testing/mocking, mock token if in dev mode)
-    const simulatedRefreshToken = `mock_refresh_token_${Date.now()}_${code.slice(0, 8)}`;
-    const encryptedRefreshToken = CryptoUtil.encryptField(simulatedRefreshToken, this.encryptionKey);
-    const mailboxAddress = `sales-${code.slice(0, 4).toLowerCase()}@company.com`;
+    const tokens = await GmailClient.exchangeCode(oauth, code);
+    if (!tokens.refreshToken) {
+      throw new BadRequestException('Google did not return a refresh token. Remove the app from the account\'s connected apps and connect again.');
+    }
+    const client = new GmailClient(oauth, tokens.refreshToken);
+    const profile = await client.getProfile();
+    const address = profile.emailAddress.toLowerCase();
+    const encryptedRefreshToken = CryptoUtil.encryptField(tokens.refreshToken, this.encryptionKey);
 
     const mailbox = await this.prisma.mailbox.upsert({
-      where: { address: mailboxAddress },
+      where: { address },
       create: {
         companyId,
-        address: mailboxAddress,
-        displayName: 'Sales Department',
+        address,
+        displayName: address.split('@')[0]!,
+        googleUserId: null,
         refreshTokenEnc: encryptedRefreshToken,
         tokenStatus: 'ok',
+        historyId: null,
         connectedBy: adminId,
         createdAt: this.clock.now(),
       },
       update: {
         refreshTokenEnc: encryptedRefreshToken,
         tokenStatus: 'ok',
-        lastSyncAt: this.clock.now(),
+        historyId: null,
       },
     });
 
-    // Automatically assign the admin full permissions
     await this.prisma.mailboxAssignment.upsert({
-      where: {
-        mailboxId_employeeId: {
-          mailboxId: mailbox.id,
-          employeeId: adminId,
-        },
-      },
+      where: { mailboxId_employeeId: { mailboxId: mailbox.id, employeeId: adminId } },
       create: {
         mailboxId: mailbox.id,
         employeeId: adminId,
@@ -122,11 +134,29 @@ export class MailService {
         assignedBy: adminId,
         createdAt: this.clock.now(),
       },
-      update: {
-        permissions: Object.values(MailboxPermission),
-      },
+      update: { permissions: Object.values(MailboxPermission) },
     });
 
+    // Watch first (best effort; needs GMAIL_PUBSUB_TOPIC), then the initial sync in the background.
+    if (oauth.pubsubTopic) {
+      try {
+        const w = await client.watch();
+        await this.prisma.mailbox.update({ where: { id: mailbox.id }, data: { watchExpiresAt: w.expiration } });
+      } catch (e) {
+        this.logger.warn(`watch failed for ${mailbox.id}: ${(e as Error).message}`);
+      }
+    }
+    await this.syncTrigger.trigger(mailbox.id);
+
+    await this.prisma.mailAudit.create({
+      data: { mailboxId: mailbox.id, employeeId: adminId, action: 'connect', subject: address, ip: 'oauth-callback', occurredAt: this.clock.now() },
+    });
+    return { id: mailbox.id, address: mailbox.address, tokenStatus: mailbox.tokenStatus };
+  }
+
+  async getCompanyMailbox(companyId: string, mailboxId: string) {
+    const mailbox = await this.prisma.mailbox.findFirst({ where: { id: mailboxId, companyId } });
+    if (!mailbox) throw new NotFoundException('Mailbox not found');
     return mailbox;
   }
 
@@ -318,10 +348,26 @@ export class MailService {
       where: { id: mailboxId },
     });
     if (!mailbox) throw new NotFoundException('Mailbox not found');
+    this.assertNotDemo(mailbox);
+    if (mailbox.tokenStatus !== 'ok') {
+      throw new UnprocessableEntityException('Mailbox is not connected. Reconnect it under Mail > Mailboxes.');
+    }
 
     const now = this.clock.now();
-    const gmailMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const gmailThreadId = dto.replyToThreadId || `th_${Date.now()}`;
+    let gmailMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    let gmailThreadId = dto.replyToThreadId || `th_${Date.now()}`;
+
+    // Real send through Gmail when the OAuth client is configured (10 section 4.4).
+    if (this.gmail.configured()) {
+      const replyTo = dto.replyToThreadId
+        ? await this.prisma.mailThread.findFirst({ where: { mailboxId, OR: [{ id: dto.replyToThreadId }, { gmailThreadId: dto.replyToThreadId }] }, select: { gmailThreadId: true } })
+        : null;
+      const raw = buildRawMessage({ from: mailbox.address, to: dto.to, cc: dto.cc, bcc: dto.bcc, subject: dto.subject, html: dto.html, inReplyTo: dto.replyToMessageId, references: dto.replyToMessageId });
+      const client = this.gmail.forRefreshToken(CryptoUtil.decryptField(mailbox.refreshTokenEnc, this.encryptionKey));
+      const sent = await client.send(raw, replyTo?.gmailThreadId);
+      gmailMessageId = sent.id;
+      gmailThreadId = sent.threadId;
+    }
 
     // Upsert thread
     const thread = await this.prisma.mailThread.upsert({
@@ -464,35 +510,49 @@ export class MailService {
   }
 
   /**
-   * Handles incoming Google Pub/Sub push webhook.
+   * Handles the Google Pub/Sub push webhook (10 section 4.2). The OIDC bearer token is verified
+   * against GMAIL_PUSH_AUDIENCE when set; the sync itself is queued (or run inline) per mailbox.
    */
-  async handlePushWebhook(data: { message?: { data?: string } }) {
+  async handlePushWebhook(data: { message?: { data?: string } }, authorization?: string) {
     if (!data?.message?.data) return { received: false };
-
+    const audience = this.config.get<string>('GMAIL_PUSH_AUDIENCE');
+    if (audience) {
+      const ok = await this.verifyPushToken(authorization, audience);
+      if (!ok) throw new ForbiddenException('Invalid Pub/Sub push token');
+    }
     try {
       const decoded = Buffer.from(data.message.data, 'base64').toString('utf-8');
-      const payload = JSON.parse(decoded);
-      this.logger.log(`Google Pub/Sub push event received for: ${payload.emailAddress}`);
-
-      const mailbox = await this.prisma.mailbox.findUnique({
-        where: { address: payload.emailAddress },
-        include: { assignments: true },
-      });
-
-      if (mailbox) {
-        // Broadcast new mail event to all assigned employees
-        for (const assignment of mailbox.assignments) {
-          this.gateway.emitToUser(assignment.employeeId, WebSocketEvents.MAIL_NEW, {
-            mailboxId: mailbox.id,
-            threadId: payload.historyId || 'sync',
-          });
-        }
-      }
-
-      return { received: true };
+      const payload = JSON.parse(decoded) as { emailAddress?: string; historyId?: string };
+      if (!payload.emailAddress) return { received: false };
+      const mailbox = await this.prisma.mailbox.findUnique({ where: { address: payload.emailAddress.toLowerCase() }, select: { id: true, tokenStatus: true } });
+      if (!mailbox || mailbox.tokenStatus !== 'ok') return { received: true, queued: false };
+      const queued = await this.syncTrigger.trigger(mailbox.id);
+      return { received: true, queued };
     } catch (err) {
       this.logger.error(`Error processing Pub/Sub push: ${(err as Error).message}`);
       return { received: false };
+    }
+  }
+
+  /** Google's tokeninfo endpoint validates the OIDC token; we check audience and verified email. */
+  private async verifyPushToken(authorization: string | undefined, audience: string): Promise<boolean> {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`);
+      if (!res.ok) return false;
+      const info = (await res.json()) as { aud?: string; email_verified?: string | boolean; email?: string };
+      const expectedSa = this.config.get<string>('GMAIL_PUSH_SERVICE_ACCOUNT');
+      return info.aud === audience && String(info.email_verified) === 'true' && (!expectedSa || info.email === expectedSa);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Demo mailboxes carry synthetic data and never talk to Google. */
+  assertNotDemo(mailbox: { tokenStatus: string }) {
+    if (mailbox.tokenStatus === DEMO_TOKEN_STATUS) {
+      throw new UnprocessableEntityException('This is a demo mailbox with synthetic data. Connect a real Google Workspace mailbox to send or sync.');
     }
   }
 

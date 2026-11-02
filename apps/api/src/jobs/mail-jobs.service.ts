@@ -5,6 +5,8 @@ import { Queue, Worker } from 'bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { ConversationsService } from '../mail/conversations.service';
+import { MailSyncService } from '../mail/mail-sync.service';
+import { MailSyncTrigger } from '../mail/mail-sync.trigger';
 import { JobRegistry, JobResult } from './job-registry';
 
 export const GMAIL_SYNC_QUEUE = 'gmail-sync';
@@ -26,11 +28,15 @@ export class MailJobsService implements OnModuleInit, OnModuleDestroy {
     private config: ConfigService,
     private conversations: ConversationsService,
     private registry: JobRegistry,
+    private mailSync: MailSyncService,
+    private syncTrigger: MailSyncTrigger,
   ) {}
 
   onModuleInit() {
     this.registry.register('mail-unsnooze', '* * * * *', 'Reopens snoozed conversations whose time has come', () => this.unsnooze());
-    this.registry.register('gmail-watch-renew', '0 3 * * *', 'Renews Gmail watch for connected mailboxes (requires Google credentials)', () => this.watchRenew());
+    this.registry.register('gmail-watch-renew', '0 3 * * *', 'Renews Gmail watch for connected mailboxes expiring within 24 h', () => this.watchRenew());
+    // The API's push webhook and OAuth callback hand syncs to the queue when one is available.
+    this.syncTrigger.setHandler((mailboxId) => this.enqueueSync(mailboxId));
     this.registry.register('gmail-sync', '*/2 * * * *', 'Fallback: enqueues an incremental sync for every healthy mailbox', () => this.enqueueAll());
     if (this.config.get<string>('WORKER_ENABLED') === 'true') this.startWorker();
   }
@@ -60,16 +66,11 @@ export class MailJobsService implements OnModuleInit, OnModuleDestroy {
     return { reopened: r.reopened };
   }
 
-  /**
-   * Limitation: MailService has no `users.watch` renewal method yet (10 section 4.2 step
-   * "gmail-watch-renew"). Until it exists this job reports the mailboxes whose watch expires within
-   * 24 h so the health screen (FR-MAIL-20) can show them; nothing is renewed.
-   */
+  /** 10 section 4.2: renews users.watch for healthy mailboxes whose watch expires within 24 h. */
   async watchRenew(): Promise<JobResult> {
-    const now = this.clock.now();
-    const soon = new Date(now.getTime() + 24 * 3_600_000);
-    const expiring = await this.prisma.mailbox.count({ where: { tokenStatus: 'ok', OR: [{ watchExpiresAt: null }, { watchExpiresAt: { lte: soon } }] } });
-    return { expiringWithin24h: expiring, renewed: 0, renewalImplemented: false };
+    if (!this.mailSync.configured()) return { renewed: 0, skipped: true, reason: 'google_not_configured' };
+    const r = await this.mailSync.renewExpiringWatches();
+    return { ...r };
   }
 
   /** Called by the push webhook path or the fallback cron. Deduplicates by mailbox id. */
@@ -103,18 +104,15 @@ export class MailJobsService implements OnModuleInit, OnModuleDestroy {
     return this.queue;
   }
 
-  /**
-   * Limitation: incremental history sync (users.history.list -> ConversationsService.ingestInbound)
-   * needs Google credentials and a Gmail client that MailService does not expose yet. The worker
-   * acknowledges jobs and records the attempt so the pipeline is wired end to end.
-   */
+  /** Worker: incremental history sync per mailbox (initial sync when no historyId yet). */
   private startWorker() {
     this.worker = new Worker(
       GMAIL_SYNC_QUEUE,
       async (job) => {
         const mailboxId = String(job.data.mailboxId);
-        await this.prisma.mailbox.updateMany({ where: { id: mailboxId }, data: { lastSyncAt: this.clock.now() } });
-        return { mailboxId, synced: 0, syncImplemented: false };
+        if (!this.mailSync.configured()) return { mailboxId, skipped: true, reason: 'google_not_configured' };
+        const r = await this.mailSync.syncMailbox(mailboxId);
+        return { mailboxId, mode: r.mode, fetched: r.fetched, inbound: r.inbound, outbound: r.outbound };
       },
       { connection: this.connection(), concurrency: 2 },
     );

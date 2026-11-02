@@ -69,6 +69,8 @@ describe('MailService (Unit)', () => {
       redisService,
       gatewayMock,
       targetsMock,
+      { configured: () => false, oauth: () => null, forRefreshToken: vi.fn() } as any,
+      { trigger: vi.fn().mockResolvedValue(false), setHandler: vi.fn() } as any,
     );
   });
 
@@ -87,7 +89,7 @@ describe('MailService (Unit)', () => {
       permissions: [MailboxPermission.READ, MailboxPermission.SEND],
     });
     prismaMock.mailbox.findUnique.mockResolvedValue({
-      id: 'mb-1',
+      tokenStatus: 'ok', refreshTokenEnc: 'x', id: 'mb-1',
       address: 'sales@company.com',
     });
     prismaMock.mailThread.upsert.mockResolvedValue({

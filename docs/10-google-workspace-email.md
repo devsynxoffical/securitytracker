@@ -139,3 +139,16 @@ Disabling an employee or removing an assignment needs no action at Google: the e
 ## 9. Out of scope for 1.0
 
 Calendar, contacts sync, label management, mail templates and sequences, tracking pixels, thread assignment, non-Google mail providers.
+
+## 10. Implementation notes
+
+| Item | Where |
+|---|---|
+| Gmail REST client (token refresh, history, messages, watch, send, thread modify) | `apps/api/src/mail/gmail-client.ts`. Plain `fetch`, no Google SDK. 429 and 5xx retry with exponential backoff capped at 60 s; `invalid_grant` is treated as 401 |
+| Sync | `apps/api/src/mail/mail-sync.service.ts`. Initial sync = `newer_than:30d` metadata; incremental = `users.history.list` from the stored `historyId`; 404 on history drops the id and runs a full resync. Inbound mail goes through `ConversationsService.ingestInbound` (reopen, CRM linking); outbound mail is stored without touching conversation state |
+| Token revoked | Mailbox `token_status = revoked`, a `security_alerts` row `mailbox_token_revoked` and a notification to the connecting admin. Other failures set `error`. Both show on Mail > Mailboxes with a Reconnect action |
+| Triggers | OAuth callback and the Pub/Sub webhook call `MailSyncTrigger`, which hands the mailbox to the BullMQ `gmail-sync` queue when the worker is running and otherwise syncs inline. `GET /mail/mailboxes/:id/sync` (mail.accounts.manage) runs a sync on demand and returns counts. The fallback cron enqueues every healthy mailbox every 2 minutes; `gmail-watch-renew` renews watches expiring within 24 h |
+| Push verification | When `GMAIL_PUSH_AUDIENCE` is set the webhook validates the OIDC bearer token through Google's tokeninfo endpoint (audience, verified email, optional `GMAIL_PUSH_SERVICE_ACCOUNT`). Unset in development |
+| Environment | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (defaults to `http://localhost:4000/api/v1/mail/oauth/callback`), `GMAIL_PUBSUB_TOPIC` (`projects/<id>/topics/gmail-push`), `GMAIL_PUSH_AUDIENCE`, `GMAIL_PUSH_SERVICE_ACCOUNT`, `ENCRYPTION_SECRET` (refresh tokens at rest) |
+| Demo mailbox | `SEED_DEMO_MAILBOX=true` on the seed creates `demo-sales@example.com` with `token_status = demo` and twelve synthetic threads. Send and sync refuse demo mailboxes with 422; health shows `demo` |
+| Not implemented | Message bodies on demand (4.3 shows snippets only), attachment download, drafts in Gmail, archive and mark-read propagation to Gmail labels (local state only), domain restriction on connect (any Google account the admin signs in as is accepted; restrict with the Workspace trusted-app setting in section 3) |
