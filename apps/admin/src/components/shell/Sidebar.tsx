@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { ChevronDown, LogOut, History } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { Avatar } from '@/components/ui';
 import { fullName } from '@/lib/format';
@@ -77,18 +77,6 @@ export function Sidebar() {
             </div>
           );
         })}
-        <div className="pt-2">
-          <Link
-            href="/admin/legacy"
-            className={clsx(
-              'flex items-center gap-2.5 rounded-lg px-2.5 py-[6px] text-[12px] font-medium text-ink-3 transition hover:bg-surface-2 hover:text-ink',
-              pathname === '/admin/legacy' && 'bg-pri-soft text-pri-2',
-            )}
-          >
-            <History size={15} strokeWidth={1.85} />
-            <span className="flex-1 truncate">Legacy console</span>
-          </Link>
-        </div>
       </nav>
 
       {me && (

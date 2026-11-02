@@ -18,7 +18,6 @@ const titles: Record<string, [string, string]> = {
   '/admin/crm/activities': ['CRM', 'Activities'],
   '/admin/crm/import': ['CRM', 'Import'],
   '/admin/crm/settings': ['CRM', 'Settings'],
-  '/admin/legacy': ['Operations', 'Legacy console'],
 };
 
 export function Topbar() {

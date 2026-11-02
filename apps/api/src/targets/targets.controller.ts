@@ -33,7 +33,7 @@ export class TargetsController {
     @Request() req: any,
     @Body(new ZodValidationPipe(CreateTargetSchema)) dto: CreateTargetDto,
   ) {
-    return this.targetsService.createTarget(req.user.companyId, req.user.sub, dto);
+    return this.targetsService.createTarget(req.user.companyId, req.user.id, dto);
   }
 
   @Get()
@@ -50,7 +50,7 @@ export class TargetsController {
   async getMyProgress(@Request() req: any) {
     return this.targetsService.getEmployeeTargetProgress(
       req.user.companyId,
-      req.user.sub,
+      req.user.id,
     );
   }
 
