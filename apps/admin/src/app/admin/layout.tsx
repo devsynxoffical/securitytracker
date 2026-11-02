@@ -3,14 +3,16 @@
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 import { ToastProvider, Skeleton } from '@/components/ui';
-import { Sidebar } from '@/components/shell/Sidebar';
+import { Sidebar, SIDEBAR_WIDTH, SIDEBAR_COLLAPSED } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
 import { LoginScreen } from '@/components/shell/LoginScreen';
 import { ApiError } from '@/lib/api';
 
 function Gate({ children }: { children: ReactNode }) {
   const { status } = useAuth();
+  const { sidebarCollapsed } = useTheme();
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg">
@@ -26,9 +28,9 @@ function Gate({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-bg">
       <Sidebar />
-      <div className="pl-[232px]">
+      <div className="transition-[padding] duration-150" style={{ paddingLeft: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH }}>
         <Topbar />
-        <main className="px-[22px] py-5">{children}</main>
+        <main className="fade-in px-[22px] py-5">{children}</main>
       </div>
     </div>
   );
@@ -49,11 +51,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>
-        <AuthProvider>
-          <Gate>{children}</Gate>
-        </AuthProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <Gate>{children}</Gate>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

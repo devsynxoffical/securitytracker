@@ -4,59 +4,183 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------------
+   Design tokens v2 (company-os-design/DESIGN-SYSTEM.md sections 1 and 9).
+   Tailwind colour classes map to these variables, so dark mode is a token swap.
+   ------------------------------------------------------------------------ */
 :root {
+  color-scheme: light;
   --bg: #F5F6F3;
   --surface: #FFFFFF;
   --surface-2: #FAFBF9;
+  --surface-3: #F1F3EF;
   --line: #E4E7E1;
   --line-2: #EEF0EC;
   --ink: #151A1E;
   --ink-2: #4A535B;
   --ink-3: #8A939B;
   --pri: #0F6B5C;
-  --pri-hover: #0B5548;
+  --pri-2: #0B5548;
   --pri-soft: #E3F1EE;
   --green: #1E8E5A;
+  --green-text: #14673F;
   --green-soft: #E4F4EB;
   --amber: #B26A00;
+  --amber-text: #8A5200;
   --amber-soft: #FCF0DA;
+  --amber-bar: #E0921A;
   --red: #C2362B;
+  --red-text: #9E2A21;
   --red-soft: #FBE7E4;
   --blue: #2459C4;
+  --blue-text: #1C469B;
   --blue-soft: #E6EDFB;
   --violet: #6B46C1;
+  --violet-text: #55359C;
   --violet-soft: #EEE8FA;
-  --r: 10px;
+  --gray: #5C666E;
+  --gray-soft: #ECEEEB;
+  --gray-bar: #B5BCC2;
+  --overlay: rgba(21, 26, 30, 0.38);
   --shadow-card: 0 1px 2px rgba(21, 26, 30, 0.05);
+  --shadow-pop: 0 8px 28px rgba(21, 26, 30, 0.14), 0 1px 3px rgba(21, 26, 30, 0.08);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.22);
+  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.15);
+  --ring: 0 0 0 3px var(--pri-soft);
+
+  /* Chart series: validated categorical order (dataviz reference palette). Never cycled. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --grid: #EEF0EC;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0F1214;
+  --surface: #161A1D;
+  --surface-2: #1C2125;
+  --surface-3: #22282D;
+  --line: #2A3137;
+  --line-2: #222930;
+  --ink: #ECEFF1;
+  --ink-2: #AEB7BE;
+  --ink-3: #7B858D;
+  --pri: #3FA58F;
+  --pri-2: #8FD4C3;
+  --pri-soft: #15302B;
+  --green: #4CBF86;
+  --green-text: #8FDDB4;
+  --green-soft: #15301F;
+  --amber: #E0A24A;
+  --amber-text: #F3C97F;
+  --amber-soft: #352A12;
+  --amber-bar: #E0921A;
+  --red: #E36A5F;
+  --red-text: #F3A49B;
+  --red-soft: #3A1C19;
+  --blue: #6B93E8;
+  --blue-text: #A9C0F5;
+  --blue-soft: #18233D;
+  --violet: #A08BE6;
+  --violet-text: #C8BBF4;
+  --violet-soft: #26203D;
+  --gray: #AEB7BE;
+  --gray-soft: #242A2F;
+  --gray-bar: #4A545C;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.7);
+  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.6);
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --grid: #222930;
+}
+
+html {
+  height: 100%;
 }
 
 body {
   margin: 0;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .font-mono {
   font-family: 'IBM Plex Mono', monospace;
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Focus ring: 1px primary border plus 3px soft ring (DESIGN-SYSTEM section 3) */
+:where(input, select, textarea, button, a, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+/* Density: data-density="compact" tightens table and list rows */
+:root[data-density='compact'] {
+  --row-py: 6px;
 }
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 4px;
+:root {
+  --row-py: 10px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+
+/* Motion: short, purposeful; honour reduced motion */
+.fade-in {
+  animation: fade-in 140ms ease-out;
 }
+.slide-in-right {
+  animation: slide-in-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pop-in {
+  animation: pop-in 120ms ease-out;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes pop-in {
+  from { transform: translateY(-4px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-in, .slide-in-right, .pop-in { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* Scrollbars follow the theme */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-bar); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--ink-3); }
+
+/* Hide row actions until hover or focus-within (HubSpot-style quiet rows) */
+.row-actions { opacity: 0; transition: opacity 120ms; }
+tr:hover .row-actions, tr:focus-within .row-actions, .hover-reveal:hover .row-actions, .hover-reveal:focus-within .row-actions { opacity: 1; }
+
+/* Prose for markdown-ish descriptions */
+.prose-sm p { margin: 0 0 0.6em; }
+.prose-sm ul { padding-left: 1.2em; margin: 0 0 0.6em; }

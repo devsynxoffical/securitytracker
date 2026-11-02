@@ -121,3 +121,24 @@ Admin Panel (1440 x 900 reference, responsive down to 1280):
 3. Build the shared components first (packages/ui): Button, Input, Select, Badge, Table, Card, KpiCard, ProgressBar, TimelineBar, Tabs, Segmented, Modal, Drawer, Banner, Avatar, AppShell (desktop), AdminShell.
 4. Fonts: IBM Plex Sans and IBM Plex Mono. Bundle them in the desktop app (no network dependency).
 5. All example names, numbers and domains in the images are sample data.
+
+## 9. Design system v2 (admin panel)
+
+Implemented in `apps/admin/src/app/globals.css` (tokens), `tailwind.config.ts` (classes map to tokens), `components/ui/index.tsx` (base primitives), `components/ui/advanced.tsx` (data table, record layout, menus, KPI tiles), `components/ui/charts.tsx` (SVG charts) and `components/shell/*`.
+
+| Area | Rule |
+|---|---|
+| Themes | Light is default. Dark is a token swap on `<html data-theme="dark">`, chosen per viewer (light, dark, system) from the top bar. Every colour class resolves to a CSS variable, so no component carries theme logic |
+| Type scale | 2xs 10.5px uppercase labels, xs 11.5, sm 12.5, base 13, md 14, lg 16 (page title), xl 18 (record title), 2xl 24 mono KPI, 3xl 30 mono timer |
+| Elevation | card `0 1px 2px`, popover `0 8px 28px`, modal `0 20px 60px`. Popovers and menus animate in 120 ms; drawers slide 180 ms; reduced motion disables all |
+| Density | `data-density="compact"` tightens table rows from 10px to 6px vertical padding. Toggle in the top bar, per viewer |
+| Focus | 1px primary border plus 3px primary-soft ring on every focusable element (`:focus-visible`) |
+| Charts | Series colours `--series-1..8` are the validated categorical order (dataviz method) in both themes. Assign in fixed order, never cycled; max 6 slices in a donut, then Other. Text never wears the series colour. Every chart has hover tooltips and a table toggle. Status hues (green, amber, red) are reserved for status, never for series |
+| Sidebar | 232px grouped and collapsible; 60px icon rail when collapsed (tooltips show labels). Groups open for the current route |
+| Top bar | Breadcrumb from the navigation config, page title, search field that opens the command palette, density, theme, notifications bell with unread count |
+| Command palette | ⌘K / Ctrl+K. Searches leads, contacts, accounts and deals through the server (scope applied), jumps to any screen the user may see, offers quick create actions. Arrow keys, Enter, Esc |
+| Lists | `DataTable`: sticky header, sortable columns with indicator, column chooser persisted per viewer, row selection with indeterminate header, quiet row actions revealed on hover or focus, skeleton rows, empty and error states built in. Above it: `ViewTabs` (saved views with counts) and `FilterChip`s (label: value, clear with ×) |
+| Records | `RecordLayout`: header card (avatar, title, badges, actions, one primary), left rail of editable properties (`PropertyList`, click to edit, Enter saves), centre timeline (`TimelineItem`), right rail of associations (`AssociationCard`). Drawers remain for quick look; full records open the layout |
+| KPI tiles | `KpiTile`: label, mono value, delta with direction, sparkline of the trend, optional click-through. Four to six per row |
+| Menus and hints | `Menu` for row and header actions, `Tooltip` on icon-only buttons, `Kbd` for shortcuts |
+| Per-viewer storage | Only conveniences: theme, density, sidebar state, hidden columns. Every read and write is guarded; the UI renders correctly without it |
