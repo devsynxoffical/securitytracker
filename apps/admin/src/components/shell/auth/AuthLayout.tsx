@@ -41,7 +41,7 @@ function BrandPanel() {
   return (
     <aside
       className="relative hidden w-[44%] shrink-0 flex-col justify-between overflow-hidden p-12 text-white lg:flex"
-      style={{ background: 'linear-gradient(160deg, var(--pri) 0%, var(--pri-2) 100%)' }}
+      style={{ background: 'linear-gradient(160deg, #0E7C66 0%, #0A5B4B 100%)' }}
       aria-hidden
     >
       <div
