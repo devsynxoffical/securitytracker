@@ -32,6 +32,19 @@ export const AdminLoginSchema = z.object({
 });
 export type AdminLoginDto = z.infer<typeof AdminLoginSchema>;
 
+/** Step 1 of admin 2FA enrolment: temp token from login -> secret + otpauth URL. */
+export const TwoFactorEnrollSchema = z.object({
+  tempToken: z.string().min(10),
+});
+export type TwoFactorEnrollDto = z.infer<typeof TwoFactorEnrollSchema>;
+
+/** Step 2 of enrolment, and the verify step of a normal 2FA login. */
+export const TwoFactorCodeSchema = z.object({
+  tempToken: z.string().min(10),
+  totpCode: z.string().length(6),
+});
+export type TwoFactorCodeDto = z.infer<typeof TwoFactorCodeSchema>;
+
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(10),

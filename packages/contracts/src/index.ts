@@ -8,6 +8,7 @@ export * from './shift.js';
 export * from './attendance.js';
 export * from './tracking.js';
 export * from './crm.js';
+export * from './crm-objects.js';
 export * from './mail.js';
 export * from './targets.js';
 export * from './notifications.js';

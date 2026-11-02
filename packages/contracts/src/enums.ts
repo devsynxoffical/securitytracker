@@ -141,3 +141,94 @@ export const MailboxPermission = {
   MARK_READ: 'mark_read',
 } as const;
 export type MailboxPermissionType = (typeof MailboxPermission)[keyof typeof MailboxPermission];
+
+export const CrmEntityType = {
+  LEAD: 'lead',
+  CONTACT: 'contact',
+  ACCOUNT: 'account',
+  DEAL: 'deal',
+} as const;
+export type CrmEntityTypeValue = (typeof CrmEntityType)[keyof typeof CrmEntityType];
+
+export const PipelineEntity = {
+  LEAD: 'lead',
+  DEAL: 'deal',
+} as const;
+export type PipelineEntityValue = (typeof PipelineEntity)[keyof typeof PipelineEntity];
+
+export const Lifecycle = {
+  LEAD: 'lead',
+  PROSPECT: 'prospect',
+  CUSTOMER: 'customer',
+  CHURNED: 'churned',
+  PARTNER: 'partner',
+} as const;
+export type LifecycleValue = (typeof Lifecycle)[keyof typeof Lifecycle];
+
+export const LeadPriority = {
+  LOW: 'low',
+  NORMAL: 'normal',
+  HIGH: 'high',
+} as const;
+export type LeadPriorityValue = (typeof LeadPriority)[keyof typeof LeadPriority];
+
+export const CrmActivityType = {
+  NOTE: 'note',
+  CALL: 'call',
+  EMAIL: 'email',
+  MEETING: 'meeting',
+  TASK: 'task',
+  STAGE_CHANGED: 'stage_changed',
+  ASSIGNED: 'assigned',
+  FIELD_CHANGED: 'field_changed',
+  CONVERTED: 'converted',
+  CREATED: 'created',
+  CREATED_FROM_LEAD: 'created_from_lead',
+  IMPORTED: 'imported',
+  TAG_ADDED: 'tag_added',
+  TAG_REMOVED: 'tag_removed',
+} as const;
+export type CrmActivityTypeValue = (typeof CrmActivityType)[keyof typeof CrmActivityType];
+
+export const CrmActivityStatus = {
+  PLANNED: 'planned',
+  DONE: 'done',
+  CANCELLED: 'cancelled',
+} as const;
+export type CrmActivityStatusValue = (typeof CrmActivityStatus)[keyof typeof CrmActivityStatus];
+
+export const CustomFieldType = {
+  TEXT: 'text',
+  NUMBER: 'number',
+  DATE: 'date',
+  SELECT: 'select',
+  MULTI_SELECT: 'multi_select',
+  CHECKBOX: 'checkbox',
+  URL: 'url',
+  PHONE: 'phone',
+  EMAIL: 'email',
+} as const;
+export type CustomFieldTypeValue = (typeof CustomFieldType)[keyof typeof CustomFieldType];
+
+export const SavedViewVisibility = {
+  PRIVATE: 'private',
+  TEAM: 'team',
+  COMPANY: 'company',
+} as const;
+export type SavedViewVisibilityValue = (typeof SavedViewVisibility)[keyof typeof SavedViewVisibility];
+
+export const ImportJobStatus = {
+  MAPPING: 'mapping',
+  QUEUED: 'queued',
+  RUNNING: 'running',
+  DONE: 'done',
+  FAILED: 'failed',
+} as const;
+export type ImportJobStatusValue = (typeof ImportJobStatus)[keyof typeof ImportJobStatus];
+
+export const ImportDuplicateMode = {
+  SKIP: 'skip',
+  UPDATE: 'update',
+  CREATE: 'create',
+} as const;
+export type ImportDuplicateModeValue = (typeof ImportDuplicateMode)[keyof typeof ImportDuplicateMode];

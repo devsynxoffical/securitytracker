@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const NotificationType = {
   LEAD_ASSIGNED: 'lead_assigned',
+  RECORD_ASSIGNED: 'record_assigned',
   TASK_ASSIGNED: 'task_assigned',
   TASK_DUE_SOON: 'task_due_soon',
   TASK_OVERDUE: 'task_overdue',
