@@ -84,6 +84,8 @@ Cell value = scope. Empty = not granted.
 | targets.view | own | team | department | all | all |
 | targets.manage | | | department | all | all |
 | mail.use | own | own | own | own | own |
+| chat.use | own | own | own | own | own |
+| chat.manage | - | - | department | all | all |
 | mail.accounts.manage | | | | | all |
 | mail.assign | | | | all | all |
 | mail.logs.view | | | | all | all |
