@@ -2,11 +2,21 @@ const { Client } = require('ssh2');
 const fs = require('fs');
 const path = require('path');
 
+// Credentials come from the environment only (AGENTS.md rule 6). Set DEPLOY_HOST, DEPLOY_USER, DEPLOY_PASSWORD.
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing environment variable ${name}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 const config = {
-  host: '185.232.14.208',
-  port: 65002,
-  username: 'u880916130',
-  password: 'RAJOURIgarden@1996',
+  host: requiredEnv('DEPLOY_HOST'),
+  port: Number(process.env.DEPLOY_SSH_PORT || 22),
+  username: requiredEnv('DEPLOY_USER'),
+  password: requiredEnv('DEPLOY_PASSWORD'),
   readyTimeout: 30000,
 };
 

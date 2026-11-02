@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorCodes, ApiErrorResponse, ErrorCode } from '@company-os/contracts';
+import { Prisma } from '@prisma/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -38,6 +39,30 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (obj.issues) {
           details = { issues: obj.issues };
         }
+      }
+    } else if (isZodError(exception)) {
+      // Zod .parse() in controllers: contract violations are 400 VALIDATION_ERROR (AGENTS.md rule 4)
+      status = HttpStatus.BAD_REQUEST;
+      code = ErrorCodes.VALIDATION_ERROR;
+      message = 'Input validation failed';
+      details = { issues: exception.issues.map((i) => ({ path: i.path.join('.'), message: i.message, code: i.code })) };
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      // Malformed ids and missing rows are client errors, not server faults.
+      if (exception.code === 'P2023') {
+        status = HttpStatus.BAD_REQUEST;
+        code = ErrorCodes.VALIDATION_ERROR;
+        message = 'Malformed identifier';
+      } else if (exception.code === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        code = ErrorCodes.NOT_FOUND;
+        message = 'Record not found';
+      } else if (exception.code === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        code = ErrorCodes.CONFLICT;
+        message = 'A record with these values already exists';
+      } else {
+        this.logger.error(`Database error ${exception.code}: ${exception.message}`);
+        message = 'Database error';
       }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
@@ -76,4 +101,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return ErrorCodes.INTERNAL_ERROR;
     }
   }
+}
+
+interface ZodLikeError {
+  name: string;
+  issues: Array<{ path: Array<string | number>; message: string; code: string }>;
+}
+
+/** Duck-typed: the zod instance bundled with @company-os/contracts is not the API's own zod class. */
+function isZodError(e: unknown): e is ZodLikeError {
+  return typeof e === 'object' && e !== null && (e as { name?: string }).name === 'ZodError' && Array.isArray((e as { issues?: unknown }).issues);
 }

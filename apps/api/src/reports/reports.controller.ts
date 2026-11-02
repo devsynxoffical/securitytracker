@@ -11,6 +11,7 @@ import { ReportsService } from './reports.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RbacGuard, ScopeFilter } from '../auth/guards/rbac.guard.js';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator.js';
+import { ExportGuarded } from '../auth/decorators/export-guarded.decorator.js';
 import { CurrentScope } from '../auth/decorators/current-scope.decorator.js';
 import { ReportQuerySchema, ReportQueryDto } from '@company-os/contracts';
 
@@ -21,6 +22,7 @@ export class ReportsController {
 
   @Get('attendance')
   @RequirePermission('reports.view')
+  @ExportGuarded({ csvOnly: true })
   async getAttendanceReport(
     @Request() req: any,
     @CurrentScope() scopeFilter: ScopeFilter,
@@ -44,6 +46,7 @@ export class ReportsController {
 
   @Get('productivity')
   @RequirePermission('reports.view')
+  @ExportGuarded({ csvOnly: true })
   async getProductivityReport(
     @Request() req: any,
     @CurrentScope() scopeFilter: ScopeFilter,
@@ -67,6 +70,7 @@ export class ReportsController {
 
   @Get('crm')
   @RequirePermission('reports.view')
+  @ExportGuarded({ csvOnly: true })
   async getCrmReport(
     @Request() req: any,
     @CurrentScope() scopeFilter: ScopeFilter,
@@ -90,6 +94,7 @@ export class ReportsController {
 
   @Get('calls')
   @RequirePermission('reports.view')
+  @ExportGuarded({ csvOnly: true })
   async getCallsReport(
     @Request() req: any,
     @CurrentScope() scopeFilter: ScopeFilter,

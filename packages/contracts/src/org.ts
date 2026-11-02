@@ -37,6 +37,12 @@ export const DisableEmployeeSchema = z.object({
 });
 export type DisableEmployeeDto = z.infer<typeof DisableEmployeeSchema>;
 
+/** FR-SEC-24: suspend access. The reason is stored on the audit entry and the revoked sessions. */
+export const SuspendEmployeeSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
+});
+export type SuspendEmployeeDto = z.infer<typeof SuspendEmployeeSchema>;
+
 export const CreateDepartmentSchema = z.object({
   name: z.string().min(1),
   managerId: z.string().uuid().optional(),

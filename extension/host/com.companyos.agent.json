@@ -1,9 +1,9 @@
 {
   "name": "com.companyos.agent",
-  "description": "Company OS Tracker Native Messaging Host",
+  "description": "Company OS Tracker native messaging host (forwards the active tab domain to the local agent)",
   "path": "C:\\Program Files\\CompanyOS\\agent\\CompanyOS.NativeHost.exe",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://companyos-domain-reporter-id/"
+    "chrome-extension://REPLACE_WITH_EXTENSION_ID/"
   ]
 }

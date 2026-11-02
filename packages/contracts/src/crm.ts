@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CallDirection, CallOutcome, TaskPriority, TaskStatus, StageType } from './enums.js';
+import { CallDirection, CallOutcome, TaskPriority, TaskStatus, StageType, PipelineEntity, LeadPriority } from './enums.js';
 
 export const CreateLeadSchema = z.object({
   name: z.string().min(1),
@@ -31,6 +31,7 @@ export const CreateLeadSchema = z.object({
   tags: z.array(z.string()).optional(),
   followUpAt: z.string().datetime().optional(),
   customFields: z.record(z.unknown()).optional(),
+  priority: z.enum([LeadPriority.LOW, LeadPriority.NORMAL, LeadPriority.HIGH]).default(LeadPriority.NORMAL),
   allowDuplicate: z.boolean().default(false),
 });
 export type CreateLeadDto = z.infer<typeof CreateLeadSchema>;
@@ -99,6 +100,7 @@ export const CreateTaskSchema = z.object({
   leadId: z.string().uuid().optional(),
   priority: z
     .enum([
+      TaskPriority.NONE,
       TaskPriority.LOW,
       TaskPriority.NORMAL,
       TaskPriority.HIGH,
@@ -121,6 +123,7 @@ export type UpdateTaskStatusDto = z.infer<typeof UpdateTaskStatusSchema>;
 
 export const CreatePipelineSchema = z.object({
   name: z.string().min(1),
+  entity: z.enum([PipelineEntity.LEAD, PipelineEntity.DEAL]).default(PipelineEntity.LEAD),
   isDefault: z.boolean().default(false),
 });
 export type CreatePipelineDto = z.infer<typeof CreatePipelineSchema>;
@@ -131,5 +134,14 @@ export const CreatePipelineStageSchema = z.object({
   type: z.enum([StageType.OPEN, StageType.WON, StageType.LOST]).default(StageType.OPEN),
   countsAsQualified: z.boolean().default(false),
   countsAsMeeting: z.boolean().default(false),
+  probability: z.number().int().min(0).max(100).default(0),
 });
 export type CreatePipelineStageDto = z.infer<typeof CreatePipelineStageSchema>;
+
+export const UpdatePipelineStageSchema = CreatePipelineStageSchema.partial();
+export type UpdatePipelineStageDto = z.infer<typeof UpdatePipelineStageSchema>;
+
+export const ReorderStagesSchema = z.object({
+  stageIds: z.array(z.string().uuid()).min(1),
+});
+export type ReorderStagesDto = z.infer<typeof ReorderStagesSchema>;

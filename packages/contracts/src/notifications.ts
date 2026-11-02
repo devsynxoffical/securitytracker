@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const NotificationType = {
   LEAD_ASSIGNED: 'lead_assigned',
+  RECORD_ASSIGNED: 'record_assigned',
   TASK_ASSIGNED: 'task_assigned',
   TASK_DUE_SOON: 'task_due_soon',
   TASK_OVERDUE: 'task_overdue',
@@ -15,6 +16,7 @@ export const NotificationType = {
   LEAVE_REQUESTED: 'leave_requested',
   LEAVE_DECIDED: 'leave_decided',
   SHIFT_AUTO_CLOSED: 'shift_auto_closed',
+  SHIFT_REMINDER: 'shift_reminder',
   SECURITY_ALERT: 'security_alert',
   ANNOUNCEMENT: 'announcement',
 } as const;

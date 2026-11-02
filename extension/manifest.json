@@ -2,9 +2,12 @@
   "manifest_version": 3,
   "name": "Company OS Domain Reporter",
   "version": "1.0.0",
-  "description": "Reports active tab domain to the local Company OS tracker agent",
+  "description": "Reports the registrable domain of the active tab to the local Company OS tracker agent. No page content, no history, no URLs.",
+  "minimum_chrome_version": "110",
   "permissions": ["tabs", "nativeMessaging"],
   "background": {
-    "service_worker": "background.js"
-  }
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "incognito": "not_allowed"
 }

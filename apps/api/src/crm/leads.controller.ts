@@ -18,8 +18,10 @@ import {
   AddNoteSchema,
   ScheduleAppointmentSchema,
   CheckDuplicateLeadSchema,
+  ConvertLeadSchema,
 } from '@company-os/contracts';
 import { LeadsService } from './leads.service';
+import { LeadConversionService } from './lead-conversion.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../auth/decorators/require-permission.decorator';
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
@@ -27,7 +29,10 @@ import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.
 @Controller('leads')
 @UseGuards(JwtAuthGuard)
 export class LeadsController {
-  constructor(private leadsService: LeadsService) {}
+  constructor(
+    private leadsService: LeadsService,
+    private conversion: LeadConversionService,
+  ) {}
 
   @Get()
   @RequirePermission('crm.leads.view')
@@ -146,5 +151,18 @@ export class LeadsController {
   ) {
     const dto = ScheduleAppointmentSchema.parse(body);
     return this.leadsService.scheduleAppointment(id, user.companyId, user.id, dto, req.scopeFilter);
+  }
+
+  /** F21 - converts the lead into contact (+ account, + deal). */
+  @Post(':id/convert')
+  @RequirePermission('crm.leads.convert')
+  async convertLead(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: any,
+    @Body() body: unknown,
+  ) {
+    const dto = ConvertLeadSchema.parse(body);
+    return this.conversion.convert(id, req.scopeFilter, user.id, dto);
   }
 }

@@ -1,64 +1,300 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------------
+   WorkPulse design tokens (company-os-design/DESIGN-SYSTEM.md sections 1 and 9).
+   Same token names as the admin panel so both apps read as one product.
+   Dark is the default on :root; light is a token swap on <html data-theme="light">.
+   Every Tailwind colour class resolves to one of these variables.
+   ------------------------------------------------------------------------ */
 :root {
-  --bg: #F0F2F5;
-  --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
-  --line: #E2E8F0;
-  --line-2: #EDF2F7;
-  --ink: #1E293B;
-  --ink-2: #475569;
-  --ink-3: #94A3B8;
-  --sidebar-grad-from: #10B981;
-  --sidebar-grad-via: #16A34A;
-  --sidebar-grad-to: #65A30D;
-  --pri: #2563EB;
-  --pri-hover: #1D4ED8;
-  --pri-soft: #EFF6FF;
-  --emerald: #10B981;
-  --emerald-soft: #ECFDF5;
-  --amber: #F59E0B;
-  --amber-soft: #FFFBEB;
-  --rose: #E11D48;
-  --rose-soft: #FFF1F2;
-  --blue: #2563EB;
-  --blue-soft: #EFF6FF;
-  --dark-pill: #1E293B;
-  --r: 12px;
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  color-scheme: dark;
+  --bg: #0f1214;
+  --surface: #161a1d;
+  --surface-2: #1c2125;
+  --surface-3: #22282d;
+  --line: #2a3137;
+  --line-2: #222930;
+  --ink: #eceff1;
+  --ink-2: #aeb7be;
+  --ink-3: #7b858d;
+  --pri: #3fa58f;
+  --pri-2: #8fd4c3;
+  --pri-soft: #15302b;
+  --green: #4cbf86;
+  --green-text: #8fddb4;
+  --green-soft: #15301f;
+  --amber: #e0a24a;
+  --amber-text: #f3c97f;
+  --amber-soft: #352a12;
+  --amber-bar: #e0921a;
+  --red: #e36a5f;
+  --red-text: #f3a49b;
+  --red-soft: #3a1c19;
+  --blue: #6b93e8;
+  --blue-text: #a9c0f5;
+  --blue-soft: #18233d;
+  --violet: #a08be6;
+  --violet-text: #c8bbf4;
+  --violet-soft: #26203d;
+  --gray: #aeb7be;
+  --gray-soft: #242a2f;
+  --gray-bar: #4a545c;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.7);
+  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.6);
+  --shadow-btn: none;
+  --ring: 0 0 0 3px var(--pri-soft);
+  --on-pri: #ffffff;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --surface-3: #edf0f3;
+  --line: #dce2e8;
+  --line-2: #e8ecf0;
+  --ink: #0f172a;
+  --ink-2: #3b4756;
+  --ink-3: #64748b;
+  --pri: #0e7c66;
+  --pri-2: #0a5b4b;
+  --pri-soft: #ddf2ec;
+  --green: #16834f;
+  --green-text: #0f6b40;
+  --green-soft: #dcf5e7;
+  --amber: #b45309;
+  --amber-text: #92400e;
+  --amber-soft: #fdefd2;
+  --amber-bar: #e59e1c;
+  --red: #c62828;
+  --red-text: #a32020;
+  --red-soft: #fbe3e1;
+  --blue: #1e56c5;
+  --blue-text: #17439b;
+  --blue-soft: #e3ebfb;
+  --violet: #6d3fc9;
+  --violet-text: #55309f;
+  --violet-soft: #ece6fa;
+  --gray: #52606d;
+  --gray-soft: #e8ecf0;
+  --gray-bar: #aeb8c2;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-pop: 0 10px 30px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-modal: 0 24px 64px rgba(15, 23, 42, 0.28);
+  --shadow-drawer: -12px 0 44px rgba(15, 23, 42, 0.18);
+  --shadow-btn: 0 1px 2px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable],
+.selectable,
+.select-text {
+  user-select: text;
+}
+
+/* FR-SEC-22: nothing can be dragged out of the window (images, links, selected text) */
+img,
+a {
+  -webkit-user-drag: none;
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', monospace;
-  font-feature-settings: "tnum";
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
 }
 
-/* Custom scrollbars */
+/* Product numerals: Inter with tabular figures, tight tracking (KPIs, totals) */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* Frameless window: the title bar drags, controls inside it do not */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Elevated primary button in light, flat in dark (same as the admin) */
+.btn-primary {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--pri) 88%, white) 0%, var(--pri) 100%);
+  box-shadow: var(--shadow-btn);
+}
+.btn-primary:hover {
+  background-image: linear-gradient(180deg, var(--pri) 0%, var(--pri-2) 100%);
+}
+:root:not([data-theme='light']) .btn-primary {
+  background-image: none;
+}
+:root:not([data-theme='light']) .btn-primary:hover {
+  background-image: none;
+  filter: brightness(1.08);
+}
+
+/* Sidebar reads as its own plane in light mode */
+.sidebar-surface {
+  background: var(--surface);
+}
+:root[data-theme='light'] .sidebar-surface {
+  background: #fbfcfd;
+}
+
+/* Hero gradient for the shift card and the auth brand panel: primary tokens only */
+.brand-gradient {
+  background: linear-gradient(160deg, var(--pri) 0%, color-mix(in srgb, var(--pri) 55%, #000) 100%);
+}
+:root[data-theme='light'] .brand-gradient {
+  background: linear-gradient(160deg, var(--pri) 0%, var(--pri-2) 100%);
+}
+
+/* Focus ring: 1px primary border plus 3px soft ring (DESIGN-SYSTEM section 3) */
+:where(input, select, textarea, button, a, [tabindex]):focus-visible {
+  outline: none;
+  border-color: var(--pri);
+  box-shadow: var(--ring);
+}
+
+/* Native controls follow the theme */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--pri);
+}
+select option {
+  background: var(--surface);
+  color: var(--ink);
+}
+input::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+/* Motion: short, purposeful; honour reduced motion */
+.fade-in {
+  animation: fade-in 140ms ease-out;
+}
+.slide-in-right {
+  animation: slide-in-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pop-in {
+  animation: pop-in 120ms ease-out;
+}
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    transform: translateY(-4px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .slide-in-right,
+  .pop-in,
+  .pulse-dot,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbars follow the theme */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 4px;
+  background: var(--gray-bar);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background-color: var(--ink-3);
+}
+
+/* Quiet row actions revealed on hover or focus */
+.row-actions {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+tr:hover .row-actions,
+tr:focus-within .row-actions,
+.hover-reveal:hover .row-actions,
+.hover-reveal:focus-within .row-actions {
+  opacity: 1;
 }

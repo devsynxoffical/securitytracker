@@ -37,6 +37,7 @@ export const PermissionKeys = [
   'tracking.view_summary',
   'tracking.view_detail',
   'tracking.manage_rules',
+  'tracking.timesheets.approve',
 
   // CRM leads
   'crm.leads.view',
@@ -48,9 +49,38 @@ export const PermissionKeys = [
   'crm.leads.import',
   'crm.leads.export',
   'crm.leads.create_duplicate',
+  'crm.leads.convert',
+
+  // CRM contacts
+  'crm.contacts.view',
+  'crm.contacts.create',
+  'crm.contacts.edit',
+  'crm.contacts.assign',
+  'crm.contacts.delete',
+  'crm.contacts.import',
+  'crm.contacts.export',
+
+  // CRM accounts
+  'crm.accounts.view',
+  'crm.accounts.create',
+  'crm.accounts.edit',
+  'crm.accounts.assign',
+  'crm.accounts.delete',
+  'crm.accounts.import',
+  'crm.accounts.export',
+
+  // CRM deals
+  'crm.deals.view',
+  'crm.deals.create',
+  'crm.deals.edit',
+  'crm.deals.assign',
+  'crm.deals.reopen',
+  'crm.deals.delete',
+  'crm.deals.export',
 
   // CRM config
   'crm.pipelines.manage',
+  'crm.config.manage',
 
   // Calls
   'crm.calls.log',
@@ -61,6 +91,7 @@ export const PermissionKeys = [
   'tasks.create',
   'tasks.assign',
   'tasks.manage',
+  'tasks.spaces.manage',
 
   // Targets
   'targets.view',
@@ -71,6 +102,17 @@ export const PermissionKeys = [
   'mail.accounts.manage',
   'mail.assign',
   'mail.logs.view',
+  'mail.templates.manage',
+
+  // Chat (22)
+  'chat.use',
+  'chat.manage',
+
+  // HR
+  'hr.leave.manage',
+  'hr.profiles.view',
+  'hr.profiles.edit',
+  'hr.checklists.manage',
 
   // Reports
   'reports.view',

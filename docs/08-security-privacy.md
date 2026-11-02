@@ -100,3 +100,21 @@ Each entry: actor, role at the time, action, entity, before and after values (se
 | Incident handling | Security alerts to admins by email. Runbook: revoke sessions, rotate keys, disconnect mailboxes |
 | Key rotation | JWT signing keys and field encryption keys rotatable (key id in data), rotate yearly or on incident |
 | Pre-release | Dependency scan, OWASP ASVS level 2 self-check, external penetration test recommended before full rollout |
+
+## 9. Data containment and immediate revocation (FR-SEC-20 to FR-SEC-27)
+
+Goal: company data (CRM, mail, attendance, chat, documents) is used inside the system and does not leave it through the employee's computer. Import is allowed; export is not, unless a Super Admin turns it on deliberately.
+
+| ID | Requirement | P |
+|---|---|---|
+| FR-SEC-20 | Company setting `dataExportPolicy`: `disabled` [default], `super_admin` (only Super Admin, each export audited), `permission` (whoever holds `*.export` keys). Every export endpoint (CRM, employees, attendance sheet, reports, timesheets, mail audit) checks it through one guard and answers 403 `EXPORT_DISABLED` | M |
+| FR-SEC-21 | Admin panel hides every Export button when the policy forbids it and shows the reason on hover; the desktop app has no export or download function at all | M |
+| FR-SEC-22 | Desktop renderer: downloads cancelled in the main process (`will-download`), drag-out of content disabled, context menu without "Save as", DevTools disabled in packaged builds, text selection limited to message and record text, no `file://` navigation, CSP without external connect | M |
+| FR-SEC-23 | Mail attachments: opened inside the system only (inline preview); download requires the mailbox `download` permission AND an export policy other than `disabled`; every download audited (10 section 8b) | M |
+| FR-SEC-24 | Suspend access (`POST /employees/:id/suspend`): status `suspended`, all sessions revoked, all devices revoked, refresh families closed, chat membership removed, WebSocket `session.revoked` pushed. The JWT strategy rejects any non-active employee on every request, so the effect is immediate on the next call and at the latest at the next desktop heartbeat (60 s) | M |
+| FR-SEC-25 | Desktop on 401, `session.revoked` or `account_suspended`: ends tracking, uploads nothing further, wipes tokens, device session and every cached list (tasks, leads, mail, chat), returns to the sign-in screen with "Your access was suspended. Contact your administrator." Sign-in is refused while suspended (`ACCOUNT_SUSPENDED`) | M |
+| FR-SEC-26 | Restore access (`POST /employees/:id/restore`): status `active`; devices stay revoked and must be approved again (F2) | M |
+| FR-SEC-27 | Import stays available (CRM import, holidays import, employee import) under the existing permissions; imports are audited with row counts | M |
+
+Suspension differs from disable (offboarding, F16): a suspended employee keeps assignments, targets and mailboxes and reappears unchanged on restore; disable reassigns and closes.
+

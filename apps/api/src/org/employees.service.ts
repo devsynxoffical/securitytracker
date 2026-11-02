@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Optional,
   NotFoundException,
   ForbiddenException,
   ConflictException,
@@ -10,17 +11,30 @@ import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
   DisableEmployeeDto,
+  SuspendEmployeeDto,
+  WebSocketEvents,
+  SessionRevokedPayload,
 } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { ScopeFilter } from '../auth/guards/rbac.guard';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { ChatMembershipService } from '../chat/chat-membership.service';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     private prisma: PrismaService,
     private clock: ClockService,
+    private gateway: NotificationsGateway,
+    /** Optional so existing unit tests that construct the service directly keep working. */
+    @Optional() private chatMembership?: ChatMembershipService,
   ) {}
+
+  /** FR-CHAT-01 / FR-CHAT-10: channel membership follows org units and status. */
+  private async syncChat(id: string) {
+    await this.chatMembership?.syncEmployee(id);
+  }
 
   async listEmployees(scopeFilter: ScopeFilter, status?: string) {
     const where: any = { companyId: scopeFilter.companyId, deletedAt: null };
@@ -170,7 +184,7 @@ export class EmployeesService {
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
-    return this.prisma.employee.update({
+    const updated = await this.prisma.employee.update({
       where: { id },
       data: {
         firstName: dto.firstName,
@@ -184,6 +198,8 @@ export class EmployeesService {
         joinDate: dto.joinDate ? new Date(dto.joinDate) : undefined,
       },
     });
+    await this.syncChat(id);
+    return updated;
   }
 
   async resetPassword(id: string, companyId: string) {
@@ -308,7 +324,65 @@ export class EmployeesService {
       });
     });
 
+    await this.syncChat(id);
+
     return { success: true, message: 'Employee disabled and assets successfully reassigned' };
+  }
+
+  /**
+   * FR-SEC-24: suspend access. Status `suspended`, every session revoked (refresh families close
+   * with them), approved devices revoked, `session.revoked` pushed to the employee's sockets.
+   * Assignments, targets and mailboxes are kept so the employee reappears unchanged on restore.
+   */
+  async suspendEmployee(id: string, companyId: string, actorId: string, dto: SuspendEmployeeDto) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: { role: true },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+    if (employee.id === actorId) throw new ForbiddenException('You cannot suspend your own access.');
+    if (employee.status === 'disabled') throw new ConflictException('A disabled employee cannot be suspended.');
+
+    if (employee.role.name === 'Super Admin') {
+      const activeSuperAdmins = await this.prisma.employee.count({
+        where: { companyId, role: { name: 'Super Admin' }, status: 'active', deletedAt: null },
+      });
+      if (activeSuperAdmins <= 1) {
+        throw new ForbiddenException('Cannot suspend the last active Super Admin.');
+      }
+    }
+
+    const now = this.clock.now();
+    const [, sessions, devices] = await this.prisma.$transaction([
+      this.prisma.employee.update({ where: { id }, data: { status: 'suspended' } }),
+      this.prisma.session.updateMany({
+        where: { employeeId: id, revokedAt: null },
+        data: { revokedAt: now, revokedReason: 'suspended' },
+      }),
+      this.prisma.device.updateMany({
+        where: { employeeId: id, status: 'approved' },
+        data: { status: 'revoked' },
+      }),
+    ]);
+    await this.syncChat(id);
+
+    const payload: SessionRevokedPayload = { reason: 'account_suspended' };
+    this.gateway.emitToUser(id, WebSocketEvents.SESSION_REVOKED, payload);
+
+    return { success: true, status: 'suspended', revokedSessions: sessions.count, revokedDevices: devices.count, reason: dto.reason };
+  }
+
+  /** FR-SEC-26: restore access. Devices stay revoked and must be approved again (F2). */
+  async restoreEmployee(id: string, companyId: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+    if (employee.status !== 'suspended') throw new ConflictException('Only a suspended employee can be restored.');
+
+    await this.prisma.employee.update({ where: { id }, data: { status: 'active' } });
+    await this.syncChat(id);
+    return { success: true, status: 'active' };
   }
 
   async enableEmployee(id: string, companyId: string) {
@@ -317,12 +391,14 @@ export class EmployeesService {
     });
     if (!employee) throw new NotFoundException('Employee not found');
 
-    return this.prisma.employee.update({
+    const enabled = await this.prisma.employee.update({
       where: { id },
       data: {
         status: 'active',
         disabledAt: null,
       },
     });
+    await this.syncChat(id);
+    return enabled;
   }
 }

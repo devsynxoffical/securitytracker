@@ -16,6 +16,10 @@ import {
   RefreshTokenSchema,
   ChangePasswordSchema,
   AcceptConsentSchema,
+  TwoFactorEnrollSchema,
+  TwoFactorCodeSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
 } from '@company-os/contracts';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard, Public } from './guards/jwt-auth.guard';
@@ -63,6 +67,45 @@ export class AuthController {
     }
 
     return result;
+  }
+
+  @Public()
+  @Post('admin/auth/2fa/enroll')
+  @HttpCode(HttpStatus.OK)
+  async twoFactorEnroll(@Body() body: unknown) {
+    return this.authService.startTwoFactorEnrollment(TwoFactorEnrollSchema.parse(body));
+  }
+
+  @Public()
+  @Post('admin/auth/2fa/confirm')
+  @HttpCode(HttpStatus.OK)
+  async twoFactorConfirm(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.confirmTwoFactorEnrollment(TwoFactorCodeSchema.parse(body), ip, req.headers['user-agent']);
+  }
+
+  @Public()
+  @Post('admin/auth/2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  async twoFactorVerify(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.verifyTwoFactor(TwoFactorCodeSchema.parse(body), ip, req.headers['user-agent']);
+  }
+
+  @Public()
+  @Post('auth/forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.forgotPassword(ForgotPasswordSchema.parse(body), ip);
+  }
+
+  @Public()
+  @Post('auth/reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.resetPassword(ResetPasswordSchema.parse(body), ip);
   }
 
   @Public()

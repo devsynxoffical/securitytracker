@@ -1,27 +1,123 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.devsynx.workpulse",
-  "productName": "WorkPulse Workstation",
+  "productName": "WorkPulse",
+  "copyright": "Copyright \u00a9 2026 DEVSYNX",
   "directories": {
     "output": "dist",
-    "buildResources": "resources"
+    "buildResources": "installer"
   },
   "files": [
-    "out/**/*"
+    "out/**/*",
+    "package.json"
   ],
+  "extraResources": [
+    {
+      "from": "resources/tray",
+      "to": "tray",
+      "filter": [
+        "**/*.png"
+      ]
+    },
+    {
+      "from": "resources/icon.png",
+      "to": "icon.png"
+    },
+    {
+      "from": "../../agent/publish/agent",
+      "to": "agent",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "icon": "resources/icon.png",
+  "asar": true,
+  "publish": null,
   "mac": {
     "identity": null,
     "forceCodeSigning": false,
-    "target": ["dmg", "zip"],
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
     "category": "public.app-category.business",
-    "artifactName": "WorkPulse-Mac-${version}.${ext}"
+    "minimumSystemVersion": "12.0",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": [
+          "universal"
+        ]
+      },
+      {
+        "target": "zip",
+        "arch": [
+          "universal"
+        ]
+      }
+    ],
+    "artifactName": "WorkPulse-${version}-mac-${arch}.${ext}",
+    "darkModeSupport": true
+  },
+  "dmg": {
+    "title": "WorkPulse ${version}",
+    "contents": [
+      {
+        "x": 140,
+        "y": 180
+      },
+      {
+        "x": 400,
+        "y": 180,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ]
   },
   "win": {
-    "target": ["nsis", "portable"],
-    "artifactName": "WorkPulse-Setup-${version}.${ext}"
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "artifactName": "WorkPulse-${version}-win-${arch}-${os}.${ext}",
+    "requestedExecutionLevel": "asInvoker",
+    "verifyUpdateCodeSignature": false
   },
   "nsis": {
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
-  }
+    "perMachine": true,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "include": "installer/installer.nsh",
+    "artifactName": "WorkPulse-Setup-${version}.${ext}",
+    "shortcutName": "WorkPulse",
+    "uninstallDisplayName": "WorkPulse",
+    "deleteAppDataOnUninstall": false,
+    "runAfterFinish": true
+  },
+  "portable": {
+    "artifactName": "WorkPulse-Portable-${version}.${ext}"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "category": "Office",
+    "artifactName": "WorkPulse-${version}-linux-${arch}.${ext}"
+  },
+  "executableName": "WorkPulse"
 }

@@ -12,7 +12,7 @@ Employee Management + Security + CRM Platform
 
 ## 1. What this is
 
-One platform with which a company controls identity, CRM, company email access, attendance, targets, activity tracking, devices and security from a single Admin Panel. Employees receive only a Windows desktop application and log in with company-issued credentials.
+One platform with which a company controls identity, CRM, company email access, attendance, targets, activity tracking, devices and security from a single Admin Panel. Employees receive only a desktop application (Windows and macOS) and log in with company-issued credentials.
 
 ## 2. Document set
 
@@ -31,6 +31,16 @@ One platform with which a company controls identity, CRM, company email access, 
 | 10-google-workspace-email.md | Gmail integration design and setup | Email module |
 | 11-build-plan.md | Phases, deliverables, acceptance criteria, testing, risks | Planning |
 | 12-ai-build-guide.md | How to drive AI coding models with these documents, rules file, prompt templates | Every AI session |
+| 13-crm-spec.md | CRM objects (leads, contacts, accounts, deals), activities, custom fields, import, conversion | CRM work |
+| 14-tasks-spec.md | Spaces, lists, statuses, tasks, subtasks, comments, time entries, views | Tasks work |
+| 15-hr-spec.md | Leave types and balances, profiles, documents, checklists, announcements, attendance screens | HR work |
+| 16-tracking-admin-spec.md | Timesheets, manual time, team activity, apps and URLs, uncategorised queue | Tracking admin work |
+| 17-mail-collaboration-spec.md | Shared inbox assignment, status, comments, labels, templates, CRM linking | Mail work |
+| 18-verification.md | Flow verification matrix: which test proves which flow, and what still needs a real environment | Before release |
+| 19-deployment-guide.md | Go-live on a VPS: DNS, Docker, environment, first start, GitHub secrets, desktop releases, smoke checks | Before hosting |
+| 20-desktop-install-guide.md | Desktop platforms, install steps for Windows and macOS, what the smoke test proves, data locations | Rollout and support |
+| 22-internal-chat-spec.md | Channels, direct messages, mentions, realtime events, retention, no export | Chat work |
+| 21-time-and-attendance-scenarios.md | What happens when: every shift, break, idle, offline, sleep, forgotten start or end, schedule and attendance scenario, and the settings behind them | Before configuring shifts, support |
 
 ## 3. Conventions
 

@@ -29,13 +29,17 @@ Access channels: the Desktop App is for every employee. The Admin Panel needs th
 | Devices | `devices.view`, `devices.approve`, `devices.revoke` |
 | Sessions | `sessions.view`, `sessions.revoke` |
 | Attendance | `attendance.view`, `attendance.manage` (schedules, holidays), `attendance.approve` (corrections, leave) |
-| Tracking | `tracking.view_summary` (totals), `tracking.view_detail` (apps, domains, time ranges), `tracking.manage_rules` |
-| CRM leads | `crm.leads.view`, `crm.leads.create`, `crm.leads.edit`, `crm.leads.assign`, `crm.leads.reopen`, `crm.leads.delete`, `crm.leads.import`, `crm.leads.export`, `crm.leads.create_duplicate` |
-| CRM config | `crm.pipelines.manage` |
+| Tracking | `tracking.view_summary` (totals), `tracking.view_detail` (apps, domains, time ranges), `tracking.manage_rules`, `tracking.timesheets.approve` (16) |
+| CRM leads | `crm.leads.view`, `crm.leads.create`, `crm.leads.edit`, `crm.leads.assign`, `crm.leads.reopen`, `crm.leads.delete`, `crm.leads.import`, `crm.leads.export`, `crm.leads.create_duplicate`, `crm.leads.convert` |
+| CRM contacts | `crm.contacts.view`, `crm.contacts.create`, `crm.contacts.edit`, `crm.contacts.assign`, `crm.contacts.delete`, `crm.contacts.import`, `crm.contacts.export` |
+| CRM accounts | `crm.accounts.view`, `crm.accounts.create`, `crm.accounts.edit`, `crm.accounts.assign`, `crm.accounts.delete`, `crm.accounts.import`, `crm.accounts.export` |
+| CRM deals | `crm.deals.view`, `crm.deals.create`, `crm.deals.edit`, `crm.deals.assign`, `crm.deals.reopen`, `crm.deals.delete`, `crm.deals.export` |
+| CRM config | `crm.pipelines.manage`, `crm.config.manage` (custom fields, tags, sources, lost reasons). Default scopes for the new keys: 13-crm-spec.md section 4 |
 | Calls | `crm.calls.log`, `crm.calls.manage` |
-| Tasks | `tasks.view`, `tasks.create`, `tasks.assign`, `tasks.manage` |
+| Tasks | `tasks.view`, `tasks.create`, `tasks.assign`, `tasks.manage`, `tasks.spaces.manage` (14) |
 | Targets | `targets.view`, `targets.manage` |
-| Mail | `mail.use` (assigned mailboxes), `mail.accounts.manage`, `mail.assign`, `mail.logs.view` |
+| Mail | `mail.use` (assigned mailboxes), `mail.accounts.manage`, `mail.assign`, `mail.logs.view`, `mail.templates.manage` (17) |
+| HR | `hr.leave.manage`, `hr.profiles.view`, `hr.profiles.edit`, `hr.checklists.manage` (15) |
 | Reports | `reports.view`, `reports.export` |
 | Notifications | `announcements.send` |
 | Security | `security.view` (login history, alerts), `audit.view`, `audit.export` |
@@ -80,6 +84,8 @@ Cell value = scope. Empty = not granted.
 | targets.view | own | team | department | all | all |
 | targets.manage | | | department | all | all |
 | mail.use | own | own | own | own | own |
+| chat.use | own | own | own | own | own |
+| chat.manage | - | - | department | all | all |
 | mail.accounts.manage | | | | | all |
 | mail.assign | | | | all | all |
 | mail.logs.view | | | | all | all |

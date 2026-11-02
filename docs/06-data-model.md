@@ -79,6 +79,8 @@ Constraint: partial unique index on `shifts (employee_id) WHERE state <> 'ended'
 | custom_field_defs | entity (lead), key, label, type, options jsonb, position |
 | import_jobs | uploader_id, file_key, mapping jsonb, status, totals jsonb, report_key |
 
+CRM contacts, accounts, deals, activities, tags, custom fields, saved views and import jobs: see 13-crm-spec.md section 5.
+
 ## 5. Targets
 
 | Table | Key columns |
@@ -106,6 +108,10 @@ Constraint: partial unique index on `shifts (employee_id) WHERE state <> 'ended'
 | security_alerts | type, severity, employee_id null, detail jsonb, acknowledged_by, acknowledged_at |
 | app_releases | version, channel (pilot, stable), mandatory, min_supported, notes, installer_key, signature, published_at |
 | settings | key, value jsonb (company-level overrides of defaults) |
+
+Settings keys stored on `companies.settings` (camelCase in the API, defaults in brackets): `idleThresholdSeconds` [300], `longIdleThresholdSeconds` [1800], `breakAllowanceMinutes` [60], `deviceApprovalMode` [manual], `deviceLimitPerEmployee` [1], `maxShiftHours` [16], `heartbeatTimeoutMinutes` [10], `captureWindowTitles` [off], `adminIpAllowlist` [[]]. Shift policy (03 F3, F5; `ShiftPolicySchema` in packages/contracts, delivered on `/me` as `shiftPolicy`): `autoStartShiftOnLogin` [off], `autoStartWindowMinutesBefore` [30, 0..180], `autoEndShiftOnShutdown` [off], `countEarlyStart` [on], `endReminderMinutes` [15, 0..240], `startReminderEnabled` [on], `breakReminderAtAllowance` [on], `minShiftMinutes` [5, 0..60], `longIdlePrompt` [on]. `timezone` and `week_start` are columns.
+
+`attendance_days` additionally stores `scheduled_start_at`, `scheduled_end_at` (timestamptz, the F8 window in UTC), `late_s` and `early_s` (nullable, migration 0004_attendance_schedule).
 
 `audit_logs` and `lead_timeline`: the application database role has INSERT and SELECT only. No UPDATE or DELETE grants.
 

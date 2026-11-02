@@ -1,6 +1,16 @@
 const ftp = require('basic-ftp');
 const path = require('path');
 
+// Credentials come from the environment only (AGENTS.md rule 6). Set DEPLOY_HOST, DEPLOY_USER, DEPLOY_PASSWORD.
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Missing environment variable ${name}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 async function deploy() {
   const client = new ftp.Client();
   client.ftp.verbose = true;
@@ -9,10 +19,10 @@ async function deploy() {
   try {
     console.log('Connecting to Hostinger via standard FTP (Port 21)...');
     await client.access({
-      host: '185.232.14.208',
-      user: 'u880916130',
-      password: 'RAJOURIgarden@1996',
-      port: 21,
+      host: requiredEnv('DEPLOY_HOST'),
+      user: requiredEnv('DEPLOY_USER'),
+      password: requiredEnv('DEPLOY_PASSWORD'),
+      port: Number(process.env.DEPLOY_FTP_PORT || 21),
       secure: false,
     });
 

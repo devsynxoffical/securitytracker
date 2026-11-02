@@ -1,39 +1,74 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { electronAPI } from '@electron-toolkit/preload';
 
-const api = {
-  ping: () => ipcRenderer.invoke('ping'),
-  getHardwareProfile: () => ipcRenderer.invoke('telemetry:get-hardware'),
-  getLiveTelemetry: () => ipcRenderer.invoke('telemetry:get-state'),
-  startShift: (shiftId: string) => ipcRenderer.invoke('telemetry:start-shift', shiftId),
-  pauseShift: (reason?: string) => ipcRenderer.invoke('telemetry:pause-shift', reason),
-  resumeShift: () => ipcRenderer.invoke('telemetry:resume-shift'),
-  endShift: () => ipcRenderer.invoke('telemetry:end-shift'),
-  registerKeyTap: (count?: number) => ipcRenderer.invoke('telemetry:register-key', count),
-  registerMouseClick: (count?: number) => ipcRenderer.invoke('telemetry:register-click', count),
-  getQueuedSegments: () => ipcRenderer.invoke('telemetry:get-segments'),
-  acknowledgeSegments: (acceptedIds: string[]) =>
-    ipcRenderer.invoke('telemetry:ack-segments', acceptedIds),
-  onTelemetryUpdate: (callback: (data: any) => void) => {
-    const subscription = (_: any, value: any) => callback(value);
-    ipcRenderer.on('telemetry:update', subscription);
-    return () => {
-      ipcRenderer.removeListener('telemetry:update', subscription);
-    };
+/**
+ * The only surface the renderer sees (AGENTS.md rule 7). Tokens, keys and the pipe never cross it;
+ * the renderer calls the server through `api.request`, which the main process authenticates.
+ */
+const on = (channel: string) => (callback: (payload: unknown) => void) => {
+  const sub = (_: unknown, value: unknown) => callback(value);
+  ipcRenderer.on(channel, sub);
+  return () => ipcRenderer.removeListener(channel, sub);
+};
+
+const bridge = {
+  window: {
+    minimize: () => ipcRenderer.invoke('win:minimize'),
+    maximize: () => ipcRenderer.invoke('win:maximize'),
+    close: () => ipcRenderer.invoke('win:close'),
+  },
+  app: {
+    info: () => ipcRenderer.invoke('app:info'),
+    setApiUrl: (url: string) => ipcRenderer.invoke('app:setApiUrl', url),
+    probeApiUrl: (url: string) => ipcRenderer.invoke('app:probeApiUrl', url),
+    openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+    toast: (title: string, body: string) => ipcRenderer.invoke('notify:toast', title, body),
+  },
+  auth: {
+    session: () => ipcRenderer.invoke('auth:session'),
+    login: (identifier: string, password: string) => ipcRenderer.invoke('auth:login', identifier, password),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    onExpired: on('auth:expired'),
+  },
+  api: {
+    /** `headers` is allow-listed in the main process (Idempotency-Key only). */
+    request: (method: string, path: string, body?: unknown, headers?: Record<string, string>) => ipcRenderer.invoke('api:request', method, path, body, headers),
+  },
+  /** Socket events forwarded by the main process (the socket and its token stay there). */
+  realtime: {
+    status: () => ipcRenderer.invoke('realtime:status'),
+    onEvent: on('realtime:event'),
+    onStatus: on('realtime:status'),
+  },
+  /** FR-CHAT-14: last 200 messages per channel, plain values in the main-process store, wiped on revocation. */
+  chat: {
+    cacheGet: (channelId: string) => ipcRenderer.invoke('chat:cacheGet', channelId),
+    cachePut: (channelId: string, messages: unknown[]) => ipcRenderer.invoke('chat:cachePut', channelId, messages),
+  },
+  shift: {
+    state: () => ipcRenderer.invoke('shift:state'),
+    start: () => ipcRenderer.invoke('shift:start'),
+    startBreak: (type: string) => ipcRenderer.invoke('shift:break', type),
+    resume: () => ipcRenderer.invoke('shift:resume'),
+    end: () => ipcRenderer.invoke('shift:end'),
+    sync: () => ipcRenderer.invoke('shift:sync'),
+    claimIdle: (claim: 'break' | 'away_work') => ipcRenderer.invoke('shift:claimIdle', claim),
+    startContext: () => ipcRenderer.invoke('shift:startContext'),
+    dismissClosure: () => ipcRenderer.invoke('shift:dismissClosure'),
+    snoozeEndReminder: () => ipcRenderer.invoke('shift:snoozeEndReminder'),
+    dismissReminder: (kind: 'start' | 'end' | 'break') => ipcRenderer.invoke('shift:dismissReminder', kind),
+    onUpdate: on('shift:update'),
+    onLongIdle: on('tracker:longIdle'),
+    onNotice: on('shift:notice'),
+  },
+  net: {
+    onStatus: on('net:status'),
+  },
+  /** QA only: the main process registers 'dev:simulate' solely when COMPANYOS_DEV_SIM=1; otherwise this rejects. */
+  dev: {
+    simulate: (payload: unknown) => ipcRenderer.invoke('dev:simulate', payload),
   },
 };
 
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('api', api);
-  } catch (error) {
-    console.error(error);
-  }
-} else {
-  // @ts-ignore
-  window.electron = electronAPI;
-  // @ts-ignore
-  window.api = api;
-}
+export type DesktopBridge = typeof bridge;
 
+contextBridge.exposeInMainWorld('companyos', bridge);

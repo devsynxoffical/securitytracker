@@ -9,16 +9,22 @@
     "dist": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "dist:mac": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
     "dist:win": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "node test/smoke.mjs",
+    "test:lockdown": "tsc src/main/lockdown.ts --outDir out/lockdown-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/lockdown.spec.mjs",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "pack": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
+    "test:policy": "tsc src/main/shift-policy.ts --outDir out/policy-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/policy.spec.mjs"
   },
   "dependencies": {
     "@company-os/contracts": "workspace:*",
-    "@fontsource/inter": "^5.3.0",
-    "@fontsource/plus-jakarta-sans": "^5.3.0",
+    "@fontsource/inter": "5.2.5",
+    "@fontsource/ibm-plex-mono": "5.2.5",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io-client": "4.8.1",
     "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
@@ -32,9 +38,16 @@
     "electron": "^44.5.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^3.1.0",
+    "playwright": "1.63.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "WorkPulse employee workstation: shifts, tasks, leave, inbox and privacy-first activity tracking",
+  "author": {
+    "name": "DEVSYNX",
+    "email": "support@devsynx.com"
+  },
+  "homepage": "https://github.com/devsynxoffical/securitytracker"
 }

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WorkPulse — Enterprise Workforce Intelligence & Operations',
+  title: 'WorkPulse',
   description: 'Real-time telemetry, employee tracking, and unified CRM operations platform',
 };
 
@@ -12,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased min-h-screen bg-[#F5F6F3] text-[#151A1E]">{children}</body>
+    <html lang="en" data-theme="dark">
+      <body className="antialiased min-h-screen bg-bg text-ink">{children}</body>
     </html>
   );
 }

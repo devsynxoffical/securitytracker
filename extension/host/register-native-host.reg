@@ -1,0 +1,25 @@
+Windows Registry Editor Version 5.00
+
+; Native messaging host registration for Chrome and Edge (docs/09 section 5). Written by the installer under HKLM
+; so it applies to every user. The value is the path to the host manifest JSON.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Google\Chrome\NativeMessagingHosts\com.companyos.agent]
+@="C:\\Program Files\\CompanyOS\\agent\\com.companyos.agent.json"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Edge\NativeMessagingHosts\com.companyos.agent]
+@="C:\\Program Files\\CompanyOS\\agent\\com.companyos.agent.json"
+
+; Force-install the extension and disable incognito (docs/09 section 5). Replace EXTENSION_ID and the update URL
+; with the Chrome Web Store id (unlisted item) or the self-hosted update manifest.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]
+"1"="EXTENSION_ID;https://clients2.google.com/service/update2/crx"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"IncognitoModeAvailability"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]
+"1"="EXTENSION_ID;https://edge.microsoft.com/extensionwebstorebase/v1/crx"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"InPrivateModeAvailability"=dword:00000001

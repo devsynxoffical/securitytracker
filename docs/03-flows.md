@@ -73,7 +73,7 @@ Open app -> valid refresh token on this device?
 
 Rules:
 
-- Login does not start a shift. The employee presses Start Shift (F5). Setting `auto_start_shift_on_login` exists [off].
+- Login does not start a shift. The employee presses Start Shift (F5). Setting `auto_start_shift_on_login` exists [off]; when on, the app starts the shift automatically only if login falls within `auto_start_window_minutes_before` [30] of the scheduled start (F5 rule 13). `/me` carries the resolved schedule for today and the next workday plus the shift policy so the app can decide offline.
 - Refresh tokens rotate on every use. Reuse of an old refresh token revokes the whole session family and raises a security alert.
 - Logout while a shift is open is blocked: the app asks to end the shift first.
 - Server can push `session.revoked` over WebSocket. The app then stops the agent, wipes tokens and returns to the login screen. If the app is offline, the next API call fails with 401 and has the same effect.
@@ -122,6 +122,11 @@ Rules:
 10. Break allowance: total break time above [60] minutes per shift is flagged `break_exceeded` on the attendance day.
 11. Clock: shift start, break and end timestamps are assigned by the server on receipt. When an event was performed offline, the client sends its monotonic elapsed time since the last server-confirmed sync and the server reconstructs the timestamp. Events with a reconstructed timestamp are flagged.
 12. Changing the Windows clock has no effect on durations (monotonic clock). A detected jump of more than 2 minutes is logged as `clock_changed`.
+13. Schedule context at start: the server resolves the attendance date (F8) and flags the shift `early_start` (more than 60 min before the scheduled start), `outside_schedule` (not a workday, or after the scheduled end) or `unscheduled` (no schedule assignment, or no scheduled start within the F8 window). Early time counts as working time unless `count_early_start` is off; then it is stored but excluded from the day and the day is flagged `early_clipped`.
+14. Short shifts: a shift ended after less than `min_shift_minutes` [5] is flagged `short_shift`.
+15. Reminders (job every 5 minutes, each sent once): `start_reminder_enabled` [on] notifies the employee at scheduled start + grace when no shift has started on this attendance date, and the manager at scheduled start + 60 min; an open shift past scheduled end + `end_reminder_minutes` [15] notifies the employee once; break time above the allowance (rule 10) notifies the employee once per break when `break_reminder_at_allowance` [on]. Holidays, approved leave and non-workdays send nothing.
+16. Auto start and auto end are app-side policies delivered on `/me`: `auto_start_shift_on_login` [off] (F3) and `auto_end_shift_on_shutdown` [off]; with auto end off, shutdown follows rule 8.
+17. Closed shift the client still believes open: the heartbeat response carries a command `{ type: 'shift_closed', shiftId, endedAt, reason }` with reason `auto_closed_no_heartbeat`, `auto_closed_max_length`, `ended_elsewhere` (ended from another device or by an admin) or `ended`. Break, end or claim events that refer to a closed shift are acknowledged (returned in `acknowledgedEventIds`, so the client drops them) and the response carries `closedShift: { id, endedAt, reason }`. Start events still create a shift (409 with the open shift when one exists).
 
 ### Working time formula
 
@@ -222,7 +227,7 @@ Status per employee and date, computed by the attendance-close job [2] hours aft
 | Late | First shift start later than scheduled start + grace [10 min] |
 | Present | Otherwise |
 
-Additional flags on the day: `left_early`, `break_exceeded`, `auto_closed`, `offline_time`, `unscheduled`, `corrected`. Live status in the admin list during the day: Working, On break, Idle, Offline, Not started.
+Additional flags on the day: `late` (also when the status is Half day), `left_early` (last end before scheduled end minus grace; only when every shift ended and none was auto-closed), `break_exceeded` (break time above the company `break_allowance_minutes`), `auto_closed`, `offline_time`, `unscheduled` (no schedule assignment, or a shift flagged `unscheduled`), `early_start` (first start more than 60 min before the scheduled start), `early_clipped` (early time excluded because `count_early_start` is off), `short_shift` (a shift under `min_shift_minutes`), `corrected`. The day also stores `scheduled_start_at`, `scheduled_end_at`, `late_s` (first start minus scheduled start, 0 when on time) and `early_s` (scheduled end minus last end, 0 when not early). Days without a schedule assignment fall back to Monday to Friday for the workday test. Live status in the admin list during the day: Working, On break, Idle, Offline, Not started.
 
 Multiple shifts on one attendance date are allowed (split shift). Times are summed. Check-in is the first start, check-out the last end.
 
@@ -452,4 +457,31 @@ Employee: open app -> auto login -> Start Shift -> dashboard
    -> break / resume -> End Shift -> day summary shown -> close app
 Manager: Admin Panel dashboard -> who is working / late / absent
    -> team targets -> overdue follow-ups -> approvals -> reports
+```
+
+## F29 - First-run workspace setup
+
+```text
+Fresh deployment, no employee exists
+  -> Admin Panel calls GET /setup/status -> {needsSetup: true}
+  -> "Create your workspace" (3 steps: Company, Your account, Done)
+  -> POST /setup/bootstrap {companyName, timezone, firstName, lastName, email, password}
+       -> company, the five system roles with the default matrix (05), the Super Admin
+          (code EMP-0001, 2FA enrolment on first sign-in), default pipelines, lookups,
+          tags, task space, leave types, checklist templates, mail labels, audit entry
+  -> every later call to /setup/bootstrap answers 409. Sign-up never exists for
+     employees: they are created by an admin (F1).
+```
+
+## F30 - Admin password reset
+
+```text
+Sign in -> "Forgot password?" -> POST /auth/forgot-password {email}
+  -> always 200 (no enumeration). Active account: single-use token (sha256 stored,
+     30 minutes, Redis when configured, otherwise process memory) and a login event
+     password_reset_requested. No mailer yet: outside production the response carries
+     devResetUrl for the operator; in production the link must be delivered by email.
+  -> /admin/reset?token=... -> POST /auth/reset-password {token, newPassword}
+  -> password replaced (Argon2id), lockout cleared, every session revoked, login event
+     password_reset. 2FA is untouched; a 2FA reset stays with the Super Admin (08).
 ```

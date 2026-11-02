@@ -13,44 +13,66 @@ generator client {
 // --------------------------------------------------------
 
 model Company {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String
-  timezone   String   @default("UTC")
-  weekStart  Int      @default(1) // 1 = Monday
-  settings   Json     @default("{}")
-  createdAt  DateTime @default(now()) @db.Timestamptz()
-  updatedAt  DateTime @updatedAt @db.Timestamptz()
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  timezone  String   @default("UTC")
+  weekStart Int      @default(1) // 1 = Monday
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
 
-  departments    Department[]
-  teams          Team[]
-  employees      Employee[]
-  devices        Device[]
-  schedules      ShiftSchedule[]
-  holidays       Holiday[]
-  pipelines      Pipeline[]
-  targets        Target[]
-  mailboxes      Mailbox[]
-  productivityRules ProductivityRule[]
-  trackingExclusions TrackingExclusion[]
-  exceptionApps   ActivityExceptionApp[]
-  appReleases    AppRelease[]
-  auditLogs      AuditLog[]
+  departments          Department[]
+  teams                Team[]
+  employees            Employee[]
+  devices              Device[]
+  schedules            ShiftSchedule[]
+  holidays             Holiday[]
+  pipelines            Pipeline[]
+  crmAccounts          CrmAccount[]
+  crmContacts          CrmContact[]
+  deals                Deal[]
+  crmActivities        CrmActivity[]
+  leadSources          LeadSource[]
+  lostReasons          LostReason[]
+  tags                 Tag[]
+  customFieldDefs      CustomFieldDef[]
+  savedViews           SavedView[]
+  importJobs           ImportJob[]
+  taskSpaces           TaskSpace[]
+  taskLists            TaskList[]
+  taskActivities       TaskActivity[]
+  leaveTypes           LeaveType[]
+  leaveBalances        LeaveBalance[]
+  hrDocuments          HrDocument[]
+  hrChecklistTemplates HrChecklistTemplate[]
+  hrChecklists         HrChecklist[]
+  announcements        Announcement[]
+  manualTimeEntries    ManualTimeEntry[]
+  mailLabels           MailLabel[]
+  mailTemplates        MailTemplate[]
+  targets              Target[]
+  mailboxes            Mailbox[]
+  productivityRules    ProductivityRule[]
+  trackingExclusions   TrackingExclusion[]
+  exceptionApps        ActivityExceptionApp[]
+  appReleases          AppRelease[]
+  auditLogs            AuditLog[]
 
   @@map("companies")
 }
 
 model Department {
-  id         String   @id @default(uuid()) @db.Uuid
-  companyId  String   @db.Uuid @map("company_id")
-  name       String
-  managerId  String?  @db.Uuid @map("manager_id")
-  createdAt  DateTime @default(now()) @db.Timestamptz()
-  updatedAt  DateTime @updatedAt @db.Timestamptz()
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  managerId String?  @map("manager_id") @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
 
-  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  manager    Employee?  @relation("DepartmentManager", fields: [managerId], references: [id])
-  teams      Team[]
-  employees  Employee[] @relation("DepartmentMembers")
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager   Employee?  @relation("DepartmentManager", fields: [managerId], references: [id])
+  teams     Team[]
+  employees Employee[] @relation("DepartmentMembers")
 
   @@index([companyId])
   @@map("departments")
@@ -58,17 +80,17 @@ model Department {
 
 model Team {
   id           String   @id @default(uuid()) @db.Uuid
-  companyId    String   @db.Uuid @map("company_id")
-  departmentId String   @db.Uuid @map("department_id")
+  companyId    String   @map("company_id") @db.Uuid
+  departmentId String   @map("department_id") @db.Uuid
   name         String
-  leaderId     String?  @db.Uuid @map("leader_id")
+  leaderId     String?  @map("leader_id") @db.Uuid
   createdAt    DateTime @default(now()) @db.Timestamptz()
   updatedAt    DateTime @updatedAt @db.Timestamptz()
 
-  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  leader       Employee?  @relation("TeamLeader", fields: [leaderId], references: [id])
-  employees    Employee[] @relation("TeamMembers")
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  leader     Employee?  @relation("TeamLeader", fields: [leaderId], references: [id])
+  employees  Employee[] @relation("TeamMembers")
 
   @@index([companyId])
   @@index([departmentId])
@@ -77,7 +99,7 @@ model Team {
 
 model Employee {
   id                 String    @id @default(uuid()) @db.Uuid
-  companyId          String    @db.Uuid @map("company_id")
+  companyId          String    @map("company_id") @db.Uuid
   code               String
   firstName          String    @map("first_name")
   lastName           String    @map("last_name")
@@ -86,42 +108,51 @@ model Employee {
   passwordHash       String    @map("password_hash")
   mustChangePassword Boolean   @default(true) @map("must_change_password")
   status             String    @default("invited") // invited, active, disabled
-  roleId             String    @db.Uuid @map("role_id")
-  departmentId       String?   @db.Uuid @map("department_id")
-  teamId             String?   @db.Uuid @map("team_id")
-  managerId          String?   @db.Uuid @map("manager_id")
-  joinDate           DateTime? @db.Date @map("join_date")
+  roleId             String    @map("role_id") @db.Uuid
+  departmentId       String?   @map("department_id") @db.Uuid
+  teamId             String?   @map("team_id") @db.Uuid
+  managerId          String?   @map("manager_id") @db.Uuid
+  joinDate           DateTime? @map("join_date") @db.Date
   totpSecretEnc      String?   @map("totp_secret_enc")
   totpEnabled        Boolean   @default(false) @map("totp_enabled")
   failedLogins       Int       @default(0) @map("failed_logins")
-  lockedUntil        DateTime? @db.Timestamptz() @map("locked_until")
-  lastLoginAt        DateTime? @db.Timestamptz() @map("last_login_at")
-  disabledAt         DateTime? @db.Timestamptz() @map("disabled_at")
-  deletedAt          DateTime? @db.Timestamptz() @map("deleted_at")
+  lockedUntil        DateTime? @map("locked_until") @db.Timestamptz()
+  lastLoginAt        DateTime? @map("last_login_at") @db.Timestamptz()
+  disabledAt         DateTime? @map("disabled_at") @db.Timestamptz()
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz()
   createdAt          DateTime  @default(now()) @db.Timestamptz()
   updatedAt          DateTime  @updatedAt @db.Timestamptz()
 
-  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  role               Role                @relation(fields: [roleId], references: [id])
-  department         Department?         @relation("DepartmentMembers", fields: [departmentId], references: [id])
-  team               Team?               @relation("TeamMembers", fields: [teamId], references: [id])
-  manager            Employee?           @relation("EmployeeHierarchy", fields: [managerId], references: [id])
-  directReports      Employee[]          @relation("EmployeeHierarchy")
-  managedDepartments Department[]        @relation("DepartmentManager")
-  ledTeams           Team[]              @relation("TeamLeader")
+  company            Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role               Role         @relation(fields: [roleId], references: [id])
+  department         Department?  @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  team               Team?        @relation("TeamMembers", fields: [teamId], references: [id])
+  manager            Employee?    @relation("EmployeeHierarchy", fields: [managerId], references: [id])
+  directReports      Employee[]   @relation("EmployeeHierarchy")
+  managedDepartments Department[] @relation("DepartmentManager")
+  ledTeams           Team[]       @relation("TeamLeader")
 
   permissionOverrides EmployeePermissionOverride[]
-  devices            Device[]
-  sessions           Session[]
-  consentRecords     ConsentRecord[]
-  employeeSchedules  EmployeeSchedule[]
-  shifts             Shift[]
-  attendanceDays     AttendanceDay[]
-  leaveRequests      LeaveRequest[]
-  leads              Lead[]
-  tasks              Task[]
-  assignedMailboxes  MailboxAssignment[]
-  callLogs           CallLog[]
+  devices             Device[]
+  sessions            Session[]
+  consentRecords      ConsentRecord[]
+  employeeSchedules   EmployeeSchedule[]
+  shifts              Shift[]
+  attendanceDays      AttendanceDay[]
+  leaveRequests       LeaveRequest[]
+  leads               Lead[]
+  ownedAccounts       CrmAccount[]                 @relation("AccountOwner")
+  ownedContacts       CrmContact[]                 @relation("ContactOwner")
+  ownedDeals          Deal[]                       @relation("DealOwner")
+  taskAssignments     TaskAssignee[]
+  spaceMemberships    TaskSpaceMember[]
+  profile             EmployeeProfile?
+  leaveBalances       LeaveBalance[]
+  hrChecklists        HrChecklist[]
+  manualTimeEntries   ManualTimeEntry[]
+  tasks               Task[]
+  assignedMailboxes   MailboxAssignment[]
+  callLogs            CallLog[]
 
   @@unique([companyId, code])
   @@unique([companyId, email])
@@ -133,12 +164,12 @@ model Employee {
 }
 
 model Role {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String   @unique
-  rank       Int      @default(1)
-  isSystem   Boolean  @default(false) @map("is_system")
-  createdAt  DateTime @default(now()) @db.Timestamptz()
-  updatedAt  DateTime @updatedAt @db.Timestamptz()
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  rank      Int      @default(1)
+  isSystem  Boolean  @default(false) @map("is_system")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
 
   permissions RolePermission[]
   employees   Employee[]
@@ -147,25 +178,25 @@ model Role {
 }
 
 model RolePermission {
-  id            String   @id @default(uuid()) @db.Uuid
-  roleId        String   @db.Uuid @map("role_id")
-  permissionKey String   @map("permission_key")
-  scope         String   @default("own") // own, team, department, all
+  id            String @id @default(uuid()) @db.Uuid
+  roleId        String @map("role_id") @db.Uuid
+  permissionKey String @map("permission_key")
+  scope         String @default("own") // own, team, department, all
 
-  role          Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionKey])
   @@map("role_permissions")
 }
 
 model EmployeePermissionOverride {
-  id            String   @id @default(uuid()) @db.Uuid
-  employeeId    String   @db.Uuid @map("employee_id")
-  permissionKey String   @map("permission_key")
-  effect        String   // grant, deny
-  scope         String   @default("own")
+  id            String @id @default(uuid()) @db.Uuid
+  employeeId    String @map("employee_id") @db.Uuid
+  permissionKey String @map("permission_key")
+  effect        String // grant, deny
+  scope         String @default("own")
 
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, permissionKey])
   @@map("employee_permission_overrides")
@@ -173,8 +204,8 @@ model EmployeePermissionOverride {
 
 model Device {
   id             String    @id @default(uuid()) @db.Uuid
-  companyId      String    @db.Uuid @map("company_id")
-  employeeId     String    @db.Uuid @map("employee_id")
+  companyId      String    @map("company_id") @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
   name           String
   publicKey      String    @map("public_key")
   hardwareHash   String    @map("hardware_hash")
@@ -182,17 +213,17 @@ model Device {
   appVersion     String?   @map("app_version")
   agentVersion   String?   @map("agent_version")
   status         String    @default("pending") // pending, approved, rejected, revoked
-  approvedBy     String?   @db.Uuid @map("approved_by")
-  approvedAt     DateTime? @db.Timestamptz() @map("approved_at")
-  lastSeenAt     DateTime? @db.Timestamptz() @map("last_seen_at")
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz()
+  lastSeenAt     DateTime? @map("last_seen_at") @db.Timestamptz()
   releaseChannel String    @default("stable") @map("release_channel")
   createdAt      DateTime  @default(now()) @db.Timestamptz()
   updatedAt      DateTime  @updatedAt @db.Timestamptz()
 
-  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  sessions       Session[]
-  shifts         Shift[]
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  sessions Session[]
+  shifts   Shift[]
 
   @@index([companyId])
   @@index([employeeId])
@@ -201,20 +232,20 @@ model Device {
 
 model Session {
   id               String    @id @default(uuid()) @db.Uuid
-  employeeId       String    @db.Uuid @map("employee_id")
-  deviceId         String?   @db.Uuid @map("device_id")
-  familyId         String    @db.Uuid @map("family_id")
+  employeeId       String    @map("employee_id") @db.Uuid
+  deviceId         String?   @map("device_id") @db.Uuid
+  familyId         String    @map("family_id") @db.Uuid
   refreshTokenHash String    @map("refresh_token_hash")
-  client           String    // desktop, admin
+  client           String // desktop, admin
   ip               String
   userAgent        String?   @map("user_agent")
-  expiresAt        DateTime  @db.Timestamptz() @map("expires_at")
-  revokedAt        DateTime? @db.Timestamptz() @map("revoked_at")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz()
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz()
   revokedReason    String?   @map("revoked_reason")
   createdAt        DateTime  @default(now()) @db.Timestamptz()
 
-  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  device           Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  device   Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([employeeId])
   @@index([familyId])
@@ -224,12 +255,12 @@ model Session {
 
 model LoginEvent {
   id         String   @id @default(uuid()) @db.Uuid
-  employeeId String?  @db.Uuid @map("employee_id")
+  employeeId String?  @map("employee_id") @db.Uuid
   identifier String
-  deviceId   String?  @db.Uuid @map("device_id")
+  deviceId   String?  @map("device_id") @db.Uuid
   ip         String
   client     String
-  result     String   // success, bad_password, locked, device_pending, device_revoked, disabled, 2fa_failed
+  result     String // success, bad_password, locked, device_pending, device_revoked, disabled, 2fa_failed
   createdAt  DateTime @default(now()) @db.Timestamptz()
 
   @@index([identifier])
@@ -240,20 +271,20 @@ model LoginEvent {
 model PolicyVersion {
   version     Int      @id
   text        String
-  publishedAt DateTime @default(now()) @db.Timestamptz() @map("published_at")
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz()
 
   @@map("policy_versions")
 }
 
 model ConsentRecord {
   id            String   @id @default(uuid()) @db.Uuid
-  employeeId    String   @db.Uuid @map("employee_id")
+  employeeId    String   @map("employee_id") @db.Uuid
   policyVersion Int      @map("policy_version")
-  deviceId      String?  @db.Uuid @map("device_id")
+  deviceId      String?  @map("device_id") @db.Uuid
   ip            String
-  acceptedAt    DateTime @default(now()) @db.Timestamptz() @map("accepted_at")
+  acceptedAt    DateTime @default(now()) @map("accepted_at") @db.Timestamptz()
 
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@map("consent_records")
@@ -265,20 +296,20 @@ model ConsentRecord {
 
 model ShiftSchedule {
   id              String   @id @default(uuid()) @db.Uuid
-  companyId       String   @db.Uuid @map("company_id")
+  companyId       String   @map("company_id") @db.Uuid
   name            String
-  workdays        Int[]    // 1 to 7 (1 = Mon)
+  workdays        Int[] // 1 to 7 (1 = Mon)
   startTime       String   @map("start_time") // HH:mm
-  endTime         String   @map("end_time")   // HH:mm
+  endTime         String   @map("end_time") // HH:mm
   crossesMidnight Boolean  @default(false) @map("crosses_midnight")
   graceMinutes    Int      @default(10) @map("grace_minutes")
   halfDayPercent  Int      @default(50) @map("half_day_percent")
   createdAt       DateTime @default(now()) @db.Timestamptz()
   updatedAt       DateTime @updatedAt @db.Timestamptz()
 
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeSchedules EmployeeSchedule[]
-  attendanceDays  AttendanceDay[]
+  attendanceDays    AttendanceDay[]
 
   @@index([companyId])
   @@map("shift_schedules")
@@ -286,13 +317,13 @@ model ShiftSchedule {
 
 model EmployeeSchedule {
   id            String    @id @default(uuid()) @db.Uuid
-  employeeId    String    @db.Uuid @map("employee_id")
-  scheduleId    String    @db.Uuid @map("schedule_id")
-  effectiveFrom DateTime  @db.Date @map("effective_from")
-  effectiveTo   DateTime? @db.Date @map("effective_to")
+  employeeId    String    @map("employee_id") @db.Uuid
+  scheduleId    String    @map("schedule_id") @db.Uuid
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
 
-  employee      Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  schedule      ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([scheduleId])
@@ -300,46 +331,55 @@ model EmployeeSchedule {
 }
 
 model Holiday {
-  id        String   @id @default(uuid()) @db.Uuid
-  companyId String   @db.Uuid @map("company_id")
-  date      DateTime @db.Date
-  name      String
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  date       DateTime @db.Date
+  name       String
+  isOptional Boolean  @default(false) @map("is_optional")
 
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, date])
   @@map("holidays")
 }
 
 model LeaveRequest {
-  id         String    @id @default(uuid()) @db.Uuid
-  employeeId String    @db.Uuid @map("employee_id")
-  type       String    // annual, sick, unpaid, other
-  dateFrom   DateTime  @db.Date @map("date_from")
-  dateTo     DateTime  @db.Date @map("date_to")
-  reason     String
-  status     String    @default("pending") // pending, approved, rejected, cancelled
-  decidedBy  String?   @db.Uuid @map("decided_by")
-  decidedAt  DateTime? @db.Timestamptz() @map("decided_at")
-  comment    String?
-  createdAt  DateTime  @default(now()) @db.Timestamptz()
+  id          String    @id @default(uuid()) @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  type        String // annual, sick, unpaid, other
+  companyId   String?   @map("company_id") @db.Uuid
+  leaveTypeId String?   @map("leave_type_id") @db.Uuid
+  days        Decimal   @default(0) @db.Decimal(6, 2)
+  halfDay     Boolean   @default(false) @map("half_day")
+  approverId  String?   @map("approver_id") @db.Uuid
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz()
+  dateFrom    DateTime  @map("date_from") @db.Date
+  dateTo      DateTime  @map("date_to") @db.Date
+  reason      String
+  status      String    @default("pending") // pending, approved, rejected, cancelled
+  decidedBy   String?   @map("decided_by") @db.Uuid
+  decidedAt   DateTime? @map("decided_at") @db.Timestamptz()
+  comment     String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
 
-  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee  Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType? @relation(fields: [leaveTypeId], references: [id], onDelete: SetNull)
 
   @@index([employeeId])
+  @@index([companyId, status])
   @@map("leave_requests")
 }
 
 model Shift {
   id              String    @id @default(uuid()) @db.Uuid
-  employeeId      String    @db.Uuid @map("employee_id")
-  deviceId        String    @db.Uuid @map("device_id")
-  attendanceDate  DateTime  @db.Date @map("attendance_date")
-  startedAt       DateTime  @db.Timestamptz() @map("started_at")
-  endedAt         DateTime? @db.Timestamptz() @map("ended_at")
+  employeeId      String    @map("employee_id") @db.Uuid
+  deviceId        String    @map("device_id") @db.Uuid
+  attendanceDate  DateTime  @map("attendance_date") @db.Date
+  startedAt       DateTime  @map("started_at") @db.Timestamptz()
+  endedAt         DateTime? @map("ended_at") @db.Timestamptz()
   state           String    @default("WORKING") // OFF_SHIFT, WORKING, ON_BREAK, ENDED
-  endReason       String?   @map("end_reason")  // manual, auto_closed, recovered, admin
-  lastHeartbeatAt DateTime  @default(now()) @db.Timestamptz() @map("last_heartbeat_at")
+  endReason       String?   @map("end_reason") // manual, auto_closed, recovered, admin
+  lastHeartbeatAt DateTime  @default(now()) @map("last_heartbeat_at") @db.Timestamptz()
   flags           String[]  @default([])
   durationSeconds Int       @default(0) @map("duration_s")
   breakSeconds    Int       @default(0) @map("break_s")
@@ -349,11 +389,11 @@ model Shift {
   createdAt       DateTime  @default(now()) @db.Timestamptz()
   updatedAt       DateTime  @updatedAt @db.Timestamptz()
 
-  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  device          Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  breaks          ShiftBreak[]
-  events          ShiftEvent[]
-  segments        ActivitySegment[]
+  employee Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  device   Device            @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  breaks   ShiftBreak[]
+  events   ShiftEvent[]
+  segments ActivitySegment[]
 
   @@index([employeeId, state])
   @@index([employeeId, attendanceDate])
@@ -362,51 +402,57 @@ model Shift {
 
 model ShiftBreak {
   id        String    @id @default(uuid()) @db.Uuid
-  shiftId   String    @db.Uuid @map("shift_id")
+  shiftId   String    @map("shift_id") @db.Uuid
   type      String    @default("general")
-  startedAt DateTime  @db.Timestamptz() @map("started_at")
-  endedAt   DateTime? @db.Timestamptz() @map("ended_at")
+  startedAt DateTime  @map("started_at") @db.Timestamptz()
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz()
 
-  shift     Shift     @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
 
   @@index([shiftId])
   @@map("shift_breaks")
 }
 
 model ShiftEvent {
-  id                String   @id @default(uuid()) @db.Uuid
-  shiftId           String   @db.Uuid @map("shift_id")
-  clientEventId     String   @unique @db.Uuid @map("client_event_id")
-  type              String   // start, break_start, break_end, end
-  breakType         String?  @map("break_type")
-  occurredAt        DateTime @db.Timestamptz() @map("occurred_at")
-  receivedAt        DateTime @default(now()) @db.Timestamptz() @map("received_at")
-  reconstructed     Boolean  @default(false)
+  id            String   @id @default(uuid()) @db.Uuid
+  shiftId       String   @map("shift_id") @db.Uuid
+  clientEventId String   @unique @map("client_event_id") @db.Uuid
+  type          String // start, break_start, break_end, end
+  breakType     String?  @map("break_type")
+  occurredAt    DateTime @map("occurred_at") @db.Timestamptz()
+  receivedAt    DateTime @default(now()) @map("received_at") @db.Timestamptz()
+  reconstructed Boolean  @default(false)
 
-  shift             Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
 
   @@index([shiftId])
   @@map("shift_events")
 }
 
 model AttendanceDay {
-  id             String    @id @default(uuid()) @db.Uuid
-  employeeId     String    @db.Uuid @map("employee_id")
-  date           DateTime  @db.Date
-  scheduleId     String?   @db.Uuid @map("schedule_id")
-  status         String    @default("present") // present, late, half_day, absent, on_leave, weekly_off, holiday
-  checkInAt      DateTime? @db.Timestamptz() @map("check_in_at")
-  checkOutAt     DateTime? @db.Timestamptz() @map("check_out_at")
-  workingSeconds Int       @default(0) @map("working_s")
-  activeSeconds  Int       @default(0) @map("active_s")
-  idleSeconds    Int       @default(0) @map("idle_s")
-  breakSeconds   Int       @default(0) @map("break_s")
-  offlineSeconds Int       @default(0) @map("offline_s")
-  flags          String[]  @default([])
-  computedAt     DateTime  @default(now()) @db.Timestamptz() @map("computed_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  date             DateTime  @db.Date
+  scheduleId       String?   @map("schedule_id") @db.Uuid
+  status           String    @default("present") // present, late, half_day, absent, on_leave, weekly_off, holiday
+  checkInAt        DateTime? @map("check_in_at") @db.Timestamptz()
+  checkOutAt       DateTime? @map("check_out_at") @db.Timestamptz()
+  workingSeconds   Int       @default(0) @map("working_s")
+  activeSeconds    Int       @default(0) @map("active_s")
+  idleSeconds      Int       @default(0) @map("idle_s")
+  breakSeconds     Int       @default(0) @map("break_s")
+  offlineSeconds   Int       @default(0) @map("offline_s")
+  manualSeconds    Int       @default(0) @map("manual_s")
+  flags            String[]  @default([])
+  // F8 schedule context: scheduled window in UTC, lateness at check-in, early leave at check-out.
+  scheduledStartAt DateTime? @map("scheduled_start_at") @db.Timestamptz()
+  scheduledEndAt   DateTime? @map("scheduled_end_at") @db.Timestamptz()
+  lateSeconds      Int?      @map("late_s")
+  earlySeconds     Int?      @map("early_s")
+  computedAt       DateTime  @default(now()) @map("computed_at") @db.Timestamptz()
 
-  employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  schedule       ShiftSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  employee Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule ShiftSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
 
   @@unique([employeeId, date])
   @@index([date])
@@ -415,15 +461,15 @@ model AttendanceDay {
 
 model AttendanceCorrection {
   id             String    @id @default(uuid()) @db.Uuid
-  employeeId     String    @db.Uuid @map("employee_id")
+  employeeId     String    @map("employee_id") @db.Uuid
   date           DateTime  @db.Date
-  type           String    // missed_start, missed_end, wrong_break, system_issue
-  requestedStart DateTime? @db.Timestamptz() @map("requested_start")
-  requestedEnd   DateTime? @db.Timestamptz() @map("requested_end")
+  type           String // missed_start, missed_end, wrong_break, system_issue
+  requestedStart DateTime? @map("requested_start") @db.Timestamptz()
+  requestedEnd   DateTime? @map("requested_end") @db.Timestamptz()
   reason         String
   status         String    @default("pending") // pending, approved, rejected
-  decidedBy      String?   @db.Uuid @map("decided_by")
-  decidedAt      DateTime? @db.Timestamptz() @map("decided_at")
+  decidedBy      String?   @map("decided_by") @db.Uuid
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz()
   comment        String?
   createdAt      DateTime  @default(now()) @db.Timestamptz()
 
@@ -437,13 +483,13 @@ model AttendanceCorrection {
 
 model ActivitySegment {
   id          String   @id @db.Uuid
-  employeeId  String   @db.Uuid @map("employee_id")
-  deviceId    String   @db.Uuid @map("device_id")
-  shiftId     String   @db.Uuid @map("shift_id")
-  startedAt   DateTime @db.Timestamptz() @map("started_at")
-  endedAt     DateTime @db.Timestamptz() @map("ended_at")
+  employeeId  String   @map("employee_id") @db.Uuid
+  deviceId    String   @map("device_id") @db.Uuid
+  shiftId     String   @map("shift_id") @db.Uuid
+  startedAt   DateTime @map("started_at") @db.Timestamptz()
+  endedAt     DateTime @map("ended_at") @db.Timestamptz()
   durationS   Int      @map("duration_s")
-  kind        String   // active, idle, locked
+  kind        String // active, idle, locked
   processName String   @map("process_name")
   appName     String   @map("app_name")
   domain      String?
@@ -452,10 +498,10 @@ model ActivitySegment {
   mouseCount  Int      @default(0) @map("mouse_count")
   exception   String   @default("none") // none, call_app, meeting_app, mic
   claim       String   @default("none") // none, break, away_work
-  receivedAt  DateTime @default(now()) @db.Timestamptz() @map("received_at")
+  receivedAt  DateTime @default(now()) @map("received_at") @db.Timestamptz()
   late        Boolean  @default(false)
 
-  shift       Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
 
   @@index([employeeId, startedAt])
   @@index([shiftId])
@@ -464,7 +510,7 @@ model ActivitySegment {
 
 model ActivityDailyApp {
   id          String   @id @default(uuid()) @db.Uuid
-  employeeId  String   @db.Uuid @map("employee_id")
+  employeeId  String   @map("employee_id") @db.Uuid
   date        DateTime @db.Date
   appName     String   @map("app_name")
   processName String   @map("process_name")
@@ -479,7 +525,7 @@ model ActivityDailyApp {
 
 model ActivityDailyDomain {
   id         String   @id @default(uuid()) @db.Uuid
-  employeeId String   @db.Uuid @map("employee_id")
+  employeeId String   @map("employee_id") @db.Uuid
   date       DateTime @db.Date
   domain     String
   category   String   @default("neutral") // productive, neutral, unproductive
@@ -491,55 +537,57 @@ model ActivityDailyDomain {
 }
 
 model ActivityDailySummary {
-  id             String   @id @default(uuid()) @db.Uuid
-  employeeId     String   @db.Uuid @map("employee_id")
-  date           DateTime @db.Date
-  trackedS       Int      @default(0) @map("tracked_s")
-  activeS        Int      @default(0) @map("active_s")
-  idleS          Int      @default(0) @map("idle_s")
-  productiveS    Int      @default(0) @map("productive_s")
-  neutralS       Int      @default(0) @map("neutral_s")
-  unproductiveS  Int      @default(0) @map("unproductive_s")
-  keyCount       Int      @default(0) @map("key_count")
-  mouseCount     Int      @default(0) @map("mouse_count")
+  id            String   @id @default(uuid()) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  date          DateTime @db.Date
+  trackedS      Int      @default(0) @map("tracked_s")
+  activeS       Int      @default(0) @map("active_s")
+  idleS         Int      @default(0) @map("idle_s")
+  productiveS   Int      @default(0) @map("productive_s")
+  neutralS      Int      @default(0) @map("neutral_s")
+  unproductiveS Int      @default(0) @map("unproductive_s")
+  keyCount      Int      @default(0) @map("key_count")
+  mouseCount    Int      @default(0) @map("mouse_count")
+  lockedS       Int      @default(0) @map("locked_s")
+  longIdleCount Int      @default(0) @map("long_idle_count")
 
   @@unique([employeeId, date])
   @@map("activity_daily_summary")
 }
 
 model ProductivityRule {
-  id           String   @id @default(uuid()) @db.Uuid
-  companyId    String   @db.Uuid @map("company_id")
-  targetType   String   @map("target_type") // app, domain
+  id           String  @id @default(uuid()) @db.Uuid
+  companyId    String  @map("company_id") @db.Uuid
+  targetType   String  @map("target_type") // app, domain
   pattern      String
-  category     String   // productive, neutral, unproductive
-  departmentId String?  @db.Uuid @map("department_id")
+  category     String // productive, neutral, unproductive
+  departmentId String? @map("department_id") @db.Uuid
 
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("productivity_rules")
 }
 
 model TrackingExclusion {
-  id         String   @id @default(uuid()) @db.Uuid
-  companyId  String   @db.Uuid @map("company_id")
-  targetType String   @map("target_type") // domain, app
+  id         String @id @default(uuid()) @db.Uuid
+  companyId  String @map("company_id") @db.Uuid
+  targetType String @map("target_type") // domain, app
   pattern    String
 
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("tracking_exclusions")
 }
 
 model ActivityExceptionApp {
-  id          String   @id @default(uuid()) @db.Uuid
-  companyId   String   @db.Uuid @map("company_id")
-  processName String   @map("process_name")
-  type        String   // call, meeting
+  id          String @id @default(uuid()) @db.Uuid
+  companyId   String @map("company_id") @db.Uuid
+  processName String @map("process_name")
+  type        String // call, meeting
 
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("activity_exception_apps")
@@ -547,11 +595,11 @@ model ActivityExceptionApp {
 
 model TamperEvent {
   id         String   @id @default(uuid()) @db.Uuid
-  employeeId String   @db.Uuid @map("employee_id")
-  deviceId   String   @db.Uuid @map("device_id")
-  type       String   // agent_stopped, extension_missing, clock_changed, binary_mismatch
+  employeeId String   @map("employee_id") @db.Uuid
+  deviceId   String   @map("device_id") @db.Uuid
+  type       String // agent_stopped, extension_missing, clock_changed, binary_mismatch
   detail     Json     @default("{}")
-  occurredAt DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
 
   @@index([employeeId])
   @@index([deviceId])
@@ -563,32 +611,36 @@ model TamperEvent {
 // --------------------------------------------------------
 
 model Pipeline {
-  id        String          @id @default(uuid()) @db.Uuid
-  companyId String          @db.Uuid @map("company_id")
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
   name      String
-  isDefault Boolean         @default(false) @map("is_default")
-  createdAt DateTime        @default(now()) @db.Timestamptz()
-  updatedAt DateTime        @updatedAt @db.Timestamptz()
+  entity    String   @default("lead") // lead, deal
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
 
-  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  stages    PipelineStage[]
-  leads     Lead[]
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stages  PipelineStage[]
+  leads   Lead[]
+  deals   Deal[]
 
   @@index([companyId])
   @@map("pipelines")
 }
 
 model PipelineStage {
-  id                String   @id @default(uuid()) @db.Uuid
-  pipelineId        String   @db.Uuid @map("pipeline_id")
+  id                String  @id @default(uuid()) @db.Uuid
+  pipelineId        String  @map("pipeline_id") @db.Uuid
   name              String
-  position          Int      @default(0)
-  type              String   @default("open") // open, won, lost
-  countsAsQualified Boolean  @default(false) @map("counts_as_qualified")
-  countsAsMeeting   Boolean  @default(false) @map("counts_as_meeting")
+  position          Int     @default(0)
+  type              String  @default("open") // open, won, lost
+  countsAsQualified Boolean @default(false) @map("counts_as_qualified")
+  countsAsMeeting   Boolean @default(false) @map("counts_as_meeting")
+  probability       Int     @default(0)
 
-  pipeline          Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  leads             Lead[]
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads    Lead[]
+  deals    Deal[]
 
   @@index([pipelineId])
   @@map("pipeline_stages")
@@ -596,39 +648,46 @@ model PipelineStage {
 
 model Lead {
   id             String    @id @default(uuid()) @db.Uuid
-  companyId      String    @db.Uuid @map("company_id")
+  companyId      String    @map("company_id") @db.Uuid
   name           String
   companyName    String?   @map("company_name")
-  ownerId        String?   @db.Uuid @map("owner_id")
-  pipelineId     String    @db.Uuid @map("pipeline_id")
-  stageId        String    @db.Uuid @map("stage_id")
-  sourceId       String?   @db.Uuid @map("source_id")
+  ownerId        String?   @map("owner_id") @db.Uuid
+  pipelineId     String    @map("pipeline_id") @db.Uuid
+  stageId        String    @map("stage_id") @db.Uuid
+  sourceId       String?   @map("source_id") @db.Uuid
   value          Decimal?  @db.Decimal(14, 2)
   currency       String    @default("USD")
-  followUpAt     DateTime? @db.Timestamptz() @map("follow_up_at")
+  followUpAt     DateTime? @map("follow_up_at") @db.Timestamptz()
   doNotCall      Boolean   @default(false) @map("do_not_call")
   isClient       Boolean   @default(false) @map("is_client")
-  wonAt          DateTime? @db.Timestamptz() @map("won_at")
-  lostAt         DateTime? @db.Timestamptz() @map("lost_at")
-  lostReasonId   String?   @db.Uuid @map("lost_reason_id")
+  wonAt          DateTime? @map("won_at") @db.Timestamptz()
+  lostAt         DateTime? @map("lost_at") @db.Timestamptz()
+  lostReasonId   String?   @map("lost_reason_id") @db.Uuid
   custom         Json      @default("{}")
-  qualifiedAt    DateTime? @db.Timestamptz() @map("qualified_at")
-  lastActivityAt DateTime  @default(now()) @db.Timestamptz() @map("last_activity_at")
-  createdBy      String?   @db.Uuid @map("created_by")
-  deletedAt      DateTime? @db.Timestamptz() @map("deleted_at")
+  qualifiedAt    DateTime? @map("qualified_at") @db.Timestamptz()
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz()
+  priority       String    @default("normal") // low, normal, high
+  convertedAt    DateTime? @map("converted_at") @db.Timestamptz()
+  contactId      String?   @map("contact_id") @db.Uuid
+  accountId      String?   @map("account_id") @db.Uuid
+  dealId         String?   @map("deal_id") @db.Uuid
+  createdBy      String?   @map("created_by") @db.Uuid
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
   createdAt      DateTime  @default(now()) @db.Timestamptz()
   updatedAt      DateTime  @updatedAt @db.Timestamptz()
 
-  owner          Employee?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  pipeline       Pipeline       @relation(fields: [pipelineId], references: [id])
-  stage          PipelineStage  @relation(fields: [stageId], references: [id])
-  phones         LeadPhone[]
-  emails         LeadEmail[]
-  timeline       LeadTimeline[]
-  notes          LeadNote[]
-  callLogs       CallLog[]
-  appointments   Appointment[]
-  tasks          Task[]
+  owner        Employee?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  pipeline     Pipeline       @relation(fields: [pipelineId], references: [id])
+  stage        PipelineStage  @relation(fields: [stageId], references: [id])
+  source       LeadSource?    @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  lostReason   LostReason?    @relation(fields: [lostReasonId], references: [id], onDelete: SetNull)
+  phones       LeadPhone[]
+  emails       LeadEmail[]
+  timeline     LeadTimeline[]
+  notes        LeadNote[]
+  callLogs     CallLog[]
+  appointments Appointment[]
+  tasks        Task[]
 
   @@index([companyId])
   @@index([ownerId])
@@ -640,12 +699,12 @@ model Lead {
 
 model LeadPhone {
   id        String  @id @default(uuid()) @db.Uuid
-  leadId    String  @db.Uuid @map("lead_id")
+  leadId    String  @map("lead_id") @db.Uuid
   phoneE164 String  @map("phone_e164")
   label     String  @default("Mobile")
   isPrimary Boolean @default(false) @map("is_primary")
 
-  lead      Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([phoneE164])
@@ -654,12 +713,12 @@ model LeadPhone {
 
 model LeadEmail {
   id         String  @id @default(uuid()) @db.Uuid
-  leadId     String  @db.Uuid @map("lead_id")
+  leadId     String  @map("lead_id") @db.Uuid
   emailLower String  @map("email_lower")
   label      String  @default("Work")
   isPrimary  Boolean @default(false) @map("is_primary")
 
-  lead       Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([emailLower])
@@ -668,14 +727,14 @@ model LeadEmail {
 
 model LeadTimeline {
   id         String   @id @default(uuid()) @db.Uuid
-  leadId     String   @db.Uuid @map("lead_id")
-  actorId    String?  @db.Uuid @map("actor_id")
-  type       String   // created, stage_changed, assigned, note, call, email, task, appointment, attachment, imported
-  refId      String?  @db.Uuid @map("ref_id")
+  leadId     String   @map("lead_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  type       String // created, stage_changed, assigned, note, call, email, task, appointment, attachment, imported
+  refId      String?  @map("ref_id") @db.Uuid
   data       Json     @default("{}")
-  occurredAt DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
 
-  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([occurredAt])
@@ -684,12 +743,12 @@ model LeadTimeline {
 
 model LeadNote {
   id        String   @id @default(uuid()) @db.Uuid
-  leadId    String   @db.Uuid @map("lead_id")
-  authorId  String   @db.Uuid @map("author_id")
+  leadId    String   @map("lead_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
   body      String
   createdAt DateTime @default(now()) @db.Timestamptz()
 
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@map("lead_notes")
@@ -697,17 +756,17 @@ model LeadNote {
 
 model CallLog {
   id              String   @id @default(uuid()) @db.Uuid
-  leadId          String   @db.Uuid @map("lead_id")
-  employeeId      String   @db.Uuid @map("employee_id")
-  direction       String   // outbound, inbound
-  outcome         String   // Connected, No answer, Busy, Voicemail, Wrong number, Do not call
+  leadId          String   @map("lead_id") @db.Uuid
+  employeeId      String   @map("employee_id") @db.Uuid
+  direction       String // outbound, inbound
+  outcome         String // Connected, No answer, Busy, Voicemail, Wrong number, Do not call
   durationSeconds Int      @map("duration_s")
   notes           String?
   source          String   @default("manual") // manual, integration
-  occurredAt      DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
+  occurredAt      DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
 
-  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([employeeId])
@@ -716,15 +775,15 @@ model CallLog {
 
 model Appointment {
   id         String   @id @default(uuid()) @db.Uuid
-  leadId     String   @db.Uuid @map("lead_id")
-  employeeId String   @db.Uuid @map("employee_id")
+  leadId     String   @map("lead_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
   title      String
-  startsAt   DateTime @db.Timestamptz() @map("starts_at")
-  endsAt     DateTime @db.Timestamptz() @map("ends_at")
+  startsAt   DateTime @map("starts_at") @db.Timestamptz()
+  endsAt     DateTime @map("ends_at") @db.Timestamptz()
   notes      String?
   status     String   @default("scheduled") // scheduled, done, cancelled, no_show
 
-  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([employeeId])
@@ -732,28 +791,783 @@ model Appointment {
 }
 
 model Task {
-  id          String    @id @default(uuid()) @db.Uuid
-  companyId   String    @db.Uuid @map("company_id")
-  title       String
-  description String?
-  assigneeId  String    @db.Uuid @map("assignee_id")
-  creatorId   String    @db.Uuid @map("creator_id")
-  leadId      String?   @db.Uuid @map("lead_id")
-  priority    String    @default("normal") // low, normal, high, urgent
-  dueAt       DateTime  @db.Timestamptz() @map("due_at")
-  status      String    @default("todo")   // todo, in_progress, done, cancelled
-  completedAt DateTime? @db.Timestamptz() @map("completed_at")
-  deletedAt   DateTime? @db.Timestamptz() @map("deleted_at")
-  createdAt   DateTime  @default(now()) @db.Timestamptz()
-  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  title         String
+  description   String?
+  assigneeId    String    @map("assignee_id") @db.Uuid
+  creatorId     String    @map("creator_id") @db.Uuid
+  leadId        String?   @map("lead_id") @db.Uuid
+  priority      String    @default("normal") // none, low, normal, high, urgent
+  dueAt         DateTime? @map("due_at") @db.Timestamptz()
+  status        String    @default("todo") // todo, in_progress, done, cancelled (derived from status group, 14 rule 3)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz()
+  // 14-tasks-spec.md
+  listId        String?   @map("list_id") @db.Uuid
+  parentId      String?   @map("parent_id") @db.Uuid
+  statusId      String?   @map("status_id") @db.Uuid
+  startAt       DateTime? @map("start_at") @db.Timestamptz()
+  timeEstimateS Int?      @map("time_estimate_s")
+  timeSpentS    Int       @default(0) @map("time_spent_s")
+  position      Float     @default(0)
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz()
+  custom        Json      @default("{}")
+  contactId     String?   @map("contact_id") @db.Uuid
+  accountId     String?   @map("account_id") @db.Uuid
+  dealId        String?   @map("deal_id") @db.Uuid
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @db.Timestamptz()
 
-  assignee    Employee  @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
-  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignee    Employee        @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+  lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  list        TaskList?       @relation(fields: [listId], references: [id], onDelete: SetNull)
+  parent      Task?           @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Task[]          @relation("TaskSubtasks")
+  statusRef   TaskStatus?     @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  assignees   TaskAssignee[]
+  watchers    TaskWatcher[]
+  checklists  TaskChecklist[]
+  comments    TaskComment[]
+  timeEntries TaskTimeEntry[]
+  activities  TaskActivity[]
 
   @@index([assigneeId])
   @@index([leadId])
   @@index([dueAt])
+  @@index([companyId, listId, statusId])
+  @@index([parentId])
   @@map("tasks")
+}
+
+// --------------------------------------------------------
+// 4b. CRM objects: accounts, contacts, deals, activities (13-crm-spec.md)
+// --------------------------------------------------------
+
+model CrmAccount {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  name            String
+  nameNormalized  String    @map("name_normalized")
+  domain          String?
+  industry        String?
+  size            String?
+  phone           String?
+  website         String?
+  address         Json      @default("{}")
+  ownerId         String?   @map("owner_id") @db.Uuid
+  lifecycle       String    @default("prospect") // lead, prospect, customer, churned, partner
+  parentAccountId String?   @map("parent_account_id") @db.Uuid
+  custom          Json      @default("{}")
+  createdBy       String?   @map("created_by") @db.Uuid
+  lastActivityAt  DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz()
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
+
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  owner         Employee?    @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  parentAccount CrmAccount?  @relation("AccountHierarchy", fields: [parentAccountId], references: [id], onDelete: SetNull)
+  childAccounts CrmAccount[] @relation("AccountHierarchy")
+  contacts      CrmContact[]
+  deals         Deal[]
+
+  @@index([companyId, nameNormalized])
+  @@index([companyId, domain])
+  @@index([ownerId])
+  @@map("crm_accounts")
+}
+
+model CrmContact {
+  id             String    @id @default(uuid()) @db.Uuid
+  companyId      String    @map("company_id") @db.Uuid
+  firstName      String    @map("first_name")
+  lastName       String    @default("") @map("last_name")
+  title          String?
+  accountId      String?   @map("account_id") @db.Uuid
+  ownerId        String?   @map("owner_id") @db.Uuid
+  lifecycle      String    @default("lead")
+  address        Json      @default("{}")
+  doNotCall      Boolean   @default(false) @map("do_not_call")
+  doNotEmail     Boolean   @default(false) @map("do_not_email")
+  custom         Json      @default("{}")
+  leadId         String?   @map("lead_id") @db.Uuid
+  createdBy      String?   @map("created_by") @db.Uuid
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz()
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
+
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  account   CrmAccount?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  owner     Employee?         @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  phones    CrmContactPhone[]
+  emails    CrmContactEmail[]
+  dealLinks DealContact[]
+
+  @@index([companyId])
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([companyId, lastName, firstName])
+  @@map("crm_contacts")
+}
+
+model CrmContactPhone {
+  id        String  @id @default(uuid()) @db.Uuid
+  contactId String  @map("contact_id") @db.Uuid
+  phoneE164 String  @map("phone_e164")
+  label     String  @default("Mobile")
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([phoneE164])
+  @@map("crm_contact_phones")
+}
+
+model CrmContactEmail {
+  id         String  @id @default(uuid()) @db.Uuid
+  contactId  String  @map("contact_id") @db.Uuid
+  emailLower String  @map("email_lower")
+  label      String  @default("Work")
+  isPrimary  Boolean @default(false) @map("is_primary")
+
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([emailLower])
+  @@map("crm_contact_emails")
+}
+
+model Deal {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  name            String
+  accountId       String?   @map("account_id") @db.Uuid
+  pipelineId      String    @map("pipeline_id") @db.Uuid
+  stageId         String    @map("stage_id") @db.Uuid
+  amount          Decimal?  @db.Decimal(14, 2)
+  currency        String    @default("USD")
+  probability     Int       @default(0)
+  expectedCloseAt DateTime? @map("expected_close_at") @db.Timestamptz()
+  ownerId         String?   @map("owner_id") @db.Uuid
+  wonAt           DateTime? @map("won_at") @db.Timestamptz()
+  lostAt          DateTime? @map("lost_at") @db.Timestamptz()
+  lostReasonId    String?   @map("lost_reason_id") @db.Uuid
+  custom          Json      @default("{}")
+  leadId          String?   @map("lead_id") @db.Uuid
+  createdBy       String?   @map("created_by") @db.Uuid
+  lastActivityAt  DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz()
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
+
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  account    CrmAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  pipeline   Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage      PipelineStage @relation(fields: [stageId], references: [id])
+  owner      Employee?     @relation("DealOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  lostReason LostReason?   @relation(fields: [lostReasonId], references: [id], onDelete: SetNull)
+  contacts   DealContact[]
+
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([accountId])
+  @@index([pipelineId, stageId])
+  @@index([expectedCloseAt])
+  @@map("deals")
+}
+
+model DealContact {
+  dealId    String  @map("deal_id") @db.Uuid
+  contactId String  @map("contact_id") @db.Uuid
+  role      String?
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  deal    Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, contactId])
+  @@index([contactId])
+  @@map("deal_contacts")
+}
+
+model CrmActivity {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  entityType      String    @map("entity_type") // lead, contact, account, deal
+  entityId        String    @map("entity_id") @db.Uuid
+  type            String // note, call, email, meeting, task, stage_changed, assigned, field_changed, converted, created, created_from_lead, imported, tag_added, tag_removed
+  actorId         String?   @map("actor_id") @db.Uuid
+  subject         String?
+  body            String?
+  status          String? // planned, done, cancelled (call, meeting, task only)
+  dueAt           DateTime? @map("due_at") @db.Timestamptz()
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz()
+  durationSeconds Int?      @map("duration_s")
+  data            Json      @default("{}")
+  refType         String?   @map("ref_type")
+  refId           String?   @map("ref_id") @db.Uuid
+  occurredAt      DateTime  @default(now()) @map("occurred_at") @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, entityType, entityId, occurredAt])
+  @@index([companyId, actorId, dueAt])
+  @@index([companyId, status, dueAt])
+  @@map("crm_activities")
+}
+
+model LeadSource {
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  name      String
+  position  Int     @default(0)
+  isActive  Boolean @default(true) @map("is_active")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads   Lead[]
+
+  @@unique([companyId, name])
+  @@map("lead_sources")
+}
+
+model LostReason {
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  name      String
+  position  Int     @default(0)
+  isActive  Boolean @default(true) @map("is_active")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads   Lead[]
+  deals   Deal[]
+
+  @@unique([companyId, name])
+  @@map("lost_reasons")
+}
+
+model Tag {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+  colour    String @default("#5C666E")
+
+  company Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  records RecordTag[]
+
+  @@unique([companyId, name])
+  @@map("tags")
+}
+
+model RecordTag {
+  companyId  String @map("company_id") @db.Uuid
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id") @db.Uuid
+  tagId      String @map("tag_id") @db.Uuid
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entityType, entityId, tagId])
+  @@index([companyId, tagId])
+  @@map("record_tags")
+}
+
+model CustomFieldDef {
+  id         String  @id @default(uuid()) @db.Uuid
+  companyId  String  @map("company_id") @db.Uuid
+  entityType String  @map("entity_type")
+  key        String
+  label      String
+  type       String // text, number, date, select, multi_select, checkbox, url, phone, email
+  options    Json    @default("[]")
+  required   Boolean @default(false)
+  position   Int     @default(0)
+  isActive   Boolean @default(true) @map("is_active")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, entityType, key])
+  @@map("custom_field_defs")
+}
+
+model SavedView {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  entityType String   @map("entity_type")
+  name       String
+  ownerId    String   @map("owner_id") @db.Uuid
+  visibility String   @default("private") // private, team, company
+  filters    Json     @default("{}")
+  sort       Json?
+  columns    Json?
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, entityType, ownerId])
+  @@map("saved_views")
+}
+
+model ImportJob {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  entityType String   @map("entity_type") // lead, contact, account
+  uploaderId String   @map("uploader_id") @db.Uuid
+  fileName   String   @map("file_name")
+  headers    Json     @default("[]")
+  preview    Json     @default("[]")
+  rowCount   Int      @default(0) @map("row_count")
+  payload    String // raw CSV text (bounded, 20 MB)
+  status     String   @default("mapping") // mapping, queued, running, done, failed
+  mapping    Json     @default("{}")
+  options    Json     @default("{}")
+  totals     Json     @default("{}")
+  errors     Json     @default("[]")
+  createdAt  DateTime @default(now()) @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, uploaderId])
+  @@map("import_jobs")
+}
+
+// --------------------------------------------------------
+// 4c. Tasks: spaces, lists, statuses (14-tasks-spec.md)
+// --------------------------------------------------------
+
+model TaskSpace {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  name            String
+  colour          String    @default("#0F6B5C")
+  icon            String?
+  visibility      String    @default("company") // company, private
+  defaultStatuses Json      @default("[]") @map("default_statuses")
+  position        Int       @default(0)
+  createdBy       String?   @map("created_by") @db.Uuid
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members TaskSpaceMember[]
+  lists   TaskList[]
+
+  @@index([companyId])
+  @@map("task_spaces")
+}
+
+model TaskSpaceMember {
+  spaceId    String @map("space_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  role       String @default("member") // member, admin
+
+  space    TaskSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([spaceId, employeeId])
+  @@index([employeeId])
+  @@map("task_space_members")
+}
+
+model TaskList {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  spaceId     String    @map("space_id") @db.Uuid
+  name        String
+  description String?
+  position    Int       @default(0)
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  space    TaskSpace    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  statuses TaskStatus[]
+  tasks    Task[]
+
+  @@index([companyId, spaceId])
+  @@map("task_lists")
+}
+
+model TaskStatus {
+  id       String @id @default(uuid()) @db.Uuid
+  listId   String @map("list_id") @db.Uuid
+  name     String
+  colour   String @default("#5C666E")
+  group    String // open, active, done, closed
+  position Int    @default(0)
+
+  list  TaskList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([listId, name])
+  @@map("task_statuses")
+}
+
+model TaskAssignee {
+  taskId     String   @map("task_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  assignedBy String?  @map("assigned_by") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
+
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@index([employeeId])
+  @@map("task_assignees")
+}
+
+model TaskWatcher {
+  taskId     String @map("task_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@map("task_watchers")
+}
+
+model TaskChecklist {
+  id       String @id @default(uuid()) @db.Uuid
+  taskId   String @map("task_id") @db.Uuid
+  title    String
+  position Int    @default(0)
+
+  task  Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  items TaskChecklistItem[]
+
+  @@index([taskId])
+  @@map("task_checklists")
+}
+
+model TaskChecklistItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  checklistId String    @map("checklist_id") @db.Uuid
+  title       String
+  done        Boolean   @default(false)
+  doneBy      String?   @map("done_by") @db.Uuid
+  doneAt      DateTime? @map("done_at") @db.Timestamptz()
+  position    Int       @default(0)
+
+  checklist TaskChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+  @@map("task_checklist_items")
+}
+
+model TaskComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @map("task_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]  @default([]) @db.Uuid
+  editedAt  DateTime? @map("edited_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("task_comments")
+}
+
+model TaskTimeEntry {
+  id         String    @id @default(uuid()) @db.Uuid
+  taskId     String    @map("task_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  startedAt  DateTime? @map("started_at") @db.Timestamptz()
+  endedAt    DateTime? @map("ended_at") @db.Timestamptz()
+  durationS  Int       @map("duration_s")
+  note       String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([employeeId, createdAt])
+  @@map("task_time_entries")
+}
+
+model TaskActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  type       String // created, status_changed, assigned, unassigned, field_changed, comment, checklist, subtask_added, time_logged, archived, restored, moved
+  data       Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  task    Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, occurredAt])
+  @@map("task_activities")
+}
+
+// --------------------------------------------------------
+// 4d. HR: leave, profiles, documents, checklists, announcements (15-hr-spec.md)
+// --------------------------------------------------------
+
+model LeaveType {
+  id                  String   @id @default(uuid()) @db.Uuid
+  companyId           String   @map("company_id") @db.Uuid
+  name                String
+  code                String
+  colour              String   @default("#6B46C1")
+  paid                Boolean  @default(true)
+  annualAllowanceDays Decimal  @default(0) @map("annual_allowance_days") @db.Decimal(6, 2)
+  accrual             String   @default("upfront") // upfront, monthly
+  carryOverMaxDays    Decimal  @default(0) @map("carry_over_max_days") @db.Decimal(6, 2)
+  requiresApproval    Boolean  @default(true) @map("requires_approval")
+  allowHalfDay        Boolean  @default(true) @map("allow_half_day")
+  isActive            Boolean  @default(true) @map("is_active")
+  position            Int      @default(0)
+  createdAt           DateTime @default(now()) @db.Timestamptz()
+  updatedAt           DateTime @updatedAt @db.Timestamptz()
+
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balances LeaveBalance[]
+  requests LeaveRequest[]
+
+  @@unique([companyId, code])
+  @@map("leave_types")
+}
+
+model LeaveBalance {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  employeeId      String   @map("employee_id") @db.Uuid
+  leaveTypeId     String   @map("leave_type_id") @db.Uuid
+  year            Int
+  entitledDays    Decimal  @default(0) @map("entitled_days") @db.Decimal(6, 2)
+  carriedOverDays Decimal  @default(0) @map("carried_over_days") @db.Decimal(6, 2)
+  usedDays        Decimal  @default(0) @map("used_days") @db.Decimal(6, 2)
+  pendingDays     Decimal  @default(0) @map("pending_days") @db.Decimal(6, 2)
+  adjustmentsDays Decimal  @default(0) @map("adjustments_days") @db.Decimal(6, 2)
+  updatedAt       DateTime @updatedAt @db.Timestamptz()
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([companyId, year])
+  @@map("leave_balances")
+}
+
+model EmployeeProfile {
+  employeeId       String    @id @map("employee_id") @db.Uuid
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  gender           String?
+  nationality      String?
+  personalEmail    String?   @map("personal_email")
+  address          Json      @default("{}")
+  emergencyContact Json      @default("{}") @map("emergency_contact")
+  designation      String?
+  employmentType   String?   @map("employment_type") // full_time, part_time, contract, intern
+  workLocation     String?   @map("work_location")
+  probationEnd     DateTime? @map("probation_end") @db.Date
+  custom           Json      @default("{}")
+  updatedAt        DateTime  @updatedAt @db.Timestamptz()
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_profiles")
+}
+
+model HrDocument {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  name       String
+  type       String
+  issuedAt   DateTime? @map("issued_at") @db.Date
+  expiresAt  DateTime? @map("expires_at") @db.Date
+  note       String?
+  objectKey  String?   @map("object_key")
+  uploadedBy String?   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+  updatedAt  DateTime  @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, employeeId])
+  @@index([expiresAt])
+  @@map("hr_documents")
+}
+
+model HrChecklistTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  kind      String // onboarding, offboarding
+  items     Json     @default("[]") // [{title, ownerRole, offsetDays}]
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  instances HrChecklist[]
+
+  @@index([companyId, kind])
+  @@map("hr_checklist_templates")
+}
+
+model HrChecklist {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  templateId  String?   @map("template_id") @db.Uuid
+  kind        String // onboarding, offboarding
+  status      String    @default("open") // open, completed
+  items       Json      @default("[]") // [{id, title, ownerRole, dueAt, done, doneBy, doneAt}]
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz()
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
+
+  company  Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  template HrChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, employeeId])
+  @@map("hr_checklists")
+}
+
+model Announcement {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  title        String
+  body         String
+  audienceType String   @default("company") @map("audience_type") // company, department, team, role
+  audienceId   String?  @map("audience_id") @db.Uuid
+  pinned       Boolean  @default(false)
+  publishedAt  DateTime @default(now()) @map("published_at") @db.Timestamptz()
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @db.Timestamptz()
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reads   AnnouncementRead[]
+
+  @@index([companyId, publishedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  announcementId String   @map("announcement_id") @db.Uuid
+  employeeId     String   @map("employee_id") @db.Uuid
+  readAt         DateTime @default(now()) @map("read_at") @db.Timestamptz()
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, employeeId])
+  @@map("announcement_reads")
+}
+
+// --------------------------------------------------------
+// 4e. Tracking admin: manual time (16-tracking-admin-spec.md)
+// --------------------------------------------------------
+
+model ManualTimeEntry {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  date       DateTime  @db.Date
+  startedAt  DateTime  @map("started_at") @db.Timestamptz()
+  endedAt    DateTime  @map("ended_at") @db.Timestamptz()
+  durationS  Int       @map("duration_s")
+  reason     String
+  status     String    @default("pending") // pending, approved, rejected
+  decidedBy  String?   @map("decided_by") @db.Uuid
+  decidedAt  DateTime? @map("decided_at") @db.Timestamptz()
+  comment    String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@index([employeeId, date])
+  @@map("manual_time_entries")
+}
+
+// --------------------------------------------------------
+// 6b. Mail collaboration (17-mail-collaboration-spec.md)
+// --------------------------------------------------------
+
+model MailLabel {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+  colour    String @default("#2459C4")
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  threads MailThreadLabel[]
+
+  @@unique([companyId, name])
+  @@map("mail_labels")
+}
+
+model MailThreadLabel {
+  threadId String @map("thread_id") @db.Uuid
+  labelId  String @map("label_id") @db.Uuid
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  label  MailLabel  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, labelId])
+  @@map("mail_thread_labels")
+}
+
+model MailComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  threadId  String    @map("thread_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]  @default([]) @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("mail_comments")
+}
+
+model MailTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  ownerId   String?  @map("owner_id") @db.Uuid // null = shared
+  name      String
+  subject   String   @default("")
+  bodyHtml  String   @map("body_html")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, ownerId])
+  @@map("mail_templates")
+}
+
+model MailThreadEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  threadId   String   @map("thread_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  type       String // assigned, unassigned, status_changed, label_added, label_removed, linked, comment
+  data       Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, occurredAt])
+  @@map("mail_thread_events")
 }
 
 // --------------------------------------------------------
@@ -762,19 +1576,19 @@ model Task {
 
 model Target {
   id           String    @id @default(uuid()) @db.Uuid
-  companyId    String    @db.Uuid @map("company_id")
+  companyId    String    @map("company_id") @db.Uuid
   assigneeType String    @map("assignee_type") // employee, team, role
-  assigneeId   String    @db.Uuid @map("assignee_id")
+  assigneeId   String    @map("assignee_id") @db.Uuid
   metricKey    String    @map("metric_key")
-  period       String    // daily, weekly, monthly
+  period       String // daily, weekly, monthly
   value        Decimal   @db.Decimal(14, 2)
   weekdays     Int[]     @default([])
-  validFrom    DateTime  @db.Date @map("valid_from")
-  validTo      DateTime? @db.Date @map("valid_to")
-  createdBy    String    @db.Uuid @map("created_by")
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  createdBy    String    @map("created_by") @db.Uuid
   createdAt    DateTime  @default(now()) @db.Timestamptz()
 
-  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([assigneeId])
@@ -783,13 +1597,13 @@ model Target {
 
 model MetricEvent {
   id         String   @id @default(uuid()) @db.Uuid
-  employeeId String   @db.Uuid @map("employee_id")
+  employeeId String   @map("employee_id") @db.Uuid
   metricKey  String   @map("metric_key")
   amount     Decimal  @default(1.0) @db.Decimal(14, 2)
-  occurredAt DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
-  periodDate DateTime @db.Date @map("period_date")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
+  periodDate DateTime @map("period_date") @db.Date
   refType    String   @map("ref_type")
-  refId      String   @db.Uuid @map("ref_id")
+  refId      String   @map("ref_id") @db.Uuid
 
   @@unique([metricKey, refType, refId])
   @@index([employeeId, metricKey, periodDate])
@@ -801,23 +1615,34 @@ model MetricEvent {
 // --------------------------------------------------------
 
 model Mailbox {
-  id              String   @id @default(uuid()) @db.Uuid
-  companyId       String   @db.Uuid @map("company_id")
-  address         String   @unique
-  displayName     String   @map("display_name")
-  googleUserId    String?  @map("google_user_id")
-  refreshTokenEnc String   @map("refresh_token_enc")
-  tokenStatus     String   @default("ok") @map("token_status") // ok, revoked, error
-  historyId       String?  @map("history_id")
-  watchExpiresAt  DateTime? @db.Timestamptz() @map("watch_expires_at")
-  lastSyncAt      DateTime? @db.Timestamptz() @map("last_sync_at")
-  signatureHtml   String?  @map("signature_html")
-  connectedBy     String   @db.Uuid @map("connected_by")
-  createdAt       DateTime @default(now()) @db.Timestamptz()
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  address         String    @unique
+  displayName     String    @map("display_name")
+  googleUserId    String?   @map("google_user_id")
+  provider        String    @default("gmail") // gmail, imap (10 section 2 option D)
+  refreshTokenEnc String?   @map("refresh_token_enc")
+  imapHost        String?   @map("imap_host")
+  imapPort        Int?      @map("imap_port")
+  imapSecure      Boolean   @default(true) @map("imap_secure")
+  smtpHost        String?   @map("smtp_host")
+  smtpPort        Int?      @map("smtp_port")
+  smtpSecure      Boolean   @default(true) @map("smtp_secure")
+  username        String?
+  passwordEnc     String?   @map("password_enc")
+  lastUidValidity Int?      @map("last_uid_validity")
+  lastUid         Int?      @map("last_uid")
+  tokenStatus     String    @default("ok") @map("token_status") // ok, revoked, error
+  historyId       String?   @map("history_id")
+  watchExpiresAt  DateTime? @map("watch_expires_at") @db.Timestamptz()
+  lastSyncAt      DateTime? @map("last_sync_at") @db.Timestamptz()
+  signatureHtml   String?   @map("signature_html")
+  connectedBy     String    @map("connected_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
 
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignments     MailboxAssignment[]
-  threads         MailThread[]
+  company     Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignments MailboxAssignment[]
+  threads     MailThread[]
 
   @@index([companyId])
   @@map("mailboxes")
@@ -825,53 +1650,69 @@ model Mailbox {
 
 model MailboxAssignment {
   id          String   @id @default(uuid()) @db.Uuid
-  mailboxId   String   @db.Uuid @map("mailbox_id")
-  employeeId  String   @db.Uuid @map("employee_id")
+  mailboxId   String   @map("mailbox_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
   permissions String[] // read, send, reply, draft, attach, download, archive, mark_read
-  assignedBy  String   @db.Uuid @map("assigned_by")
+  assignedBy  String   @map("assigned_by") @db.Uuid
   createdAt   DateTime @default(now()) @db.Timestamptz()
 
-  mailbox     Mailbox  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  mailbox  Mailbox  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([mailboxId, employeeId])
   @@map("mailbox_assignments")
 }
 
 model MailThread {
-  id             String        @id @default(uuid()) @db.Uuid
-  mailboxId      String        @db.Uuid @map("mailbox_id")
-  gmailThreadId  String        @map("gmail_thread_id")
-  subject        String
-  snippet        String?
-  participants   Json          @default("[]")
-  lastMessageAt  DateTime      @db.Timestamptz() @map("last_message_at")
-  unread         Boolean       @default(false)
-  hasAttachments Boolean       @default(false) @map("has_attachments")
-  labelIds       String[]      @default([]) @map("label_ids")
-  leadId         String?       @db.Uuid @map("lead_id")
+  id                  String    @id @default(uuid()) @db.Uuid
+  mailboxId           String    @map("mailbox_id") @db.Uuid
+  gmailThreadId       String    @map("gmail_thread_id")
+  subject             String
+  snippet             String?
+  participants        Json      @default("[]")
+  lastMessageAt       DateTime  @map("last_message_at") @db.Timestamptz()
+  unread              Boolean   @default(false)
+  hasAttachments      Boolean   @default(false) @map("has_attachments")
+  labelIds            String[]  @default([]) @map("label_ids")
+  leadId              String?   @map("lead_id") @db.Uuid
+  // 17-mail-collaboration-spec.md
+  assigneeId          String?   @map("assignee_id") @db.Uuid
+  status              String    @default("open") // open, closed, snoozed
+  snoozedUntil        DateTime? @map("snoozed_until") @db.Timestamptz()
+  closedAt            DateTime? @map("closed_at") @db.Timestamptz()
+  contactId           String?   @map("contact_id") @db.Uuid
+  dealId              String?   @map("deal_id") @db.Uuid
+  lastInboundAt       DateTime? @map("last_inbound_at") @db.Timestamptz()
+  assignmentChangedAt DateTime? @map("assignment_changed_at") @db.Timestamptz()
 
-  mailbox        Mailbox       @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
-  messages       MailMessage[]
+  mailbox  Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  messages MailMessage[]
+  labels   MailThreadLabel[]
+  comments MailComment[]
+  events   MailThreadEvent[]
 
   @@unique([mailboxId, gmailThreadId])
   @@index([mailboxId, lastMessageAt])
+  @@index([mailboxId, status, assigneeId])
+  @@index([contactId])
   @@map("mail_threads")
 }
 
 model MailMessage {
-  id                String     @id @default(uuid()) @db.Uuid
-  threadId          String     @db.Uuid @map("thread_id")
-  gmailMessageId    String     @map("gmail_message_id")
-  fromAddr          String     @map("from_addr")
-  toAddrs           String[]   @map("to_addrs")
-  ccAddrs           String[]   @default([]) @map("cc_addrs")
-  sentAt            DateTime   @db.Timestamptz() @map("sent_at")
-  snippet           String?
-  hasAttachments    Boolean    @default(false) @map("has_attachments")
-  sentByEmployeeId  String?    @db.Uuid @map("sent_by_employee_id")
+  id               String   @id @default(uuid()) @db.Uuid
+  threadId         String   @map("thread_id") @db.Uuid
+  gmailMessageId   String   @map("gmail_message_id")
+  fromAddr         String   @map("from_addr")
+  toAddrs          String[] @map("to_addrs")
+  ccAddrs          String[] @default([]) @map("cc_addrs")
+  sentAt           DateTime @map("sent_at") @db.Timestamptz()
+  snippet          String?
+  hasAttachments   Boolean  @default(false) @map("has_attachments")
+  attachments      Json     @default("[]") // [{partId, fileName, mime, size}]
+  uid              Int? // IMAP UID (provider imap)
+  sentByEmployeeId String?  @map("sent_by_employee_id") @db.Uuid
 
-  thread            MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId])
   @@index([gmailMessageId])
@@ -880,15 +1721,15 @@ model MailMessage {
 
 model MailAudit {
   id             String   @id @default(uuid()) @db.Uuid
-  mailboxId      String   @db.Uuid @map("mailbox_id")
-  employeeId     String   @db.Uuid @map("employee_id")
-  action         String   // list, open, send, reply, forward, draft, download_attachment, archive, mark_read
+  mailboxId      String   @map("mailbox_id") @db.Uuid
+  employeeId     String   @map("employee_id") @db.Uuid
+  action         String // list, open, send, reply, forward, draft, download_attachment, archive, mark_read
   gmailMessageId String?  @map("gmail_message_id")
   recipients     String[] @default([])
   subject        String?
   ip             String
-  deviceId       String?  @db.Uuid @map("device_id")
-  occurredAt     DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
+  deviceId       String?  @map("device_id") @db.Uuid
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
 
   @@index([mailboxId])
   @@index([employeeId])
@@ -901,12 +1742,12 @@ model MailAudit {
 
 model Notification {
   id          String    @id @default(uuid()) @db.Uuid
-  recipientId String    @db.Uuid @map("recipient_id")
+  recipientId String    @map("recipient_id") @db.Uuid
   type        String
   title       String
   body        String
   data        Json      @default("{}")
-  readAt      DateTime? @db.Timestamptz() @map("read_at")
+  readAt      DateTime? @map("read_at") @db.Timestamptz()
   createdAt   DateTime  @default(now()) @db.Timestamptz()
 
   @@index([recipientId, readAt])
@@ -915,8 +1756,8 @@ model Notification {
 
 model AuditLog {
   id         String   @id @default(uuid()) @db.Uuid
-  companyId  String   @db.Uuid @map("company_id")
-  actorId    String?  @db.Uuid @map("actor_id")
+  companyId  String   @map("company_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
   actorRole  String?  @map("actor_role")
   action     String
   entityType String   @map("entity_type")
@@ -924,11 +1765,11 @@ model AuditLog {
   before     Json?
   after      Json?
   ip         String
-  deviceId   String?  @db.Uuid @map("device_id")
+  deviceId   String?  @map("device_id") @db.Uuid
   client     String
-  occurredAt DateTime @default(now()) @db.Timestamptz() @map("occurred_at")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
 
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, occurredAt])
   @@index([actorId])
@@ -939,10 +1780,10 @@ model SecurityAlert {
   id             String    @id @default(uuid()) @db.Uuid
   type           String
   severity       String    @default("warning") // info, warning, high, critical
-  employeeId     String?   @db.Uuid @map("employee_id")
+  employeeId     String?   @map("employee_id") @db.Uuid
   detail         Json      @default("{}")
-  acknowledgedBy String?   @db.Uuid @map("acknowledged_by")
-  acknowledgedAt DateTime? @db.Timestamptz() @map("acknowledged_at")
+  acknowledgedBy String?   @map("acknowledged_by") @db.Uuid
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz()
   createdAt      DateTime  @default(now()) @db.Timestamptz()
 
   @@index([severity])
@@ -950,19 +1791,85 @@ model SecurityAlert {
 }
 
 model AppRelease {
-  id            String   @id @default(uuid()) @db.Uuid
-  companyId     String   @db.Uuid @map("company_id")
-  version       String
-  channel       String   @default("stable") // pilot, stable
-  mandatory     Boolean  @default(false)
-  minSupported  String?  @map("min_supported")
-  notes         String?
-  installerKey  String   @map("installer_key")
-  signature     String
-  publishedAt   DateTime @default(now()) @db.Timestamptz() @map("published_at")
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  version      String
+  channel      String   @default("stable") // pilot, stable
+  mandatory    Boolean  @default(false)
+  minSupported String?  @map("min_supported")
+  notes        String?
+  installerKey String   @map("installer_key")
+  signature    String
+  publishedAt  DateTime @default(now()) @map("published_at") @db.Timestamptz()
 
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, channel])
   @@map("app_releases")
+}
+
+// ---------------------------------------------------------------------------
+// Internal chat (22-internal-chat-spec.md section 4)
+// ---------------------------------------------------------------------------
+
+model ChatChannel {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  kind          String // company, department, team, group, direct
+  name          String
+  departmentId  String?   @map("department_id") @db.Uuid
+  teamId        String?   @map("team_id") @db.Uuid
+  /// direct channels: `min(employeeId):max(employeeId)`; company channel: `company`
+  directKey     String?   @map("direct_key")
+  createdBy     String?   @map("created_by") @db.Uuid
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz()
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+
+  members  ChatMember[]
+  messages ChatMessage[]
+
+  @@unique([companyId, kind, departmentId])
+  @@unique([companyId, kind, teamId])
+  @@unique([companyId, directKey])
+  @@index([companyId, lastMessageAt])
+  @@map("chat_channels")
+}
+
+model ChatMember {
+  channelId         String   @map("channel_id") @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  joinedAt          DateTime @default(now()) @map("joined_at") @db.Timestamptz()
+  lastReadMessageId String?  @map("last_read_message_id") @db.Uuid
+  muted             Boolean  @default(false)
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, employeeId])
+  @@index([employeeId])
+  @@map("chat_members")
+}
+
+model ChatMessage {
+  /// uuid v7, assigned by the service so ids are time-ordered cursors
+  id        String                   @id @db.Uuid
+  channelId String                   @map("channel_id") @db.Uuid
+  authorId  String                   @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]                 @default([]) @db.Uuid
+  recordRef Json?                    @map("record_ref")
+  /// Idempotency-Key of the desktop or admin write (AGENTS.md rule 11)
+  clientKey String?                  @map("client_key")
+  editedAt  DateTime?                @map("edited_at") @db.Timestamptz()
+  deletedAt DateTime?                @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime                 @default(now()) @db.Timestamptz()
+  /// generated column (GENERATED ALWAYS AS ... STORED in 0005_chat); Prisma models the expression as a default
+  search    Unsupported("tsvector")? @default(dbgenerated("to_tsvector('simple'::regconfig, body)"))
+
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, clientKey])
+  @@index([channelId, id(sort: Desc)])
+  @@index([search], type: Gin)
+  @@map("chat_messages")
 }

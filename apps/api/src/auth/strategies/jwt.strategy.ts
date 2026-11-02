@@ -1,3 +1,4 @@
+import { resolveJwtSecret } from '../../common/crypto.util';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -17,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         (req) => req?.cookies?.['companyos_session'],
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'company-os-dev-jwt-secret-key-32-chars-min',
+      secretOrKey: resolveJwtSecret(configService.get<string>('JWT_SECRET')),
     });
   }
 
@@ -29,8 +30,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       include: { role: true },
     });
 
-    if (!employee || employee.status === 'disabled') {
-      throw new UnauthorizedException('Account is disabled or not found');
+    // FR-SEC-24: any non-active employee (suspended, disabled, invited) is rejected on every request.
+    if (!employee || employee.status !== 'active') {
+      throw new UnauthorizedException('Account is not active');
     }
 
     if (sessionId) {

@@ -1,138 +1,143 @@
-using System;
-using System.IO;
-using System.IO.Pipes;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using CompanyOS.Shared;
+using CompanyOS.Agent.Win32;
+using CompanyOS.Core.Clock;
+using CompanyOS.Core.Pipe;
+using CompanyOS.Core.Storage;
+using CompanyOS.Core.Tracking;
+using CompanyOS.Shared.Models;
+using CompanyOS.Shared.Protocol;
 
-namespace CompanyOS.Agent
+namespace CompanyOS.Agent;
+
+/// <summary>
+/// Composition root. Runs in the interactive user session (09 section 1), started by the watchdog at logon.
+/// One instance per session: a named mutex guards against duplicates. No network code (AGENTS.md rule 9).
+/// </summary>
+internal static class Program
 {
-    public class Program
+    private const string AgentVersion = "1.0.0";
+
+    private static int Main(string[] args)
     {
-        private static bool _isRunning = true;
-        private static TrackingConfigPayload _config = new();
-        private static Guid _currentShiftId = Guid.Empty;
-        private static bool _isTracking = false;
-
-        public static async Task Main(string[] args)
+        var log = FileLog.Default;
+        if (!OperatingSystem.IsWindows())
         {
-            Console.WriteLine("[CompanyOS.Agent] Starting background tracking agent in user session...");
-
-            // Cancel on Ctrl+C / process terminate
-            Console.CancelKeyPress += (s, e) =>
-            {
-                e.Cancel = true;
-                _isRunning = false;
-            };
-
-            // Start Named Pipe server for Electron Desktop App communication
-            var pipeServerTask = Task.Run(StartNamedPipeServer);
-
-            // Start measurement loop (1 second tick)
-            var measurementLoopTask = Task.Run(RunMeasurementLoop);
-
-            await Task.WhenAll(pipeServerTask, measurementLoopTask);
-            Console.WriteLine("[CompanyOS.Agent] Agent shut down cleanly.");
+            Console.Error.WriteLine("CompanyOS.Agent runs on Windows only.");
+            return 2;
         }
 
-        private static async Task StartNamedPipeServer()
+        NativeMethods.ProcessIdToSessionId((uint)Environment.ProcessId, out var sessionId);
+        using var singleInstance = new Mutex(true, $"Local\\CompanyOS.Agent.{sessionId}", out var createdNew);
+        if (!createdNew)
         {
-            var pipeName = "CompanyOS.Agent";
-            Console.WriteLine($"[CompanyOS.Agent] Named Pipe server listening on \\\\.\\pipe\\{pipeName}");
+            log.Warn("Another agent instance is already running in this session; exiting");
+            return 0;
+        }
 
-            while (_isRunning)
+        log.Info($"Agent {AgentVersion} starting in session {sessionId}");
+
+        WindowsSystemProbe? probe = null;
+        PipeServer? pipe = null;
+        SqliteQueueStore? queue = null;
+        try
+        {
+            var cipher = DpapiKeyStore.LoadOrCreate(AgentPaths.KeyFile);
+            queue = new SqliteQueueStore(AgentPaths.QueueDb, cipher);
+            probe = new WindowsSystemProbe();
+            var clock = new AnchoredClock(new SystemTimeSource());
+
+            TrackingEngine? engineRef = null;
+            pipe = new PipeServer(PipeNames.ForSession((int)sessionId), () => new CommandHandler(engineRef!, (int)sessionId, AgentVersion), log);
+            var engine = new TrackingEngine(probe, queue, pipe, log, clock);
+            engineRef = engine;
+
+            engine.Start();
+            IngestWatchdogNotices(engine, log);
+            pipe.Start();
+
+            using var shutdown = new ManualResetEventSlim(false);
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; shutdown.Set(); };
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => shutdown.Set();
+            probe.Signal += s => { if (s == Core.Abstractions.SystemSignal.SessionEnding) shutdown.Set(); };
+
+            // 1 s tick (09 section 2). PeriodicTimer keeps cadence without drift.
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            var tickTask = Task.Run(async () =>
+            {
+                var lastStatusWrite = DateTime.MinValue;
+                while (await timer.WaitForNextTickAsync() && !shutdown.IsSet)
+                {
+                    try { engine.Tick(); }
+                    catch (Exception ex) { log.Error("Tick failed", ex); }
+
+                    if (DateTime.UtcNow - lastStatusWrite > TimeSpan.FromSeconds(30))
+                    {
+                        lastStatusWrite = DateTime.UtcNow;
+                        WriteStatusFile(engine);
+                    }
+                }
+            });
+
+            shutdown.Wait();
+            log.Info("Agent shutting down");
+            timer.Dispose();
+            tickTask.Wait(TimeSpan.FromSeconds(3));
+            engine.Stop();
+            WriteStatusFile(engine);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            log.Error("Agent crashed", ex);
+            return 1;
+        }
+        finally
+        {
+            pipe?.Dispose();
+            probe?.Dispose();
+            queue?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The watchdog cannot write into the user's encrypted queue, so it drops small JSON notices
+    /// ({"type":"agent_stopped","gapSeconds":12}) into tamper-inbox. We convert and delete them (09 section 6).
+    /// </summary>
+    private static void IngestWatchdogNotices(TrackingEngine engine, FileLog log)
+    {
+        try
+        {
+            if (!Directory.Exists(AgentPaths.TamperInbox)) return;
+            foreach (var file in Directory.EnumerateFiles(AgentPaths.TamperInbox, "*.json"))
             {
                 try
                 {
-                    using var server = new NamedPipeServerStream(
-                        pipeName,
-                        PipeDirection.InOut,
-                        1,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous);
-
-                    await server.WaitForConnectionAsync();
-                    Console.WriteLine("[CompanyOS.Agent] Desktop App connected via Named Pipe.");
-
-                    using var reader = new StreamReader(server, Encoding.UTF8);
-                    using var writer = new StreamWriter(server, Encoding.UTF8) { AutoFlush = true };
-
-                    while (server.IsConnected && _isRunning)
+                    using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                    var root = doc.RootElement;
+                    var type = root.TryGetProperty("type", out var t) ? t.GetString() ?? TamperType.AgentStopped : TamperType.AgentStopped;
+                    var detail = new Dictionary<string, string>();
+                    foreach (var p in root.EnumerateObject())
                     {
-                        var line = await reader.ReadLineAsync();
-                        if (string.IsNullOrEmpty(line)) break;
-
-                        var response = HandlePipeCommand(line);
-                        await writer.WriteLineAsync(response);
+                        if (p.Name != "type") detail[p.Name] = p.Value.ToString();
                     }
+                    engine.RecordTamper(type, detail);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[CompanyOS.Agent] Named Pipe error: {ex.Message}");
-                    await Task.Delay(1000);
-                }
+                catch (Exception ex) { log.Warn($"Bad watchdog notice {Path.GetFileName(file)}: {ex.Message}"); }
+                finally { try { File.Delete(file); } catch { } }
             }
         }
+        catch (Exception ex) { log.Warn("Tamper inbox scan failed: " + ex.Message); }
+    }
 
-        private static string HandlePipeCommand(string json)
+    /// <summary>Non-sensitive status for the watchdog: whether a shift is open, so it relaunches the app (09 section 6 rule 2).</summary>
+    private static void WriteStatusFile(TrackingEngine engine)
+    {
+        try
         {
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                var command = root.GetProperty("command").GetString();
-
-                switch (command)
-                {
-                    case "hello":
-                        return JsonSerializer.Serialize(new { status = "ok", version = "1.0.0", isTracking = _isTracking });
-
-                    case "startTracking":
-                        _currentShiftId = Guid.NewGuid();
-                        _isTracking = true;
-                        return JsonSerializer.Serialize(new { status = "ok", shiftId = _currentShiftId });
-
-                    case "pauseTracking":
-                    case "resumeTracking":
-                        return JsonSerializer.Serialize(new { status = "ok" });
-
-                    case "stopTracking":
-                        _isTracking = false;
-                        _currentShiftId = Guid.Empty;
-                        return JsonSerializer.Serialize(new { status = "ok" });
-
-                    case "status":
-                        return JsonSerializer.Serialize(new
-                        {
-                            isTracking = _isTracking,
-                            shiftId = _currentShiftId,
-                            queueCount = 0,
-                            memoryMb = GC.GetTotalMemory(false) / (1024 * 1024)
-                        });
-
-                    default:
-                        return JsonSerializer.Serialize(new { status = "unknown_command" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return JsonSerializer.Serialize(new { status = "error", message = ex.Message });
-            }
+            var s = engine.Status();
+            var json = $"{{\"state\":\"{s.State}\",\"shiftOpen\":{(s.State != TrackingState.Stopped ? "true" : "false")},\"updatedAt\":\"{DateTime.UtcNow:O}\",\"pid\":{Environment.ProcessId}}}";
+            File.WriteAllText(AgentPaths.StatusFile, json);
         }
-
-        private static async Task RunMeasurementLoop()
-        {
-            while (_isRunning)
-            {
-                if (_isTracking)
-                {
-                    // Measure foreground window & activity tick
-                    // In real Windows execution: calls Win32 GetForegroundWindow and GetLastInputInfo
-                }
-                await Task.Delay(1000);
-            }
-        }
+        catch { }
     }
 }

@@ -37,6 +37,8 @@ export const MailboxAssignmentSchema = z.object({
         MailboxPermission.DOWNLOAD,
         MailboxPermission.ARCHIVE,
         MailboxPermission.MARK_READ,
+        MailboxPermission.TRIAGE,
+        MailboxPermission.COMMENT,
       ]),
     )
     .min(1),

@@ -16,7 +16,8 @@ Gmail API scopes are coarse (read, send, modify, full). Fine-grained rules such 
 |---|---|---|---|---|
 | A. Per-mailbox OAuth, internal app | Admin clicks Connect and signs in once as each mailbox. Backend stores a refresh token per mailbox | Access exists only for connected mailboxes. Revocable per mailbox. No verification needed for an Internal app | One sign-in per mailbox | Chosen for 1.0 |
 | B. Service account with domain-wide delegation | Super Admin authorises the service account for the Gmail scope. Backend can act as any user | No per-mailbox sign-in, suits many mailboxes | The key can access every mailbox in the domain, including management. High impact if leaked | Alternative when more than about 20 mailboxes. Needs backend allowlist and strict key handling |
-| C. IMAP and SMTP with app passwords | Store mailbox passwords | None | Stores passwords, weak, being phased out by Google | Rejected |
+| C. IMAP and SMTP with app passwords | Store mailbox passwords | None | Stores passwords, weak, being phased out by Google | Rejected for Google mailboxes |
+| D. IMAP and SMTP for non-Google providers (Hostinger, GoDaddy, Outlook, Zoho Mail) | Admin enters host, port, TLS, username and password; stored AES-256-GCM encrypted with the server key; IMAP polling and IDLE for new mail, SMTP for sending, same conversation layer and permissions as A | Any provider | Credentials live on the server (encrypted, never returned by the API); no per-action revocation at the provider | Approved by the client on 2026-11-02 for non-Google providers. Google mailboxes stay on option A |
 
 A connectable mailbox must be a real Workspace user account (licensed mailbox). Aliases and Google Groups (collaborative inboxes) are not mailboxes and cannot be connected. Confirm with the client which addresses are user accounts (Q3).
 
@@ -136,6 +137,40 @@ Recommended default for sales staff: read, send, reply, draft, attach, mark_read
 
 Disabling an employee or removing an assignment needs no action at Google: the employee never held a credential. Access ends with the next API request. The mailbox, its password and its tokens are unaffected, so nothing has to be rotated when staff leave. This is the main security gain over sharing mailbox passwords.
 
+## 8b. Message bodies and attachments
+
+Bodies are not stored. `GET /mail/mailboxes/:id/messages/:messageId/body` fetches the message from the provider on demand (Gmail `messages.get format=full`, IMAP `FETCH` by UID), sanitises the HTML server side (scripts, forms, remote images blocked until the user allows them per FR-MAIL-05) and returns it with the attachment list. `GET /mail/mailboxes/:id/messages/:messageId/attachments/:partId` streams one attachment to callers holding the `download` permission and writes a `download_attachment` audit entry.
+
+## 8c. IMAP/SMTP mailboxes (option D)
+
+| Method | Path | Permission | Behaviour |
+|---|---|---|---|
+| POST | /mail/mailboxes/imap/test | mail.accounts.manage | Logs in to IMAP (SELECT INBOX) and SMTP (EHLO + AUTH) with the submitted settings; returns `{imap:{ok,messages,error}, smtp:{ok,error}}`; stores nothing |
+| POST | /mail/mailboxes/imap | mail.accounts.manage | Runs the same test, then creates the mailbox (`provider=imap`, password AES-256-GCM encrypted), grants the admin every mailbox permission, writes audit `connect` and triggers the first sync |
+| PATCH | /mail/mailboxes/:id/imap | mail.accounts.manage | Changes host, port, TLS, username, display name or password; re-tested before saving; a changed server or account resets the UID cursor; audit `reconnect` |
+| DELETE | /mail/mailboxes/:id | mail.accounts.manage | Disconnect for Gmail and IMAP: credentials wiped, `tokenStatus=disconnected`, threads, messages and audit kept; audit `disconnect` |
+
+Sync: INBOX is polled by UID (`UIDVALIDITY` + last UID cursor stored on the mailbox; a changed `UIDVALIDITY` restarts from the last 30 days). Messages are parsed once; the conversation key is the referenced message's thread (In-Reply-To, then References newest first), otherwise the message's own Message-ID. Mail sent from the mailbox itself (From equals the mailbox address) is stored as outbound and never reopens a conversation. IMAP is read-only: nothing is flagged, moved or deleted. Sync runs through the same `gmail-sync` queue job as Gmail; without Redis the two-minute fallback job syncs IMAP mailboxes inline. A rejected login sets `tokenStatus=revoked`, raises the `mailbox_token_revoked` alert and notifies the connecting admin, exactly as for Gmail.
+
+Send: SMTP with the mailbox credentials; the message carries a generated `Message-ID`, `In-Reply-To` and `References` built from the conversation, and the identical bytes are appended to the provider's `\Sent` folder (best effort). Threads, messages, audit (`send`/`reply`), lead timeline and the `emails_sent` metric are written as for Gmail. Gmail mailboxes still send through the Gmail API.
+
+Credentials: `password_enc` and `refresh_token_enc` never leave the API (every mailbox response is stripped). The health view reports `provider`, `imapHost`, `smtpHost` and `username` so admins can recognise the account.
+
+Platform mail (password reset links, F30) is a separate transactional sender configured with `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM`; when unset, non-production responses keep returning `devResetUrl`.
+
 ## 9. Out of scope for 1.0
 
-Calendar, contacts sync, label management, mail templates and sequences, tracking pixels, thread assignment, non-Google mail providers.
+Calendar, contacts sync, label management, mail templates and sequences, tracking pixels, thread assignment.
+
+## 10. Implementation notes
+
+| Item | Where |
+|---|---|
+| Gmail REST client (token refresh, history, messages, watch, send, thread modify) | `apps/api/src/mail/gmail-client.ts`. Plain `fetch`, no Google SDK. 429 and 5xx retry with exponential backoff capped at 60 s; `invalid_grant` is treated as 401 |
+| Sync | `apps/api/src/mail/mail-sync.service.ts`. Initial sync = `newer_than:30d` metadata; incremental = `users.history.list` from the stored `historyId`; 404 on history drops the id and runs a full resync. Inbound mail goes through `ConversationsService.ingestInbound` (reopen, CRM linking); outbound mail is stored without touching conversation state |
+| Token revoked | Mailbox `token_status = revoked`, a `security_alerts` row `mailbox_token_revoked` and a notification to the connecting admin. Other failures set `error`. Both show on Mail > Mailboxes with a Reconnect action |
+| Triggers | OAuth callback and the Pub/Sub webhook call `MailSyncTrigger`, which hands the mailbox to the BullMQ `gmail-sync` queue when the worker is running and otherwise syncs inline. `GET /mail/mailboxes/:id/sync` (mail.accounts.manage) runs a sync on demand and returns counts. The fallback cron enqueues every healthy mailbox every 2 minutes; `gmail-watch-renew` renews watches expiring within 24 h |
+| Push verification | When `GMAIL_PUSH_AUDIENCE` is set the webhook validates the OIDC bearer token through Google's tokeninfo endpoint (audience, verified email, optional `GMAIL_PUSH_SERVICE_ACCOUNT`). Unset in development |
+| Environment | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (defaults to `http://localhost:4000/api/v1/mail/oauth/callback`), `GMAIL_PUBSUB_TOPIC` (`projects/<id>/topics/gmail-push`), `GMAIL_PUSH_AUDIENCE`, `GMAIL_PUSH_SERVICE_ACCOUNT`, `ENCRYPTION_SECRET` (refresh tokens at rest) |
+| Demo mailbox | `SEED_DEMO_MAILBOX=true` on the seed creates `demo-sales@example.com` with `token_status = demo` and twelve synthetic threads. Send and sync refuse demo mailboxes with 422; health shows `demo` |
+| Not implemented | Message bodies on demand (4.3 shows snippets only), attachment download, drafts in Gmail, archive and mark-read propagation to Gmail labels (local state only), domain restriction on connect (any Google account the admin signs in as is accepted; restrict with the Workspace trusted-app setting in section 3) |

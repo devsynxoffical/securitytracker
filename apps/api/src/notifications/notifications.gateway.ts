@@ -1,3 +1,4 @@
+import { resolveJwtSecret } from '../common/crypto.util';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -40,7 +41,8 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         return;
       }
 
-      const secret = this.config.get<string>('JWT_ACCESS_SECRET') || 'jwt_access_secret_for_dev_mode_only';
+      // Same secret and default as AuthModule/JwtStrategy, otherwise every handshake fails with 'invalid signature'
+      const secret = resolveJwtSecret(this.config.get<string>('JWT_SECRET'));
       const payload = this.jwtService.verify(token, { secret });
 
       client.data.user = payload;
