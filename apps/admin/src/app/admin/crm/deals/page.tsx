@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Download, Kanban, List, Pencil, Trash2, Check, Eye, UserPlus, CalendarClock } from 'lucide-react';
@@ -24,7 +26,7 @@ function CloseChip({ at, closed }: { at: string | null; closed: boolean }) {
   return <span className={clsx('inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium', tone)}><CalendarClock size={10} />{label}</span>;
 }
 
-export default function DealsPage() {
+function DealsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-64" />}>
       <Deals />
@@ -116,7 +118,7 @@ function Deals() {
               {can('crm.deals.assign') && <><div className="w-52"><OwnerSelect value={bulkOwner} onChange={setBulkOwner} emptyLabel="Assign to…" /></div><Button size="sm" disabled={!bulkOwner} loading={bulk.isPending} onClick={() => runBulk({ action: 'assign', ownerId: bulkOwner })}>Assign</Button></>}
               <div className="w-40"><TagFilter value={bulkTag} onChange={setBulkTag} /></div>
               <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'add_tag', tagId: bulkTag })}>Add tag</Button>
-              {can('crm.deals.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete ${selected.size} deals?`) && runBulk({ action: 'delete' })}>Delete</Button>}
+              {can('crm.deals.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => void confirmDialog({ title: `Delete ${selected.size} deals?`, danger: true }).then((ok) => ok && runBulk({ action: 'delete' }))}>Delete</Button>}
             </BulkBar>
             <DataTable
               rows={rows}
@@ -137,7 +139,7 @@ function Deals() {
                     { label: 'Open', icon: <Eye size={14} />, onSelect: () => setId(d.id) },
                     ...(can('crm.deals.edit') ? [{ label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(d) }] : []),
                     ...(can('crm.deals.assign') && me ? [{ label: 'Assign to me', icon: <UserPlus size={14} />, onSelect: () => assignOne.mutate({ id: d.id, ownerId: me.id }, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
-                    ...(can('crm.deals.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm(`Delete ${d.name}?`) && delOne.mutate(d.id, { onSuccess: () => toast.push('success', 'Deal deleted'), onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                    ...(can('crm.deals.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${d.name}?`, danger: true }).then((ok) => ok && delOne.mutate(d.id, { onSuccess: () => toast.push('success', 'Deal deleted'), onError: (e) => toast.push('error', (e as Error).message) }) )}] : []),
                   ] as MenuItem[])}
                 />
               )}
@@ -288,7 +290,7 @@ function DealRecord({ id, onBack, onEdit, editing, onCloseEdit, pipelines }: { i
                     </div>
                   )}
                   {canEdit && <Button icon={<Pencil size={13} />} onClick={() => onEdit(d)}>Edit</Button>}
-                  {can('crm.deals.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => window.confirm('Delete this deal?') && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Deal deleted'); onBack(); } })}>Delete</Button>}
+                  {can('crm.deals.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => void confirmDialog({ title: 'Delete this deal?', danger: true }).then((ok) => ok && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Deal deleted'); onBack(); } }))}>Delete</Button>}
                 </>
               }
               primary={canMove && !closed && wonStage ? <Button variant="primary" icon={<Check size={14} />} loading={move.isPending} onClick={() => toStage(wonStage)}>Mark won</Button> : undefined}
@@ -461,5 +463,14 @@ function DealFormModal({ deal, pipeline, pipelines, onClose }: { deal: Deal | nu
         <CustomFieldInputs entityType="deal" value={custom} onChange={setCustom} />
       </div>
     </Modal>
+  );
+}
+
+export default function DealsPageWithConfirm() {
+  return (
+    <>
+      <DealsPage />
+      <ConfirmHost />
+    </>
   );
 }

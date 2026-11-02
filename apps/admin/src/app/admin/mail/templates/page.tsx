@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { useRef, useState } from 'react';
 import { FileText, Plus, Pencil, Trash2, Users, Lock } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -16,7 +18,7 @@ const PLACEHOLDERS: Array<{ token: string; label: string }> = [
   { token: '{{me.lastName}}', label: 'My last name' },
 ];
 
-export default function TemplatesPage() {
+function TemplatesPage() {
   const { can } = useAuth();
   const toast = useToast();
   const q = useMailTemplates();
@@ -40,7 +42,7 @@ export default function TemplatesPage() {
             <Menu
               items={[
                 { label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(t) },
-                ...(t.ownerId || can('mail.templates.manage') ? [{ label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm('Delete this template?') && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                ...(t.ownerId || can('mail.templates.manage') ? [{ label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: 'Delete this template?', danger: true }).then((ok) => ok && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}] : []),
               ]}
             />
           </div>
@@ -140,5 +142,14 @@ function TemplateModal({ template, canShare, onClose }: { template: MailTemplate
         </div>
       </div>
     </Modal>
+  );
+}
+
+export default function TemplatesPageWithConfirm() {
+  return (
+    <>
+      <TemplatesPage />
+      <ConfirmHost />
+    </>
   );
 }

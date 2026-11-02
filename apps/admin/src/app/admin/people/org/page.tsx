@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useState } from 'react';
 import { Plus, Pencil, Trash2, Building2, Users } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -10,7 +12,7 @@ import { DataTable, KpiTile, Menu, type Column } from '@/components/ui/advanced'
 import { DepartmentSelect, EmployeeSelect } from '@/components/people/shared';
 import { fullName } from '@/lib/format';
 
-export default function OrgPage() {
+function OrgPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Org /></Suspense>;
 }
 
@@ -52,11 +54,11 @@ function Org() {
       <div className="grid gap-4 xl:grid-cols-2">
         <Card title="Departments" actions={manage && <Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditingDept('new')}>New department</Button>}>
           <DataTable rows={departments.data ?? []} columns={deptCols} loading={departments.isLoading} error={departments.isError ? (departments.error as Error).message : null} onRetry={() => departments.refetch()} stickyHeader={false} empty={<EmptyState icon={<Building2 size={20} />} title="No departments" body="Create the first department." />}
-            rowActions={manage ? (d) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditingDept(d) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Delete ${d.name}?`) && delDept.mutate(d.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} /> : undefined} />
+            rowActions={manage ? (d) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditingDept(d) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${d.name}?`, danger: true }).then((ok) => ok && delDept.mutate(d.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}]} /> : undefined} />
         </Card>
         <Card title="Teams" actions={manage && <Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditingTeam('new')}>New team</Button>}>
           <DataTable rows={teams.data ?? []} columns={teamCols} loading={teams.isLoading} error={teams.isError ? (teams.error as Error).message : null} onRetry={() => teams.refetch()} stickyHeader={false} empty={<EmptyState icon={<Users size={20} />} title="No teams" body="Teams belong to a department and have a leader." />}
-            rowActions={manage ? (t) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditingTeam(t) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Delete ${t.name}?`) && delTeam.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} /> : undefined} />
+            rowActions={manage ? (t) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditingTeam(t) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${t.name}?`, danger: true }).then((ok) => ok && delTeam.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}]} /> : undefined} />
         </Card>
       </div>
       {editingDept && <DepartmentModal department={editingDept === 'new' ? null : editingDept} onClose={() => setEditingDept(null)} />}
@@ -94,5 +96,14 @@ function TeamModal({ team, onClose }: { team: Team | null; onClose: () => void }
         <Field label="Team leader" hint="Gets team scope for permissions granted at that level"><EmployeeSelect value={leaderId} onChange={setLeaderId} emptyLabel="No leader" /></Field>
       </div>
     </Modal>
+  );
+}
+
+export default function OrgPageWithConfirm() {
+  return (
+    <>
+      <OrgPage />
+      <ConfirmHost />
+    </>
   );
 }

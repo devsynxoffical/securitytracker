@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useMemo, useState } from 'react';
 import { Plane, Plus, Pencil, Trash2, Check, X, Ban } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -12,7 +14,7 @@ import { dateOnly, fullName, relative, titleCase } from '@/lib/format';
 
 type Tab = 'requests' | 'calendar' | 'balances' | 'types';
 
-export default function LeavePage() {
+function LeavePage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Leave /></Suspense>;
 }
 
@@ -281,7 +283,7 @@ function Types() {
         <Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditing('new')}>New type</Button>
       </div>
       <DataTable rows={q.data ?? []} columns={cols} loading={q.isLoading} error={q.isError ? (q.error as Error).message : null} onRetry={() => q.refetch()} empty={<EmptyState title="No leave types" body="Create Annual, Sick and Unpaid to start." />}
-        rowActions={(t) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(t) }, { separator: true, label: '' }, { label: 'Remove', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Remove ${t.name}? Types in use are deactivated.`) && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} />} />
+        rowActions={(t) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(t) }, { separator: true, label: '' }, { label: 'Remove', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: `Remove ${t.name}? Types in use are deactivated.`, danger: true }).then((ok) => ok && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}]} />} />
       {editing && <TypeModal type={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>
   );
@@ -359,5 +361,14 @@ function RequestModal({ onClose }: { onClose: () => void }) {
         <Field label="Reason" required><Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       </div>
     </Modal>
+  );
+}
+
+export default function LeavePageWithConfirm() {
+  return (
+    <>
+      <LeavePage />
+      <ConfirmHost />
+    </>
   );
 }

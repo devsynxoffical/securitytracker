@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useState } from 'react';
 import { Plus, Pencil, Trash2, Upload, CalendarCheck, Clock } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -10,7 +12,7 @@ import { DataTable, FilterChip, Menu, Toggle, ViewTabs, type Column } from '@/co
 import { WEEKDAYS, OptionList } from '@/components/people/shared';
 import { dateOnly } from '@/lib/format';
 
-export default function SchedulesPage() {
+function SchedulesPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Schedules /></Suspense>;
 }
 
@@ -53,7 +55,7 @@ function ScheduleList() {
         {can('attendance.manage') && <Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditing('new')}>New schedule</Button>}
       </div>
       <DataTable rows={q.data ?? []} columns={cols} loading={q.isLoading} error={q.isError ? (q.error as Error).message : null} onRetry={() => q.refetch()} empty={<EmptyState icon={<CalendarCheck size={20} />} title="No schedules" body="Create a schedule such as Day shift 09:00–18:00 Mon–Fri." />}
-        rowActions={can('attendance.manage') ? (s) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(s) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Delete ${s.name}?`) && del.mutate(s.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} /> : undefined} />
+        rowActions={can('attendance.manage') ? (s) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(s) }, { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${s.name}?`, danger: true }).then((ok) => ok && del.mutate(s.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}]} /> : undefined} />
       {editing && <ScheduleModal schedule={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>
   );
@@ -146,5 +148,14 @@ function ImportModal({ onClose }: { onClose: () => void }) {
       <Field label="One per line: YYYY-MM-DD, Name" hint="Add the word optional to mark optional holidays"><Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={'2026-12-25, Christmas Day\n2026-01-01, New Year'} /></Field>
       {parsed.length > 0 && <div className="mt-2 text-xs text-ink-3">{parsed.length} valid line{parsed.length === 1 ? '' : 's'} detected.</div>}
     </Modal>
+  );
+}
+
+export default function SchedulesPageWithConfirm() {
+  return (
+    <>
+      <SchedulesPage />
+      <ConfirmHost />
+    </>
   );
 }

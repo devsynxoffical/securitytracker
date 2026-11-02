@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { useMemo, useState } from 'react';
 import { Check, X, Ban, MonitorSmartphone } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -13,7 +15,7 @@ import { relative, dateTime } from '@/lib/format';
 
 type Filter = 'all' | 'pending' | 'approved' | 'revoked' | 'rejected';
 
-export default function DevicesPage() {
+function DevicesPage() {
   const { can } = useAuth();
   const toast = useToast();
   const q = useDevices();
@@ -24,8 +26,8 @@ export default function DevicesPage() {
 
   const rows = useMemo(() => (q.data ?? []).filter((d) => (filter === 'all' || d.status === filter) && (!search || `${d.name} ${d.osVersion} ${nameOf(d.employeeId)}`.toLowerCase().includes(search.toLowerCase()))), [q.data, filter, search, nameOf]);
   const counts = useMemo(() => ({ pending: (q.data ?? []).filter((d) => d.status === 'pending').length }), [q.data]);
-  const run = (id: string, action: 'approve' | 'reject' | 'revoke') => {
-    if (action === 'revoke' && !window.confirm('Revoke this device? Its sessions end and the local cache is wiped on next contact (FR-DEV-06).')) return;
+  const run = async (id: string, action: 'approve' | 'reject' | 'revoke') => {
+    if (action === 'revoke' && !(await confirmDialog({ title: 'Revoke this device?', body: 'Its sessions end and the local cache is wiped on next contact (FR-DEV-06).', danger: true, confirmLabel: 'Revoke' }))) return;
     act.mutate({ id, action }, { onSuccess: () => toast.push('success', `Device ${action}d`), onError: (e) => toast.push('error', (e as Error).message) });
   };
 
@@ -72,5 +74,14 @@ export default function DevicesPage() {
         />
       </Card>
     </div>
+  );
+}
+
+export default function DevicesPageWithConfirm() {
+  return (
+    <>
+      <DevicesPage />
+      <ConfirmHost />
+    </>
   );
 }

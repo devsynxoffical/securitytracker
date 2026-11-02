@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useMemo, useState } from 'react';
 import { Download, Plus, Users, KeyRound, UserX, ExternalLink, Clock, Plane, UserCheck } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -13,7 +15,7 @@ import { dateOnly, downloadText, fullName, relative, titleCase } from '@/lib/for
 
 type View = 'all' | 'active' | 'invited' | 'disabled';
 
-export default function DirectoryPage() {
+function DirectoryPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Directory /></Suspense>;
 }
 
@@ -206,5 +208,14 @@ function NewEmployeeModal({ onClose, onCreated }: { onClose: () => void; onCreat
         <Field label="Temporary password" hint="Leave empty to generate one"><Input value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
       </div>
     </Modal>
+  );
+}
+
+export default function DirectoryPageWithConfirm() {
+  return (
+    <>
+      <DirectoryPage />
+      <ConfirmHost />
+    </>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, Target as TargetIcon, Users, UserCircle2, Shield } from 'lucide-react';
 import { http, api } from '@/lib/api';
@@ -26,7 +28,7 @@ const METRICS: Array<{ key: string; label: string; unit: string }> = [
 ];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function TargetsPage() {
+function TargetsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-64" />}>
       <Targets />
@@ -90,7 +92,7 @@ function Targets() {
                     <Menu
                       items={[
                         { label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(t) },
-                        { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm('Delete this target?') && del.mutate(t.id, { onSuccess: () => toast.push('success', 'Target deleted'), onError: (e) => toast.push('error', (e as Error).message) }) },
+                        { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: 'Delete this target?', danger: true }).then((ok) => ok && del.mutate(t.id, { onSuccess: () => toast.push('success', 'Target deleted'), onError: (e) => toast.push('error', (e as Error).message) }) )},
                       ]}
                     />
                   </div>
@@ -224,5 +226,14 @@ function TargetModal({ target, onClose }: { target: Target | null; onClose: () =
         </div>
       </div>
     </Modal>
+  );
+}
+
+export default function TargetsPageWithConfirm() {
+  return (
+    <>
+      <TargetsPage />
+      <ConfirmHost />
+    </>
   );
 }

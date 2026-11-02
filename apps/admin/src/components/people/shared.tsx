@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog } from '@/components/platform/confirm';
+
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pencil, Plus, Trash2, FileText, CheckCircle2, Circle, KeyRound, UserX, UserCheck, ListTodo, Monitor, Users, CalendarCheck, Activity, Mail, Phone } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -614,7 +616,7 @@ function Documents({ employeeId, documents }: { employeeId: string; documents: H
     <div className="space-y-3">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
         <DataTable rows={documents} columns={cols} stickyHeader={false} empty={<EmptyState icon={<FileText size={20} />} title="No documents" body="Document metadata is kept here; files attach once object storage is configured (15 FR-HR-11)." />}
-          rowActions={can('hr.profiles.edit') ? (d) => <Tooltip label="Remove"><button type="button" className="rounded p-1 text-ink-3 hover:bg-red-soft hover:text-red" onClick={() => window.confirm('Remove this document?') && del.mutate(d.id, { onError: (e) => toast.push('error', (e as Error).message) })} aria-label="Remove document"><Trash2 size={13} /></button></Tooltip> : undefined} />
+          rowActions={can('hr.profiles.edit') ? (d) => <Tooltip label="Remove"><button type="button" className="rounded p-1 text-ink-3 hover:bg-red-soft hover:text-red" onClick={() => void confirmDialog({ title: 'Remove this document?', danger: true }).then((ok) => ok && del.mutate(d.id, { onError: (e) => toast.push('error', (e as Error).message) }))} aria-label="Remove document"><Trash2 size={13} /></button></Tooltip> : undefined} />
       </div>
       {can('hr.profiles.edit') && !adding && <Button size="sm" icon={<Plus size={13} />} onClick={() => setAdding(true)}>Add document</Button>}
       {adding && (

@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Download, Phone, Mail, Pencil, Trash2, Eye, UserPlus, Tag as TagIcon } from 'lucide-react';
@@ -17,7 +19,7 @@ import { money, fullName, relative, dateTime, phoneDisplay, titleCase, downloadT
 const LIFECYCLES = ['lead', 'prospect', 'customer', 'churned', 'partner'];
 const LIFECYCLE_OPTIONS = LIFECYCLES.map((l) => ({ value: l, label: titleCase(l) }));
 
-export default function ContactsPage() {
+function ContactsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-64" />}>
       <Contacts />
@@ -97,7 +99,7 @@ function Contacts() {
             <div className="w-40"><TagFilter value={bulkTag} onChange={setBulkTag} /></div>
             <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'add_tag', tagId: bulkTag })}>Add tag</Button>
             <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'remove_tag', tagId: bulkTag })}>Remove tag</Button>
-            {can('crm.contacts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete ${selected.size} contacts?`) && runBulk({ action: 'delete' })}>Delete</Button>}
+            {can('crm.contacts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => void confirmDialog({ title: `Delete ${selected.size} contacts?`, danger: true }).then((ok) => ok && runBulk({ action: 'delete' }))}>Delete</Button>}
           </BulkBar>
           <DataTable
             rows={rows}
@@ -119,7 +121,7 @@ function Contacts() {
                   ...(can('crm.contacts.edit') ? [{ label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(c) }] : []),
                   ...(can('crm.contacts.assign') && me ? [{ label: 'Assign to me', icon: <UserPlus size={14} />, onSelect: () => assignOne.mutate({ id: c.id, ownerId: me.id }, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
                   { label: 'Add tag…', icon: <TagIcon size={14} />, onSelect: () => { setSelected(new Set([c.id])); } },
-                  ...(can('crm.contacts.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm(`Delete ${fullName(c)}?`) && delOne.mutate(c.id, { onSuccess: () => toast.push('success', 'Contact deleted'), onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                  ...(can('crm.contacts.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${fullName(c)}?`, danger: true }).then((ok) => ok && delOne.mutate(c.id, { onSuccess: () => toast.push('success', 'Contact deleted'), onError: (e) => toast.push('error', (e as Error).message) }) )}] : []),
                 ] as MenuItem[])}
               />
             )}
@@ -182,7 +184,7 @@ function ContactRecord({ id, onBack, onEdit, editing, onCloseEdit }: { id: strin
                     <Button disabled={!owner || owner === c.ownerId} loading={assign.isPending} onClick={() => assign.mutate(owner, { onSuccess: () => toast.push('success', 'Reassigned') })}>Assign</Button>
                   </div>
                 )}
-                {can('crm.contacts.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => window.confirm('Delete this contact?') && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Contact deleted'); onBack(); } })}>Delete</Button>}
+                {can('crm.contacts.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => void confirmDialog({ title: 'Delete this contact?', danger: true }).then((ok) => ok && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Contact deleted'); onBack(); } }))}>Delete</Button>}
               </>
             }
             primary={canEdit ? <Button variant="primary" icon={<Pencil size={13} />} onClick={() => onEdit(c)}>Edit</Button> : undefined}
@@ -328,5 +330,14 @@ function ContactFormModal({ contact, onClose }: { contact: Contact | null; onClo
         <CustomFieldInputs entityType="contact" value={custom} onChange={setCustom} />
       </div>
     </Modal>
+  );
+}
+
+export default function ContactsPageWithConfirm() {
+  return (
+    <>
+      <ContactsPage />
+      <ConfirmHost />
+    </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { createContext, isValidElement, useContext, useEffect, useId, useState, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { X, AlertTriangle, Inbox, Check, Info, Search } from 'lucide-react';
 import { clsx } from 'clsx';
 import { initials } from '@/lib/format';
@@ -48,17 +48,33 @@ export function Button({
 // ---------------------------------------------------------------------------
 
 export function Field({ label, hint, error, required, children, className }: { label?: string; hint?: string; error?: string; required?: boolean; children: ReactNode; className?: string }) {
+  // A <label> may only wrap a single form control; anything else (chips, buttons, groups) gets a labelled group
+  // so accessible names stay correct (DESIGN-SYSTEM section 9, verified by the Playwright QA suite).
+  const controlTypes: unknown[] = ['input', 'select', 'textarea', Input, Select, Textarea];
+  const single = isValidElement(children) && controlTypes.includes(children.type);
+  const id = useId();
+  const caption = label && (
+    <span id={single ? undefined : id} className="mb-1 block text-xs font-semibold text-ink-2">
+      {label}
+      {required && <span className="text-red"> *</span>}
+    </span>
+  );
+  const footer = error ? <span className="mt-1 block text-xs text-red">{error}</span> : hint ? <span className="mt-1 block text-xs text-ink-3">{hint}</span> : null;
+  if (single) {
+    return (
+      <label className={clsx('block', className)}>
+        {caption}
+        {children}
+        {footer}
+      </label>
+    );
+  }
   return (
-    <label className={clsx('block', className)}>
-      {label && (
-        <span className="mb-1 block text-xs font-semibold text-ink-2">
-          {label}
-          {required && <span className="text-red"> *</span>}
-        </span>
-      )}
+    <div role="group" aria-labelledby={label ? id : undefined} className={clsx('block', className)}>
+      {caption}
       {children}
-      {error ? <span className="mt-1 block text-xs text-red">{error}</span> : hint ? <span className="mt-1 block text-xs text-ink-3">{hint}</span> : null}
-    </label>
+      {footer}
+    </div>
   );
 }
 

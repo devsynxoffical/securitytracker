@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { useState } from 'react';
 import { Plus, Trash2, Pencil, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -13,7 +15,7 @@ type Tab = 'pipelines' | 'fields' | 'tags' | 'sources' | 'lost';
 const ENTITIES: EntityType[] = ['lead', 'contact', 'account', 'deal'];
 const FIELD_TYPES = ['text', 'number', 'date', 'select', 'multi_select', 'checkbox', 'url', 'phone', 'email'];
 
-export default function CrmSettingsPage() {
+function CrmSettingsPage() {
   const { can } = useAuth();
   const [tab, setTab] = useState<Tab>('pipelines');
   const canPipelines = can('crm.pipelines.manage');
@@ -83,7 +85,7 @@ function PipelinesTab({ canEdit }: { canEdit: boolean }) {
                 <div className="flex gap-1">
                   {!p.isDefault && <Button size="sm" variant="ghost" onClick={() => patchPipeline.mutate({ id: p.id, body: { isDefault: true } }, { onError: err })}>Make default</Button>}
                   <Button size="sm" variant="ghost" icon={<Plus size={12} />} onClick={() => setEditStage({ pipeline: p, stage: null })}>Stage</Button>
-                  <Button size="sm" variant="ghost" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete pipeline “${p.name}”?`) && deletePipeline.mutate(p.id, { onError: err })} />
+                  <Button size="sm" variant="ghost" icon={<Trash2 size={12} />} onClick={() => void confirmDialog({ title: `Delete pipeline “${p.name}”?`, danger: true }).then((ok) => ok && deletePipeline.mutate(p.id, { onError: err }))} />
                 </div>
               )}
             </div>
@@ -103,7 +105,7 @@ function PipelinesTab({ canEdit }: { canEdit: boolean }) {
                           <Button size="sm" variant="ghost" disabled={i === 0} onClick={() => moveStage(p, i, -1)} aria-label="Move up"><ArrowUp size={12} /></Button>
                           <Button size="sm" variant="ghost" disabled={i === p.stages.length - 1} onClick={() => moveStage(p, i, 1)} aria-label="Move down"><ArrowDown size={12} /></Button>
                           <Button size="sm" variant="ghost" onClick={() => setEditStage({ pipeline: p, stage: s })} aria-label="Edit"><Pencil size={12} /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => window.confirm(`Delete stage “${s.name}”?`) && deleteStage.mutate({ pipelineId: p.id, stageId: s.id }, { onError: err })} aria-label="Delete"><Trash2 size={12} /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => void confirmDialog({ title: `Delete stage “${s.name}”?`, danger: true }).then((ok) => ok && deleteStage.mutate({ pipelineId: p.id, stageId: s.id }, { onError: err }))} aria-label="Delete"><Trash2 size={12} /></Button>
                         </span>
                       </Td>
                     )}
@@ -264,7 +266,7 @@ function TagsTab({ canEdit }: { canEdit: boolean }) {
               <Td><TagChip name={t.name} colour={t.colour} /></Td>
               <Td mono className="text-xs text-ink-2">{t.colour}</Td>
               <Td right mono>{t.usageCount ?? 0}</Td>
-              {canEdit && <Td right><span className="inline-flex gap-0.5"><Button size="sm" variant="ghost" onClick={() => setEditing(t)} aria-label="Edit"><Pencil size={12} /></Button><Button size="sm" variant="ghost" onClick={() => window.confirm(`Delete tag “${t.name}”? It is removed from ${t.usageCount ?? 0} records.`) && remove.mutate(t.id, { onError: err })} aria-label="Delete"><Trash2 size={12} /></Button></span></Td>}
+              {canEdit && <Td right><span className="inline-flex gap-0.5"><Button size="sm" variant="ghost" onClick={() => setEditing(t)} aria-label="Edit"><Pencil size={12} /></Button><Button size="sm" variant="ghost" onClick={() => void confirmDialog({ title: `Delete tag “${t.name}”? It is removed from ${t.usageCount ?? 0} records.`, danger: true }).then((ok) => ok && remove.mutate(t.id, { onError: err }))} aria-label="Delete"><Trash2 size={12} /></Button></span></Td>}
             </tr>
           ))}</tbody>
         </Table>
@@ -311,12 +313,21 @@ function LookupTab({ kind, canEdit }: { kind: 'sources' | 'lost-reasons'; canEdi
               {canEdit && <Td right><span className="inline-flex gap-0.5">
                 <Button size="sm" variant="ghost" onClick={() => setEditing(r)} aria-label="Edit"><Pencil size={12} /></Button>
                 <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: r.id, body: { isActive: !r.isActive } }, { onError: err })}>{r.isActive ? 'Deactivate' : 'Activate'}</Button>
-                <Button size="sm" variant="ghost" onClick={() => window.confirm(`Delete “${r.name}”?`) && remove.mutate(r.id, { onError: err })} aria-label="Delete"><Trash2 size={12} /></Button>
+                <Button size="sm" variant="ghost" onClick={() => void confirmDialog({ title: `Delete “${r.name}”?`, danger: true }).then((ok) => ok && remove.mutate(r.id, { onError: err }))} aria-label="Delete"><Trash2 size={12} /></Button>
               </span></Td>}
             </tr>
           ))}</tbody>
         </Table>
       )}
     </div>
+  );
+}
+
+export default function CrmSettingsPageWithConfirm() {
+  return (
+    <>
+      <CrmSettingsPage />
+      <ConfirmHost />
+    </>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Download, Pencil, Trash2, Globe, Phone, Eye, UserPlus } from 'lucide-react';
@@ -18,7 +20,7 @@ const LIFECYCLES = ['lead', 'prospect', 'customer', 'churned', 'partner'];
 const LIFECYCLE_OPTIONS = LIFECYCLES.map((l) => ({ value: l, label: titleCase(l) }));
 const SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 
-export default function AccountsPage() {
+function AccountsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-64" />}>
       <Accounts />
@@ -93,7 +95,7 @@ function Accounts() {
             <div className="w-40"><TagFilter value={bulkTag} onChange={setBulkTag} /></div>
             <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'add_tag', tagId: bulkTag })}>Add tag</Button>
             <Button size="sm" disabled={!bulkTag} onClick={() => runBulk({ action: 'remove_tag', tagId: bulkTag })}>Remove tag</Button>
-            {can('crm.accounts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Delete ${selected.size} accounts?`) && runBulk({ action: 'delete' })}>Delete</Button>}
+            {can('crm.accounts.delete') && <Button size="sm" variant="danger-outline" icon={<Trash2 size={12} />} onClick={() => void confirmDialog({ title: `Delete ${selected.size} accounts?`, danger: true }).then((ok) => ok && runBulk({ action: 'delete' }))}>Delete</Button>}
           </BulkBar>
           <DataTable
             rows={rows}
@@ -114,7 +116,7 @@ function Accounts() {
                   { label: 'Open', icon: <Eye size={14} />, onSelect: () => setId(a.id) },
                   ...(can('crm.accounts.edit') ? [{ label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(a) }] : []),
                   ...(can('crm.accounts.assign') && me ? [{ label: 'Assign to me', icon: <UserPlus size={14} />, onSelect: () => assignOne.mutate({ id: a.id, ownerId: me.id }, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
-                  ...(can('crm.accounts.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm(`Delete ${a.name}?`) && delOne.mutate(a.id, { onSuccess: () => toast.push('success', 'Account deleted'), onError: (e) => toast.push('error', (e as Error).message) }) }] : []),
+                  ...(can('crm.accounts.delete') ? [{ separator: true } as const, { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${a.name}?`, danger: true }).then((ok) => ok && delOne.mutate(a.id, { onSuccess: () => toast.push('success', 'Account deleted'), onError: (e) => toast.push('error', (e as Error).message) }) )}] : []),
                 ] as MenuItem[])}
               />
             )}
@@ -169,7 +171,7 @@ function AccountRecord({ id, onBack, onEdit, editing, onCloseEdit }: { id: strin
                     <Button disabled={!owner || owner === a.ownerId} loading={assign.isPending} onClick={() => assign.mutate(owner, { onSuccess: () => toast.push('success', 'Reassigned') })}>Assign</Button>
                   </div>
                 )}
-                {can('crm.accounts.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => window.confirm('Delete this account?') && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Account deleted'); onBack(); } })}>Delete</Button>}
+                {can('crm.accounts.delete') && <Button variant="danger-outline" icon={<Trash2 size={13} />} loading={del.isPending} onClick={() => void confirmDialog({ title: 'Delete this account?', danger: true }).then((ok) => ok && del.mutate(undefined, { onSuccess: () => { toast.push('success', 'Account deleted'); onBack(); } }))}>Delete</Button>}
               </>
             }
             primary={canEdit ? <Button variant="primary" icon={<Pencil size={13} />} onClick={() => onEdit(a)}>Edit</Button> : undefined}
@@ -335,5 +337,14 @@ function AccountFormModal({ account, onClose }: { account: Account | null; onClo
         <CustomFieldInputs entityType="account" value={custom} onChange={setCustom} />
       </div>
     </Modal>
+  );
+}
+
+export default function AccountsPageWithConfirm() {
+  return (
+    <>
+      <AccountsPage />
+      <ConfirmHost />
+    </>
   );
 }

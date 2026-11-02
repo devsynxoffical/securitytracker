@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { useState } from 'react';
 import { Tags, Plus, Pencil, Trash2, Tag as TagIcon } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -10,7 +12,7 @@ import { Menu } from '@/components/ui/advanced';
 
 const SWATCHES = ['#C2362B', '#B26A00', '#1E8E5A', '#0F6B5C', '#2459C4', '#6B46C1', '#5C666E', '#E0921A'];
 
-export default function LabelsPage() {
+function LabelsPage() {
   const { can } = useAuth();
   const toast = useToast();
   const manage = can('mail.templates.manage');
@@ -36,7 +38,7 @@ export default function LabelsPage() {
                 <Menu
                   items={[
                     { label: 'Edit', icon: <Pencil size={14} />, onSelect: () => setEditing(l) },
-                    { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => window.confirm('Delete this label from every conversation?') && del.mutate(l.id, { onError: (e) => toast.push('error', (e as Error).message) }) },
+                    { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => void confirmDialog({ title: 'Delete this label from every conversation?', danger: true }).then((ok) => ok && del.mutate(l.id, { onError: (e) => toast.push('error', (e as Error).message) }) )},
                   ]}
                 />
               )}
@@ -69,5 +71,14 @@ function LabelModal({ label, onClose }: { label: MailLabel | null; onClose: () =
         Preview: <span className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: `${colour}22`, color: colour }}><TagIcon size={10} /> {name || 'Label'}</span>
       </div>
     </Modal>
+  );
+}
+
+export default function LabelsPageWithConfirm() {
+  return (
+    <>
+      <LabelsPage />
+      <ConfirmHost />
+    </>
   );
 }

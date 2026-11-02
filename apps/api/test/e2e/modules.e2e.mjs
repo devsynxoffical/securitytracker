@@ -72,7 +72,7 @@ check('hr: leave request pending with days counted', r.status === 201 && Number(
 r = await call('POST', '/leave-requests', { employeeId: other.id, leaveTypeId: annual.id, dateFrom: d1, dateTo: d1, reason: 'dup' });
 check('hr: overlapping request rejected', r.status >= 400 && r.body?.error?.code === 'LEAVE_OVERLAP', short(r.body));
 r = await call('POST', `/leave-requests/${leave.id}/decide`, { status: 'approved', comment: 'ok' }); check('hr: approve leave', r.status === 201, short(r.body));
-r = await call('GET', `/hr/leave-balances?employeeId=${other.id}`); check('hr: used days increased', r.status === 200 && arr(r.body).some((b) => Number(b.usedDays) > 0), short(r.body));
+r = await call('GET', `/hr/leave-balances?employeeId=${other.id}&year=${d1.slice(0, 4)}`); check('hr: used days increased', r.status === 200 && arr(r.body).some((b) => Number(b.usedDays) > 0), short(r.body));
 r = await call('GET', `/hr/leave-calendar?month=${d1.slice(0, 7)}`); check('hr: leave calendar', r.status === 200, short(r.body));
 r = await call('GET', '/hr/out-today'); check('hr: out today', r.status === 200, short(r.body));
 r = await call('POST', '/holidays/import', { holidays: [{ date: `${new Date().getFullYear()}-12-25`, name: 'Christmas' }] }); check('hr: holidays import', r.status === 201 || r.status === 200, short(r.body));

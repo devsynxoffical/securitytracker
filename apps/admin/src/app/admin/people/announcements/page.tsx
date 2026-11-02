@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useMemo, useState } from 'react';
 import { Plus, Pin, PinOff, Trash2, Megaphone, Pencil, Building2, Users, KeyRound, Globe, Eye, Clock } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -12,7 +14,7 @@ import { dateTime, relative, titleCase } from '@/lib/format';
 
 type View = 'all' | 'unread' | 'pinned' | 'scheduled';
 
-export default function AnnouncementsPage() {
+function AnnouncementsPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Announcements /></Suspense>;
 }
 
@@ -87,7 +89,7 @@ function Announcements() {
                           { label: a.pinned ? 'Unpin' : 'Pin to top', icon: a.pinned ? <PinOff size={13} /> : <Pin size={13} />, onSelect: () => pin.mutate({ id: a.id, pinned: !a.pinned }, { onError: (e) => toast.push('error', (e as Error).message) }) },
                           { label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(a) },
                           { separator: true, label: '' },
-                          { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm('Delete this announcement?') && del.mutate(a.id, { onError: (e) => toast.push('error', (e as Error).message) }) },
+                          { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: 'Delete this announcement?', danger: true }).then((ok) => ok && del.mutate(a.id, { onError: (e) => toast.push('error', (e as Error).message) }) )},
                         ]} />
                       )}
                     </div>
@@ -132,5 +134,14 @@ function AnnouncementModal({ announcement: a, onClose }: { announcement: Announc
         <Toggle checked={pinned} onChange={setPinned} label="Pin to the top" />
       </div>
     </Modal>
+  );
+}
+
+export default function AnnouncementsPageWithConfirm() {
+  return (
+    <>
+      <AnnouncementsPage />
+      <ConfirmHost />
+    </>
   );
 }

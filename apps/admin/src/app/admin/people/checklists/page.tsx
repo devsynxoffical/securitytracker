@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { Suspense, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, ListTodo, CheckCircle2, UserCheck, UserX, Star } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -12,7 +14,7 @@ import { dateOnly, fullName, titleCase } from '@/lib/format';
 
 type Tab = 'active' | 'mine' | 'templates';
 
-export default function ChecklistsPage() {
+function ChecklistsPage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Checklists /></Suspense>;
 }
 
@@ -123,7 +125,7 @@ function Templates() {
                         <div className="text-2xs normal-case tracking-normal text-ink-3">{titleCase(t.kind)} · {t.items.length} items · used {t._count?.instances ?? 0}×</div>
                       </div>
                     </div>
-                    <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(t) }, ...(!t.isDefault ? [{ label: 'Make default', icon: <Star size={13} />, onSelect: () => makeDefault.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []), { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Delete ${t.name}?`) && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} />
+                    <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(t) }, ...(!t.isDefault ? [{ label: 'Make default', icon: <Star size={13} />, onSelect: () => makeDefault.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }] : []), { separator: true, label: '' }, { label: 'Delete', icon: <Trash2 size={13} />, danger: true, onSelect: () => void confirmDialog({ title: `Delete ${t.name}?`, danger: true }).then((ok) => ok && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) )}]} />
                   </div>
                   <ul className="mt-3 flex-1 space-y-1 text-sm text-ink-2">
                     {t.items.slice(0, 4).map((i, idx) => <li key={idx} className="flex items-center justify-between gap-2"><span className="truncate">{i.title}</span><span className="shrink-0 font-mono text-2xs normal-case tracking-normal text-ink-3">{i.offsetDays >= 0 ? `+${i.offsetDays}` : i.offsetDays} d</span></li>)}
@@ -193,5 +195,14 @@ function StartModal({ onClose }: { onClose: () => void }) {
         <Field label="Anchor date" hint={kind === 'onboarding' ? 'Defaults to the join date' : 'Last working day; defaults to today'}><Input type="date" value={anchorDate} onChange={(e) => setAnchor(e.target.value)} /></Field>
       </div>
     </Modal>
+  );
+}
+
+export default function ChecklistsPageWithConfirm() {
+  return (
+    <>
+      <ChecklistsPage />
+      <ConfirmHost />
+    </>
   );
 }

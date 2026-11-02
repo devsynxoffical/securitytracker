@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmDialog, ConfirmHost } from '@/components/platform/confirm';
+
 import { useMemo, useState } from 'react';
 import { Ban, Monitor, Globe, Shield } from 'lucide-react';
 import { http } from '@/lib/api';
@@ -11,7 +13,7 @@ import { DataTable, FilterChip, Menu, type Column } from '@/components/ui/advanc
 import { fullName, dateTime, relative } from '@/lib/format';
 import { Mono } from '@/components/platform/shared';
 
-export default function SessionsPage() {
+function SessionsPage() {
   const { can } = useAuth();
   const toast = useToast();
   const employees = useEmployees();
@@ -46,7 +48,7 @@ export default function SessionsPage() {
       <PageHeader
         title="Sessions"
         subtitle="Desktop and admin sessions in your scope. Revoking is enforced on the next request (FR-AUTH-08)."
-        actions={employeeId && can('sessions.revoke') ? <Button variant="danger-outline" icon={<Ban size={14} />} loading={revokeAll.isPending} onClick={() => window.confirm(`Revoke every active session of ${empName}?`) && revokeAll.mutate(employeeId, { onSuccess: (r) => { toast.push('success', `${r.revoked} sessions revoked`); reset(); }, onError: (e) => toast.push('error', (e as Error).message) })}>Revoke all for {empName}</Button> : undefined}
+        actions={employeeId && can('sessions.revoke') ? <Button variant="danger-outline" icon={<Ban size={14} />} loading={revokeAll.isPending} onClick={() => void confirmDialog({ title: `Revoke every active session of ${empName}?`, danger: true }).then((ok) => ok && revokeAll.mutate(employeeId, { onSuccess: (r) => { toast.push('success', `${r.revoked} sessions revoked`); reset(); }, onError: (e) => toast.push('error', (e as Error).message) }))}>Revoke all for {empName}</Button> : undefined}
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Segmented value={active} onChange={(v) => { setActive(v); reset(); }} options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Ended' }, { value: '', label: 'All' }]} />
@@ -71,5 +73,14 @@ export default function SessionsPage() {
         />
       </Card>
     </div>
+  );
+}
+
+export default function SessionsPageWithConfirm() {
+  return (
+    <>
+      <SessionsPage />
+      <ConfirmHost />
+    </>
   );
 }
