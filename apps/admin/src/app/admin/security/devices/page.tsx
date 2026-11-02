@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, X, Ban } from 'lucide-react';
+import { Check, X, Ban, MonitorSmartphone } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCrmMutation } from '@/lib/queries/crm';
 import { useDevices, type Device } from '@/lib/queries/platform';
-import { Button, Card, Table, Th, Td, Segmented, SearchInput, TableSkeleton, EmptyState, ErrorBanner, PageHeader, useToast } from '@/components/ui';
+import { Button, Card, Segmented, SearchInput, EmptyState, PageHeader, useToast, Avatar } from '@/components/ui';
+import { DataTable, Menu, type Column } from '@/components/ui/advanced';
 import { StatusBadge, useEmployeeName, Mono } from '@/components/platform/shared';
 import { relative, dateTime } from '@/lib/format';
 
@@ -28,6 +29,19 @@ export default function DevicesPage() {
     act.mutate({ id, action }, { onSuccess: () => toast.push('success', `Device ${action}d`), onError: (e) => toast.push('error', (e as Error).message) });
   };
 
+  const columns = useMemo<Column<Device>[]>(
+    () => [
+      { key: 'device', header: 'Device', locked: true, cell: (d) => <div><div className="font-semibold text-ink">{d.name}</div><div className="text-xs text-ink-3"><Mono>{d.hardwareHash.slice(0, 16)}</Mono> · {d.releaseChannel}</div></div> },
+      { key: 'employee', header: 'Employee', cell: (d) => <span className="inline-flex items-center gap-2"><Avatar name={nameOf(d.employeeId)} size={22} />{nameOf(d.employeeId)}</span> },
+      { key: 'status', header: 'Status', cell: (d) => <StatusBadge status={d.status} /> },
+      { key: 'os', header: 'OS', cell: (d) => <span className="text-ink-2">{d.osVersion}</span> },
+      { key: 'versions', header: 'App / agent', mono: true, cell: (d) => `${d.appVersion ?? '—'} / ${d.agentVersion ?? '—'}` },
+      { key: 'seen', header: 'Last seen', cell: (d) => <span className="text-ink-3">{d.lastSeenAt ? relative(d.lastSeenAt) : 'never'}</span> },
+      { key: 'registered', header: 'Registered', cell: (d) => <span className="text-ink-3">{dateTime(d.createdAt)}</span> },
+    ],
+    [nameOf],
+  );
+
   return (
     <div>
       <PageHeader title="Devices" subtitle={counts.pending ? `${counts.pending} awaiting approval` : 'Registered workstations in your scope (FR-DEV-03)'} />
@@ -36,36 +50,26 @@ export default function DevicesPage() {
         <SearchInput className="w-64" value={search} onChange={setSearch} placeholder="Device, OS, employee…" />
       </div>
       <Card>
-        {q.isLoading && <TableSkeleton cols={7} />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data && rows.length === 0 && <EmptyState title="No devices" body={filter === 'pending' ? 'Nothing is waiting for approval.' : 'Devices register on first login from the desktop app (F2).'} />}
-        {rows.length > 0 && (
-          <Table>
-            <thead><tr><Th>Device</Th><Th>Employee</Th><Th>Status</Th><Th>OS</Th><Th>App / agent</Th><Th>Last seen</Th><Th>Registered</Th><Th /></tr></thead>
-            <tbody>
-              {rows.map((d: Device) => (
-                <tr key={d.id} className="hover:bg-surface-2">
-                  <Td><div className="font-semibold">{d.name}</div><div className="text-xs text-ink-3"><Mono>{d.hardwareHash.slice(0, 16)}</Mono> · {d.releaseChannel}</div></Td>
-                  <Td>{nameOf(d.employeeId)}</Td>
-                  <Td><StatusBadge status={d.status} /></Td>
-                  <Td className="text-ink-2">{d.osVersion}</Td>
-                  <Td mono>{d.appVersion ?? '—'} / {d.agentVersion ?? '—'}</Td>
-                  <Td className="text-ink-3">{d.lastSeenAt ? relative(d.lastSeenAt) : 'never'}</Td>
-                  <Td className="text-ink-3">{dateTime(d.createdAt)}</Td>
-                  <Td right>
-                    <div className="flex justify-end gap-1">
-                      {d.status === 'pending' && can('devices.approve') && <>
-                        <Button size="sm" variant="primary" icon={<Check size={12} />} loading={act.isPending} onClick={() => run(d.id, 'approve')}>Approve</Button>
-                        <Button size="sm" icon={<X size={12} />} onClick={() => run(d.id, 'reject')}>Reject</Button>
-                      </>}
-                      {d.status === 'approved' && can('devices.revoke') && <Button size="sm" variant="danger-outline" icon={<Ban size={12} />} onClick={() => run(d.id, 'revoke')}>Revoke</Button>}
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+        <DataTable<Device>
+          rows={rows}
+          columns={columns}
+          loading={q.isLoading}
+          error={q.isError ? (q.error as Error).message : null}
+          onRetry={() => q.refetch()}
+          storageKey="devices"
+          empty={<EmptyState icon={<MonitorSmartphone size={28} />} title="No devices" body={filter === 'pending' ? 'Nothing is waiting for approval.' : 'Devices register on first login from the desktop app (F2).'} />}
+          rowActions={(d) => (
+            <>
+              {d.status === 'pending' && can('devices.approve') && (
+                <>
+                  <Button size="sm" variant="primary" icon={<Check size={12} />} loading={act.isPending} onClick={() => run(d.id, 'approve')}>Approve</Button>
+                  <Button size="sm" icon={<X size={12} />} onClick={() => run(d.id, 'reject')}>Reject</Button>
+                </>
+              )}
+              {d.status === 'approved' && can('devices.revoke') && <Menu items={[{ label: 'Revoke device', icon: <Ban size={14} />, danger: true, onSelect: () => run(d.id, 'revoke') }]} />}
+            </>
+          )}
+        />
       </Card>
     </div>
   );

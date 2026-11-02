@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { ScrollText } from 'lucide-react';
-import { useMailAudit, useMailboxes } from '@/lib/queries/mail';
+import { useMailAudit, useMailboxes, type MailAuditRow } from '@/lib/queries/mail';
 import { useEmployees } from '@/lib/queries/crm';
-import { Card, Table, Th, Td, Badge, TableSkeleton, EmptyState, ErrorBanner, Select, PageHeader } from '@/components/ui';
+import { Card, Badge, EmptyState, PageHeader } from '@/components/ui';
+import { DataTable, FilterChip, type Column } from '@/components/ui/advanced';
 import { fullName, dateTime } from '@/lib/format';
 
 const ACTIONS = ['open', 'send', 'reply', 'forward', 'draft', 'download_attachment', 'archive', 'mark_read'];
@@ -19,36 +20,56 @@ export default function MailLogsPage() {
   const employees = useEmployees();
   const mbName = (id: string) => mailboxes.data?.find((m) => m.id === id)?.address ?? id.slice(0, 8);
   const empName = (id: string) => { const e = employees.data?.find((x) => x.id === id); return e ? fullName(e) : id.slice(0, 8); };
+
+  const columns = useMemo<Column<MailAuditRow>[]>(
+    () => [
+      { key: 'time', header: 'Time', mono: true, cell: (r) => <span className="text-ink-2">{dateTime(r.occurredAt)}</span>, width: 170 },
+      { key: 'employee', header: 'Employee', cell: (r) => <span className="font-medium text-ink">{empName(r.employeeId)}</span> },
+      { key: 'mailbox', header: 'Mailbox', cell: (r) => <span className="font-mono text-xs text-ink-2">{mbName(r.mailboxId)}</span> },
+      { key: 'action', header: 'Action', cell: (r) => <Badge tone={r.action === 'send' || r.action === 'reply' || r.action === 'forward' ? 'blue' : r.action === 'download_attachment' ? 'amber' : 'gray'}>{r.action.replace('_', ' ')}</Badge> },
+      { key: 'subject', header: 'Subject', cell: (r) => <span className="block max-w-xs truncate">{r.subject ?? <span className="text-ink-3">—</span>}</span> },
+      { key: 'recipients', header: 'Recipients', cell: (r) => <span className="block max-w-xs truncate text-ink-2">{r.recipients.join(', ') || <span className="text-ink-3">—</span>}</span> },
+      { key: 'ip', header: 'IP', mono: true, cell: (r) => <span className="text-ink-3">{r.ip}</span> },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mailboxes.data, employees.data],
+  );
+
+  const chipList = (items: Array<{ value: string; label: string }>, value: string, onPick: (v: string) => void) => (
+    <ul className="max-h-64 overflow-y-auto text-sm">
+      {items.map((o) => (
+        <li key={o.value}>
+          <button type="button" onClick={() => onPick(o.value)} className={`block w-full rounded px-2 py-1 text-left hover:bg-surface-2 ${value === o.value ? 'font-semibold text-pri' : 'text-ink'}`}>{o.label}</button>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <div>
-      <PageHeader title="Mail logs" subtitle="Who read, sent, replied or archived from which mailbox (FR-MAIL audit, 10 section 6)" />
+      <PageHeader title="Mail logs" subtitle="Who read, sent, replied or archived from which mailbox (10 §6)." />
       <div className="mb-3 flex flex-wrap gap-2">
-        <div className="w-60"><Select value={mailboxId} onChange={(e) => setMailboxId(e.target.value)}><option value="">All mailboxes</option>{mailboxes.data?.map((m) => <option key={m.id} value={m.id}>{m.address}</option>)}</Select></div>
-        <div className="w-52"><Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}><option value="">All employees</option>{employees.data?.map((e) => <option key={e.id} value={e.id}>{fullName(e)}</option>)}</Select></div>
-        <div className="w-44"><Select value={action} onChange={(e) => setAction(e.target.value)}><option value="">All actions</option>{ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}</Select></div>
+        <FilterChip label="Mailbox" value={mailboxId ? mbName(mailboxId) : undefined} onClear={() => setMailboxId('')}>
+          {chipList((mailboxes.data ?? []).map((m) => ({ value: m.id, label: m.address })), mailboxId, setMailboxId)}
+        </FilterChip>
+        <FilterChip label="Employee" value={employeeId ? empName(employeeId) : undefined} onClear={() => setEmployeeId('')}>
+          {chipList((employees.data ?? []).map((e) => ({ value: e.id, label: fullName(e) })), employeeId, setEmployeeId)}
+        </FilterChip>
+        <FilterChip label="Action" value={action ? action.replace('_', ' ') : undefined} onClear={() => setAction('')}>
+          {chipList(ACTIONS.map((a) => ({ value: a, label: a.replace('_', ' ') })), action, setAction)}
+        </FilterChip>
       </div>
       <Card>
-        {q.isLoading && <TableSkeleton cols={6} />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data?.length === 0 && <EmptyState icon={<ScrollText size={28} />} title="No log entries" body="Mail actions appear here as employees use the inbox." />}
-        {q.data && q.data.length > 0 && (
-          <Table>
-            <thead><tr><Th>Time</Th><Th>Employee</Th><Th>Mailbox</Th><Th>Action</Th><Th>Subject</Th><Th>Recipients</Th><Th>IP</Th></tr></thead>
-            <tbody>
-              {q.data.map((r) => (
-                <tr key={r.id} className="hover:bg-surface-2">
-                  <Td mono className="text-ink-2">{dateTime(r.occurredAt)}</Td>
-                  <Td>{empName(r.employeeId)}</Td>
-                  <Td className="text-ink-2">{mbName(r.mailboxId)}</Td>
-                  <Td><Badge tone={r.action === 'send' || r.action === 'reply' ? 'blue' : 'gray'}>{r.action}</Badge></Td>
-                  <Td className="max-w-xs truncate">{r.subject ?? <span className="text-ink-3">—</span>}</Td>
-                  <Td className="max-w-xs truncate text-ink-2">{r.recipients.join(', ')}</Td>
-                  <Td mono className="text-ink-3">{r.ip}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+        <DataTable<MailAuditRow>
+          rows={q.data ?? []}
+          columns={columns}
+          loading={q.isLoading}
+          error={q.isError ? (q.error as Error).message : null}
+          onRetry={() => q.refetch()}
+          storageKey="mail-logs"
+          empty={<EmptyState icon={<ScrollText size={28} />} title="No log entries" body="Mail actions appear here as employees use the inbox." />}
+          footer={q.data && q.data.length > 0 ? <div className="border-t border-line-2 bg-surface-2 px-4 py-2 font-mono text-xs text-ink-2">{q.data.length} entries</div> : undefined}
+        />
       </Card>
     </div>
   );
