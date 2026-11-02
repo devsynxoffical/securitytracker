@@ -21,30 +21,42 @@ model Company {
   createdAt DateTime @default(now()) @db.Timestamptz()
   updatedAt DateTime @updatedAt @db.Timestamptz()
 
-  departments        Department[]
-  teams              Team[]
-  employees          Employee[]
-  devices            Device[]
-  schedules          ShiftSchedule[]
-  holidays           Holiday[]
-  pipelines          Pipeline[]
-  crmAccounts        CrmAccount[]
-  crmContacts        CrmContact[]
-  deals              Deal[]
-  crmActivities      CrmActivity[]
-  leadSources        LeadSource[]
-  lostReasons        LostReason[]
-  tags               Tag[]
-  customFieldDefs    CustomFieldDef[]
-  savedViews         SavedView[]
-  importJobs         ImportJob[]
-  targets            Target[]
-  mailboxes          Mailbox[]
-  productivityRules  ProductivityRule[]
-  trackingExclusions TrackingExclusion[]
-  exceptionApps      ActivityExceptionApp[]
-  appReleases        AppRelease[]
-  auditLogs          AuditLog[]
+  departments          Department[]
+  teams                Team[]
+  employees            Employee[]
+  devices              Device[]
+  schedules            ShiftSchedule[]
+  holidays             Holiday[]
+  pipelines            Pipeline[]
+  crmAccounts          CrmAccount[]
+  crmContacts          CrmContact[]
+  deals                Deal[]
+  crmActivities        CrmActivity[]
+  leadSources          LeadSource[]
+  lostReasons          LostReason[]
+  tags                 Tag[]
+  customFieldDefs      CustomFieldDef[]
+  savedViews           SavedView[]
+  importJobs           ImportJob[]
+  taskSpaces           TaskSpace[]
+  taskLists            TaskList[]
+  taskActivities       TaskActivity[]
+  leaveTypes           LeaveType[]
+  leaveBalances        LeaveBalance[]
+  hrDocuments          HrDocument[]
+  hrChecklistTemplates HrChecklistTemplate[]
+  hrChecklists         HrChecklist[]
+  announcements        Announcement[]
+  manualTimeEntries    ManualTimeEntry[]
+  mailLabels           MailLabel[]
+  mailTemplates        MailTemplate[]
+  targets              Target[]
+  mailboxes            Mailbox[]
+  productivityRules    ProductivityRule[]
+  trackingExclusions   TrackingExclusion[]
+  exceptionApps        ActivityExceptionApp[]
+  appReleases          AppRelease[]
+  auditLogs            AuditLog[]
 
   @@map("companies")
 }
@@ -132,6 +144,12 @@ model Employee {
   ownedAccounts       CrmAccount[]                 @relation("AccountOwner")
   ownedContacts       CrmContact[]                 @relation("ContactOwner")
   ownedDeals          Deal[]                       @relation("DealOwner")
+  taskAssignments     TaskAssignee[]
+  spaceMemberships    TaskSpaceMember[]
+  profile             EmployeeProfile?
+  leaveBalances       LeaveBalance[]
+  hrChecklists        HrChecklist[]
+  manualTimeEntries   ManualTimeEntry[]
   tasks               Task[]
   assignedMailboxes   MailboxAssignment[]
   callLogs            CallLog[]
@@ -313,10 +331,11 @@ model EmployeeSchedule {
 }
 
 model Holiday {
-  id        String   @id @default(uuid()) @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  date      DateTime @db.Date
-  name      String
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  date       DateTime @db.Date
+  name       String
+  isOptional Boolean  @default(false) @map("is_optional")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -325,21 +344,29 @@ model Holiday {
 }
 
 model LeaveRequest {
-  id         String    @id @default(uuid()) @db.Uuid
-  employeeId String    @map("employee_id") @db.Uuid
-  type       String // annual, sick, unpaid, other
-  dateFrom   DateTime  @map("date_from") @db.Date
-  dateTo     DateTime  @map("date_to") @db.Date
-  reason     String
-  status     String    @default("pending") // pending, approved, rejected, cancelled
-  decidedBy  String?   @map("decided_by") @db.Uuid
-  decidedAt  DateTime? @map("decided_at") @db.Timestamptz()
-  comment    String?
-  createdAt  DateTime  @default(now()) @db.Timestamptz()
+  id          String    @id @default(uuid()) @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  type        String // annual, sick, unpaid, other
+  companyId   String?   @map("company_id") @db.Uuid
+  leaveTypeId String?   @map("leave_type_id") @db.Uuid
+  days        Decimal   @default(0) @db.Decimal(6, 2)
+  halfDay     Boolean   @default(false) @map("half_day")
+  approverId  String?   @map("approver_id") @db.Uuid
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz()
+  dateFrom    DateTime  @map("date_from") @db.Date
+  dateTo      DateTime  @map("date_to") @db.Date
+  reason      String
+  status      String    @default("pending") // pending, approved, rejected, cancelled
+  decidedBy   String?   @map("decided_by") @db.Uuid
+  decidedAt   DateTime? @map("decided_at") @db.Timestamptz()
+  comment     String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee  Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType? @relation(fields: [leaveTypeId], references: [id], onDelete: SetNull)
 
   @@index([employeeId])
+  @@index([companyId, status])
   @@map("leave_requests")
 }
 
@@ -415,6 +442,7 @@ model AttendanceDay {
   idleSeconds    Int       @default(0) @map("idle_s")
   breakSeconds   Int       @default(0) @map("break_s")
   offlineSeconds Int       @default(0) @map("offline_s")
+  manualSeconds  Int       @default(0) @map("manual_s")
   flags          String[]  @default([])
   computedAt     DateTime  @default(now()) @map("computed_at") @db.Timestamptz()
 
@@ -515,6 +543,8 @@ model ActivityDailySummary {
   unproductiveS Int      @default(0) @map("unproductive_s")
   keyCount      Int      @default(0) @map("key_count")
   mouseCount    Int      @default(0) @map("mouse_count")
+  lockedS       Int      @default(0) @map("locked_s")
+  longIdleCount Int      @default(0) @map("long_idle_count")
 
   @@unique([employeeId, date])
   @@map("activity_daily_summary")
@@ -756,27 +786,52 @@ model Appointment {
 }
 
 model Task {
-  id          String    @id @default(uuid()) @db.Uuid
-  companyId   String    @map("company_id") @db.Uuid
-  title       String
-  description String?
-  assigneeId  String    @map("assignee_id") @db.Uuid
-  creatorId   String    @map("creator_id") @db.Uuid
-  leadId      String?   @map("lead_id") @db.Uuid
-  priority    String    @default("normal") // low, normal, high, urgent
-  dueAt       DateTime  @map("due_at") @db.Timestamptz()
-  status      String    @default("todo") // todo, in_progress, done, cancelled
-  completedAt DateTime? @map("completed_at") @db.Timestamptz()
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
-  createdAt   DateTime  @default(now()) @db.Timestamptz()
-  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  title         String
+  description   String?
+  assigneeId    String    @map("assignee_id") @db.Uuid
+  creatorId     String    @map("creator_id") @db.Uuid
+  leadId        String?   @map("lead_id") @db.Uuid
+  priority      String    @default("normal") // none, low, normal, high, urgent
+  dueAt         DateTime? @map("due_at") @db.Timestamptz()
+  status        String    @default("todo") // todo, in_progress, done, cancelled (derived from status group, 14 rule 3)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz()
+  // 14-tasks-spec.md
+  listId        String?   @map("list_id") @db.Uuid
+  parentId      String?   @map("parent_id") @db.Uuid
+  statusId      String?   @map("status_id") @db.Uuid
+  startAt       DateTime? @map("start_at") @db.Timestamptz()
+  timeEstimateS Int?      @map("time_estimate_s")
+  timeSpentS    Int       @default(0) @map("time_spent_s")
+  position      Float     @default(0)
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz()
+  custom        Json      @default("{}")
+  contactId     String?   @map("contact_id") @db.Uuid
+  accountId     String?   @map("account_id") @db.Uuid
+  dealId        String?   @map("deal_id") @db.Uuid
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @db.Timestamptz()
 
-  assignee Employee @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
-  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignee    Employee        @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+  lead        Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  list        TaskList?       @relation(fields: [listId], references: [id], onDelete: SetNull)
+  parent      Task?           @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Task[]          @relation("TaskSubtasks")
+  statusRef   TaskStatus?     @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  assignees   TaskAssignee[]
+  watchers    TaskWatcher[]
+  checklists  TaskChecklist[]
+  comments    TaskComment[]
+  timeEntries TaskTimeEntry[]
+  activities  TaskActivity[]
 
   @@index([assigneeId])
   @@index([leadId])
   @@index([dueAt])
+  @@index([companyId, listId, statusId])
+  @@index([parentId])
   @@map("tasks")
 }
 
@@ -1077,6 +1132,440 @@ model ImportJob {
 }
 
 // --------------------------------------------------------
+// 4c. Tasks: spaces, lists, statuses (14-tasks-spec.md)
+// --------------------------------------------------------
+
+model TaskSpace {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  name            String
+  colour          String    @default("#0F6B5C")
+  icon            String?
+  visibility      String    @default("company") // company, private
+  defaultStatuses Json      @default("[]") @map("default_statuses")
+  position        Int       @default(0)
+  createdBy       String?   @map("created_by") @db.Uuid
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members TaskSpaceMember[]
+  lists   TaskList[]
+
+  @@index([companyId])
+  @@map("task_spaces")
+}
+
+model TaskSpaceMember {
+  spaceId    String @map("space_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  role       String @default("member") // member, admin
+
+  space    TaskSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([spaceId, employeeId])
+  @@index([employeeId])
+  @@map("task_space_members")
+}
+
+model TaskList {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  spaceId     String    @map("space_id") @db.Uuid
+  name        String
+  description String?
+  position    Int       @default(0)
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  space    TaskSpace    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  statuses TaskStatus[]
+  tasks    Task[]
+
+  @@index([companyId, spaceId])
+  @@map("task_lists")
+}
+
+model TaskStatus {
+  id       String @id @default(uuid()) @db.Uuid
+  listId   String @map("list_id") @db.Uuid
+  name     String
+  colour   String @default("#5C666E")
+  group    String // open, active, done, closed
+  position Int    @default(0)
+
+  list  TaskList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([listId, name])
+  @@map("task_statuses")
+}
+
+model TaskAssignee {
+  taskId     String   @map("task_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  assignedBy String?  @map("assigned_by") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
+
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@index([employeeId])
+  @@map("task_assignees")
+}
+
+model TaskWatcher {
+  taskId     String @map("task_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@map("task_watchers")
+}
+
+model TaskChecklist {
+  id       String @id @default(uuid()) @db.Uuid
+  taskId   String @map("task_id") @db.Uuid
+  title    String
+  position Int    @default(0)
+
+  task  Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  items TaskChecklistItem[]
+
+  @@index([taskId])
+  @@map("task_checklists")
+}
+
+model TaskChecklistItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  checklistId String    @map("checklist_id") @db.Uuid
+  title       String
+  done        Boolean   @default(false)
+  doneBy      String?   @map("done_by") @db.Uuid
+  doneAt      DateTime? @map("done_at") @db.Timestamptz()
+  position    Int       @default(0)
+
+  checklist TaskChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+  @@map("task_checklist_items")
+}
+
+model TaskComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @map("task_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]  @default([]) @db.Uuid
+  editedAt  DateTime? @map("edited_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("task_comments")
+}
+
+model TaskTimeEntry {
+  id         String    @id @default(uuid()) @db.Uuid
+  taskId     String    @map("task_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  startedAt  DateTime? @map("started_at") @db.Timestamptz()
+  endedAt    DateTime? @map("ended_at") @db.Timestamptz()
+  durationS  Int       @map("duration_s")
+  note       String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([employeeId, createdAt])
+  @@map("task_time_entries")
+}
+
+model TaskActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  type       String // created, status_changed, assigned, unassigned, field_changed, comment, checklist, subtask_added, time_logged, archived, restored, moved
+  data       Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  task    Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, occurredAt])
+  @@map("task_activities")
+}
+
+// --------------------------------------------------------
+// 4d. HR: leave, profiles, documents, checklists, announcements (15-hr-spec.md)
+// --------------------------------------------------------
+
+model LeaveType {
+  id                  String   @id @default(uuid()) @db.Uuid
+  companyId           String   @map("company_id") @db.Uuid
+  name                String
+  code                String
+  colour              String   @default("#6B46C1")
+  paid                Boolean  @default(true)
+  annualAllowanceDays Decimal  @default(0) @map("annual_allowance_days") @db.Decimal(6, 2)
+  accrual             String   @default("upfront") // upfront, monthly
+  carryOverMaxDays    Decimal  @default(0) @map("carry_over_max_days") @db.Decimal(6, 2)
+  requiresApproval    Boolean  @default(true) @map("requires_approval")
+  allowHalfDay        Boolean  @default(true) @map("allow_half_day")
+  isActive            Boolean  @default(true) @map("is_active")
+  position            Int      @default(0)
+  createdAt           DateTime @default(now()) @db.Timestamptz()
+  updatedAt           DateTime @updatedAt @db.Timestamptz()
+
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balances LeaveBalance[]
+  requests LeaveRequest[]
+
+  @@unique([companyId, code])
+  @@map("leave_types")
+}
+
+model LeaveBalance {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  employeeId      String   @map("employee_id") @db.Uuid
+  leaveTypeId     String   @map("leave_type_id") @db.Uuid
+  year            Int
+  entitledDays    Decimal  @default(0) @map("entitled_days") @db.Decimal(6, 2)
+  carriedOverDays Decimal  @default(0) @map("carried_over_days") @db.Decimal(6, 2)
+  usedDays        Decimal  @default(0) @map("used_days") @db.Decimal(6, 2)
+  pendingDays     Decimal  @default(0) @map("pending_days") @db.Decimal(6, 2)
+  adjustmentsDays Decimal  @default(0) @map("adjustments_days") @db.Decimal(6, 2)
+  updatedAt       DateTime @updatedAt @db.Timestamptz()
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([companyId, year])
+  @@map("leave_balances")
+}
+
+model EmployeeProfile {
+  employeeId       String    @id @map("employee_id") @db.Uuid
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  gender           String?
+  nationality      String?
+  personalEmail    String?   @map("personal_email")
+  address          Json      @default("{}")
+  emergencyContact Json      @default("{}") @map("emergency_contact")
+  designation      String?
+  employmentType   String?   @map("employment_type") // full_time, part_time, contract, intern
+  workLocation     String?   @map("work_location")
+  probationEnd     DateTime? @map("probation_end") @db.Date
+  custom           Json      @default("{}")
+  updatedAt        DateTime  @updatedAt @db.Timestamptz()
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_profiles")
+}
+
+model HrDocument {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  name       String
+  type       String
+  issuedAt   DateTime? @map("issued_at") @db.Date
+  expiresAt  DateTime? @map("expires_at") @db.Date
+  note       String?
+  objectKey  String?   @map("object_key")
+  uploadedBy String?   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+  updatedAt  DateTime  @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, employeeId])
+  @@index([expiresAt])
+  @@map("hr_documents")
+}
+
+model HrChecklistTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  kind      String // onboarding, offboarding
+  items     Json     @default("[]") // [{title, ownerRole, offsetDays}]
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  instances HrChecklist[]
+
+  @@index([companyId, kind])
+  @@map("hr_checklist_templates")
+}
+
+model HrChecklist {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  templateId  String?   @map("template_id") @db.Uuid
+  kind        String // onboarding, offboarding
+  status      String    @default("open") // open, completed
+  items       Json      @default("[]") // [{id, title, ownerRole, dueAt, done, doneBy, doneAt}]
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz()
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
+
+  company  Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  template HrChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, employeeId])
+  @@map("hr_checklists")
+}
+
+model Announcement {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  title        String
+  body         String
+  audienceType String   @default("company") @map("audience_type") // company, department, team, role
+  audienceId   String?  @map("audience_id") @db.Uuid
+  pinned       Boolean  @default(false)
+  publishedAt  DateTime @default(now()) @map("published_at") @db.Timestamptz()
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @db.Timestamptz()
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reads   AnnouncementRead[]
+
+  @@index([companyId, publishedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  announcementId String   @map("announcement_id") @db.Uuid
+  employeeId     String   @map("employee_id") @db.Uuid
+  readAt         DateTime @default(now()) @map("read_at") @db.Timestamptz()
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, employeeId])
+  @@map("announcement_reads")
+}
+
+// --------------------------------------------------------
+// 4e. Tracking admin: manual time (16-tracking-admin-spec.md)
+// --------------------------------------------------------
+
+model ManualTimeEntry {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  employeeId String    @map("employee_id") @db.Uuid
+  date       DateTime  @db.Date
+  startedAt  DateTime  @map("started_at") @db.Timestamptz()
+  endedAt    DateTime  @map("ended_at") @db.Timestamptz()
+  durationS  Int       @map("duration_s")
+  reason     String
+  status     String    @default("pending") // pending, approved, rejected
+  decidedBy  String?   @map("decided_by") @db.Uuid
+  decidedAt  DateTime? @map("decided_at") @db.Timestamptz()
+  comment    String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@index([employeeId, date])
+  @@map("manual_time_entries")
+}
+
+// --------------------------------------------------------
+// 6b. Mail collaboration (17-mail-collaboration-spec.md)
+// --------------------------------------------------------
+
+model MailLabel {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  name      String
+  colour    String @default("#2459C4")
+
+  company Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  threads MailThreadLabel[]
+
+  @@unique([companyId, name])
+  @@map("mail_labels")
+}
+
+model MailThreadLabel {
+  threadId String @map("thread_id") @db.Uuid
+  labelId  String @map("label_id") @db.Uuid
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  label  MailLabel  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, labelId])
+  @@map("mail_thread_labels")
+}
+
+model MailComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  threadId  String    @map("thread_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  body      String
+  mentions  String[]  @default([]) @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("mail_comments")
+}
+
+model MailTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  ownerId   String?  @map("owner_id") @db.Uuid // null = shared
+  name      String
+  subject   String   @default("")
+  bodyHtml  String   @map("body_html")
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, ownerId])
+  @@map("mail_templates")
+}
+
+model MailThreadEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  threadId   String   @map("thread_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  type       String // assigned, unassigned, status_changed, label_added, label_removed, linked, comment
+  data       Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz()
+
+  thread MailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, occurredAt])
+  @@map("mail_thread_events")
+}
+
+// --------------------------------------------------------
 // 5. Targets
 // --------------------------------------------------------
 
@@ -1159,23 +1648,37 @@ model MailboxAssignment {
 }
 
 model MailThread {
-  id             String   @id @default(uuid()) @db.Uuid
-  mailboxId      String   @map("mailbox_id") @db.Uuid
-  gmailThreadId  String   @map("gmail_thread_id")
-  subject        String
-  snippet        String?
-  participants   Json     @default("[]")
-  lastMessageAt  DateTime @map("last_message_at") @db.Timestamptz()
-  unread         Boolean  @default(false)
-  hasAttachments Boolean  @default(false) @map("has_attachments")
-  labelIds       String[] @default([]) @map("label_ids")
-  leadId         String?  @map("lead_id") @db.Uuid
+  id                  String    @id @default(uuid()) @db.Uuid
+  mailboxId           String    @map("mailbox_id") @db.Uuid
+  gmailThreadId       String    @map("gmail_thread_id")
+  subject             String
+  snippet             String?
+  participants        Json      @default("[]")
+  lastMessageAt       DateTime  @map("last_message_at") @db.Timestamptz()
+  unread              Boolean   @default(false)
+  hasAttachments      Boolean   @default(false) @map("has_attachments")
+  labelIds            String[]  @default([]) @map("label_ids")
+  leadId              String?   @map("lead_id") @db.Uuid
+  // 17-mail-collaboration-spec.md
+  assigneeId          String?   @map("assignee_id") @db.Uuid
+  status              String    @default("open") // open, closed, snoozed
+  snoozedUntil        DateTime? @map("snoozed_until") @db.Timestamptz()
+  closedAt            DateTime? @map("closed_at") @db.Timestamptz()
+  contactId           String?   @map("contact_id") @db.Uuid
+  dealId              String?   @map("deal_id") @db.Uuid
+  lastInboundAt       DateTime? @map("last_inbound_at") @db.Timestamptz()
+  assignmentChangedAt DateTime? @map("assignment_changed_at") @db.Timestamptz()
 
-  mailbox  Mailbox       @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  mailbox  Mailbox           @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
   messages MailMessage[]
+  labels   MailThreadLabel[]
+  comments MailComment[]
+  events   MailThreadEvent[]
 
   @@unique([mailboxId, gmailThreadId])
   @@index([mailboxId, lastMessageAt])
+  @@index([mailboxId, status, assigneeId])
+  @@index([contactId])
   @@map("mail_threads")
 }
 

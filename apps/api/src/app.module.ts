@@ -15,6 +15,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TargetsModule } from './targets/targets.module';
 import { MailModule } from './mail/mail.module';
 import { ReportsModule } from './reports/reports.module';
+import { TasksModule } from './tasks/tasks.module';
+import { HrModule } from './hr/hr.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RbacGuard } from './auth/guards/rbac.guard';
 import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
@@ -37,6 +39,8 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
     TargetsModule,
     MailModule,
     ReportsModule,
+    TasksModule,
+    HrModule,
   ],
   controllers: [HealthController],
   providers: [

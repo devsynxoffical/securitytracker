@@ -37,6 +37,7 @@ export const PermissionKeys = [
   'tracking.view_summary',
   'tracking.view_detail',
   'tracking.manage_rules',
+  'tracking.timesheets.approve',
 
   // CRM leads
   'crm.leads.view',
@@ -90,6 +91,7 @@ export const PermissionKeys = [
   'tasks.create',
   'tasks.assign',
   'tasks.manage',
+  'tasks.spaces.manage',
 
   // Targets
   'targets.view',
@@ -100,6 +102,13 @@ export const PermissionKeys = [
   'mail.accounts.manage',
   'mail.assign',
   'mail.logs.view',
+  'mail.templates.manage',
+
+  // HR
+  'hr.leave.manage',
+  'hr.profiles.view',
+  'hr.profiles.edit',
+  'hr.checklists.manage',
 
   // Reports
   'reports.view',

@@ -101,6 +101,7 @@ export const CallOutcome = {
 export type CallOutcomeType = (typeof CallOutcome)[keyof typeof CallOutcome];
 
 export const TaskPriority = {
+  NONE: 'none',
   LOW: 'low',
   NORMAL: 'normal',
   HIGH: 'high',
@@ -139,6 +140,8 @@ export const MailboxPermission = {
   DOWNLOAD: 'download',
   ARCHIVE: 'archive',
   MARK_READ: 'mark_read',
+  TRIAGE: 'triage',
+  COMMENT: 'comment',
 } as const;
 export type MailboxPermissionType = (typeof MailboxPermission)[keyof typeof MailboxPermission];
 
@@ -232,3 +235,98 @@ export const ImportDuplicateMode = {
   CREATE: 'create',
 } as const;
 export type ImportDuplicateModeValue = (typeof ImportDuplicateMode)[keyof typeof ImportDuplicateMode];
+
+// ---- Tasks (14)
+export const TaskStatusGroup = {
+  OPEN: 'open',
+  ACTIVE: 'active',
+  DONE: 'done',
+  CLOSED: 'closed',
+} as const;
+export type TaskStatusGroupValue = (typeof TaskStatusGroup)[keyof typeof TaskStatusGroup];
+
+export const SpaceVisibility = {
+  COMPANY: 'company',
+  PRIVATE: 'private',
+} as const;
+export type SpaceVisibilityValue = (typeof SpaceVisibility)[keyof typeof SpaceVisibility];
+
+export const TaskActivityType = {
+  CREATED: 'created',
+  STATUS_CHANGED: 'status_changed',
+  ASSIGNED: 'assigned',
+  UNASSIGNED: 'unassigned',
+  FIELD_CHANGED: 'field_changed',
+  COMMENT: 'comment',
+  CHECKLIST: 'checklist',
+  SUBTASK_ADDED: 'subtask_added',
+  TIME_LOGGED: 'time_logged',
+  ARCHIVED: 'archived',
+  RESTORED: 'restored',
+  MOVED: 'moved',
+} as const;
+export type TaskActivityTypeValue = (typeof TaskActivityType)[keyof typeof TaskActivityType];
+
+// ---- HR (15)
+export const LeaveAccrual = {
+  UPFRONT: 'upfront',
+  MONTHLY: 'monthly',
+} as const;
+export type LeaveAccrualValue = (typeof LeaveAccrual)[keyof typeof LeaveAccrual];
+
+export const LeaveStatus = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+} as const;
+export type LeaveStatusValue = (typeof LeaveStatus)[keyof typeof LeaveStatus];
+
+export const EmploymentType = {
+  FULL_TIME: 'full_time',
+  PART_TIME: 'part_time',
+  CONTRACT: 'contract',
+  INTERN: 'intern',
+} as const;
+export type EmploymentTypeValue = (typeof EmploymentType)[keyof typeof EmploymentType];
+
+export const ChecklistKind = {
+  ONBOARDING: 'onboarding',
+  OFFBOARDING: 'offboarding',
+} as const;
+export type ChecklistKindValue = (typeof ChecklistKind)[keyof typeof ChecklistKind];
+
+export const AnnouncementAudience = {
+  COMPANY: 'company',
+  DEPARTMENT: 'department',
+  TEAM: 'team',
+  ROLE: 'role',
+} as const;
+export type AnnouncementAudienceValue = (typeof AnnouncementAudience)[keyof typeof AnnouncementAudience];
+
+// ---- Tracking admin (16)
+export const ManualTimeStatus = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+export type ManualTimeStatusValue = (typeof ManualTimeStatus)[keyof typeof ManualTimeStatus];
+
+// ---- Mail collaboration (17)
+export const MailConversationStatus = {
+  OPEN: 'open',
+  CLOSED: 'closed',
+  SNOOZED: 'snoozed',
+} as const;
+export type MailConversationStatusValue = (typeof MailConversationStatus)[keyof typeof MailConversationStatus];
+
+export const MailThreadEventType = {
+  ASSIGNED: 'assigned',
+  UNASSIGNED: 'unassigned',
+  STATUS_CHANGED: 'status_changed',
+  LABEL_ADDED: 'label_added',
+  LABEL_REMOVED: 'label_removed',
+  LINKED: 'linked',
+  COMMENT: 'comment',
+} as const;
+export type MailThreadEventTypeValue = (typeof MailThreadEventType)[keyof typeof MailThreadEventType];

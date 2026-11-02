@@ -32,6 +32,10 @@ One platform with which a company controls identity, CRM, company email access, 
 | 11-build-plan.md | Phases, deliverables, acceptance criteria, testing, risks | Planning |
 | 12-ai-build-guide.md | How to drive AI coding models with these documents, rules file, prompt templates | Every AI session |
 | 13-crm-spec.md | CRM objects (leads, contacts, accounts, deals), activities, custom fields, import, conversion | CRM work |
+| 14-tasks-spec.md | Spaces, lists, statuses, tasks, subtasks, comments, time entries, views | Tasks work |
+| 15-hr-spec.md | Leave types and balances, profiles, documents, checklists, announcements, attendance screens | HR work |
+| 16-tracking-admin-spec.md | Timesheets, manual time, team activity, apps and URLs, uncategorised queue | Tracking admin work |
+| 17-mail-collaboration-spec.md | Shared inbox assignment, status, comments, labels, templates, CRM linking | Mail work |
 
 ## 3. Conventions
 

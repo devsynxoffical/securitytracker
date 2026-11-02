@@ -100,6 +100,7 @@ export const CreateTaskSchema = z.object({
   leadId: z.string().uuid().optional(),
   priority: z
     .enum([
+      TaskPriority.NONE,
       TaskPriority.LOW,
       TaskPriority.NORMAL,
       TaskPriority.HIGH,

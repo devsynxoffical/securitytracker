@@ -87,6 +87,13 @@ async function main() {
         'crm.deals.export': 'all',
         'crm.pipelines.manage': 'all',
         'crm.config.manage': 'all',
+        'tasks.spaces.manage': 'all',
+        'tracking.timesheets.approve': 'all',
+        'mail.templates.manage': 'all',
+        'hr.leave.manage': 'all',
+        'hr.profiles.view': 'all',
+        'hr.profiles.edit': 'all',
+        'hr.checklists.manage': 'all',
         'crm.calls.log': 'all',
         'crm.calls.manage': 'all',
         'tasks.view': 'all',
@@ -143,6 +150,10 @@ async function main() {
         'crm.deals.assign': 'department',
         'crm.deals.reopen': 'department',
         'crm.deals.export': 'department',
+        'tasks.spaces.manage': 'department',
+        'tracking.timesheets.approve': 'department',
+        'hr.profiles.view': 'department',
+        'hr.checklists.manage': 'department',
         'crm.calls.log': 'department',
         'crm.calls.manage': 'department',
         'tasks.view': 'department',
@@ -185,6 +196,8 @@ async function main() {
         'crm.deals.edit': 'team',
         'crm.deals.assign': 'team',
         'crm.deals.reopen': 'team',
+        'tracking.timesheets.approve': 'team',
+        'hr.profiles.view': 'team',
         'crm.calls.log': 'team',
         'crm.calls.manage': 'team',
         'tasks.view': 'team',
@@ -217,6 +230,7 @@ async function main() {
         'crm.deals.view': 'own',
         'crm.deals.create': 'own',
         'crm.deals.edit': 'own',
+        'hr.profiles.view': 'own',
         'crm.calls.log': 'own',
         'tasks.view': 'own',
         'tasks.create': 'own',
@@ -428,6 +442,104 @@ async function main() {
   ];
   for (const [name, colour] of tags) {
     await prisma.tag.upsert({
+      where: { companyId_name: { companyId: company.id, name } },
+      update: {},
+      create: { companyId: company.id, name, colour },
+    });
+  }
+
+  // 5c. Tasks, HR and mail defaults (14, 15, 17)
+  const space = await prisma.taskSpace.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000030' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000030',
+      companyId: company.id,
+      name: 'General',
+      colour: '#0F6B5C',
+      visibility: 'company',
+      defaultStatuses: [
+        { name: 'To do', colour: '#5C666E', group: 'open' },
+        { name: 'In progress', colour: '#2459C4', group: 'active' },
+        { name: 'In review', colour: '#6B46C1', group: 'active' },
+        { name: 'Done', colour: '#1E8E5A', group: 'done' },
+        { name: 'Cancelled', colour: '#8A939B', group: 'closed' },
+      ],
+      createdBy: superAdmin.id,
+    },
+  });
+  await prisma.taskList.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000031' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000031',
+      companyId: company.id,
+      spaceId: space.id,
+      name: 'Team tasks',
+      statuses: {
+        create: [
+          { name: 'To do', colour: '#5C666E', group: 'open', position: 1 },
+          { name: 'In progress', colour: '#2459C4', group: 'active', position: 2 },
+          { name: 'In review', colour: '#6B46C1', group: 'active', position: 3 },
+          { name: 'Done', colour: '#1E8E5A', group: 'done', position: 4 },
+          { name: 'Cancelled', colour: '#8A939B', group: 'closed', position: 5 },
+        ],
+      },
+    },
+  });
+
+  const leaveTypes: Array<[string, string, string, number, boolean]> = [
+    ['Annual leave', 'ANNUAL', '#1E8E5A', 20, true],
+    ['Sick leave', 'SICK', '#C2362B', 10, true],
+    ['Unpaid leave', 'UNPAID', '#5C666E', 0, false],
+    ['Casual leave', 'CASUAL', '#B26A00', 5, true],
+  ];
+  for (const [i, [name, code, colour, allowance, paid]] of leaveTypes.entries()) {
+    await prisma.leaveType.upsert({
+      where: { companyId_code: { companyId: company.id, code } },
+      update: {},
+      create: { companyId: company.id, name, code, colour, annualAllowanceDays: allowance, paid, position: i + 1 },
+    });
+  }
+
+  const onboardingExists = await prisma.hrChecklistTemplate.findFirst({ where: { companyId: company.id, kind: 'onboarding' } });
+  if (!onboardingExists) {
+    await prisma.hrChecklistTemplate.create({
+      data: {
+        companyId: company.id,
+        name: 'Standard onboarding',
+        kind: 'onboarding',
+        isDefault: true,
+        items: [
+          { title: 'Create company email account', ownerRole: 'it', offsetDays: -2 },
+          { title: 'Prepare workstation and install WorkPulse', ownerRole: 'it', offsetDays: -1 },
+          { title: 'Sign monitoring policy and contract', ownerRole: 'hr', offsetDays: 0 },
+          { title: 'Welcome meeting with manager', ownerRole: 'manager', offsetDays: 0 },
+          { title: 'Assign CRM pipeline and targets', ownerRole: 'manager', offsetDays: 1 },
+          { title: 'Complete profile and emergency contact', ownerRole: 'employee', offsetDays: 3 },
+          { title: '30-day check-in', ownerRole: 'manager', offsetDays: 30 },
+        ],
+      },
+    });
+    await prisma.hrChecklistTemplate.create({
+      data: {
+        companyId: company.id,
+        name: 'Standard offboarding',
+        kind: 'offboarding',
+        isDefault: true,
+        items: [
+          { title: 'Reassign leads, deals and tasks', ownerRole: 'manager', offsetDays: -3 },
+          { title: 'Remove mailbox assignments', ownerRole: 'it', offsetDays: 0 },
+          { title: 'Revoke devices and sessions', ownerRole: 'it', offsetDays: 0 },
+          { title: 'Exit interview', ownerRole: 'hr', offsetDays: 0 },
+          { title: 'Return equipment', ownerRole: 'employee', offsetDays: 0 },
+        ],
+      },
+    });
+  }
+
+  for (const [name, colour] of [['Urgent', '#C2362B'], ['Billing', '#B26A00'], ['Support', '#2459C4'], ['Sales', '#1E8E5A']] as Array<[string, string]>) {
+    await prisma.mailLabel.upsert({
       where: { companyId_name: { companyId: company.id, name } },
       update: {},
       create: { companyId: company.id, name, colour },

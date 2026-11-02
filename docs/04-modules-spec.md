@@ -66,6 +66,7 @@ Functional requirements per module. Priority: M = MUST (1.0), S = SHOULD (1.0 if
 | FR-ATT-09 | Leave requests with approval (F9) | S |
 | FR-ATT-10 | Monthly attendance sheet per employee and per team, CSV export | M |
 | FR-ATT-11 | Long idle prompt (F5 rule 6) | S |
+| FR-HR-01 to 15 | Leave types and balances, profiles, documents, checklists, announcements, attendance sheet, org chart. See 15-hr-spec.md | M / S per 15 |
 
 ## 6. Activity tracking (TRK)
 
@@ -86,6 +87,7 @@ Functional requirements per module. Priority: M = MUST (1.0), S = SHOULD (1.0 if
 | FR-TRK-12 | Tamper signals: agent stopped, extension missing, clock changed | M |
 | FR-TRK-13 | Employee sees own activity summary in the app | S |
 | FR-TRK-14 | Screenshots, optional, configurable interval, blur option | L |
+| FR-TRK-16 to 26 | Timesheets, manual time, team activity, apps and URLs report, uncategorised queue, idle and tamper report. See 16-tracking-admin-spec.md | M / L per 16 |
 
 ## 7. CRM (CRM)
 
@@ -118,6 +120,7 @@ Functional requirements per module. Priority: M = MUST (1.0), S = SHOULD (1.0 if
 | FR-TASK-03 | Reminders and overdue notifications | M |
 | FR-TASK-04 | My Tasks view grouped by today, upcoming, overdue, done | M |
 | FR-TASK-05 | Comments on tasks | S |
+| FR-TASK-06 to 18 | Spaces, lists, custom statuses, subtasks, checklists, comments, watchers, views, workload, time entries, bulk, archive. See 14-tasks-spec.md | M / S per 14 |
 
 ## 9. Targets (TGT)
 
@@ -144,6 +147,7 @@ Functional requirements per module. Priority: M = MUST (1.0), S = SHOULD (1.0 if
 | FR-MAIL-08 | No delete, no settings, no forwarding rules, no filters exposed | M |
 | FR-MAIL-09 | Signature per mailbox and per employee | S |
 | FR-MAIL-10 | Mailbox health status and alert when a token is revoked | M |
+| FR-MAIL-11 to 21 | Conversation assignment, status, internal comments, labels, templates, CRM linking, mailbox health. See 17-mail-collaboration-spec.md | M / S per 17 |
 
 ## 11. Notifications (NOTIF)
 
