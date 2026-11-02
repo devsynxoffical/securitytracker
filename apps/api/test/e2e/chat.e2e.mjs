@@ -100,6 +100,14 @@ r = await call('GET', '/chat/channels', undefined, {}, plainToken);
 check('chat: new employee is in the company channel automatically', r.status === 200 && arr(r.body).some((c) => c.kind === 'company' && c.isMember), short(r.body));
 r = await call('GET', '/chat/channels?scope=all', undefined, {}, plainToken);
 check('chat: moderation listing without chat.manage is 403', r.status === 403, short(r.body));
+r = await call('GET', '/employees', undefined, {}, plainToken);
+check('chat: plain employee has no employees.view', r.status === 403, short(r.body));
+r = await call('GET', '/chat/directory?limit=100', undefined, {}, plainToken);
+check('chat: directory lists colleagues for a plain employee, without the caller', r.status === 200 && arr(r.body).some((e) => e.id === other.id) && !arr(r.body).some((e) => e.id === plainId) && arr(r.body).every((e) => typeof e.code === 'string'), short(r.body));
+r = await call('GET', `/chat/directory?q=${encodeURIComponent(other.lastName)}`, undefined, {}, plainToken);
+check('chat: directory search by name', r.status === 200 && arr(r.body).some((e) => e.id === other.id), short(r.body));
+r = await call('GET', '/chat/directory?limit=1');
+check('chat: directory is cursor paginated', r.status === 200 && arr(r.body).length === 1 && typeof r.body.nextCursor === 'string', short(r.body));
 r = await call('PATCH', `/chat/messages/${msg.id}`, { body: 'hijack' }, {}, plainToken);
 check('chat: editing someone else\'s message is denied', r.status === 403 || r.status === 404, short(r.body));
 
@@ -138,6 +146,9 @@ check('chat: archived channel rejects send (CHAT_CHANNEL_ARCHIVED)', r.status ==
 
 // ---------------- retention job and membership removal on disable ----------------
 r = await call('POST', '/jobs/chat-retention/run', {}); check('chat: retention job runs', r.status < 300 && r.body?.lastOutcome === 'ok' && r.body?.lastResult?.deleted === 0, short(r.body));
+r = await call('POST', `/employees/${plainId}/suspend`, { reason: 'chat smoke' }); check('setup: suspend plain employee', r.status === 201 || r.status === 200, short(r.body));
+r = await call('GET', '/chat/directory?limit=100'); check('chat: suspended employee absent from directory', r.status === 200 && !arr(r.body).some((e) => e.id === plainId), short(r.body));
+r = await call('POST', `/employees/${plainId}/restore`, {}); check('setup: restore plain employee', r.status === 201 || r.status === 200, short(r.body));
 r = await call('POST', `/employees/${plainId}/disable`, {}); check('setup: disable plain employee', r.status === 201 || r.status === 200, short(r.body));
 const plainMemberships = await call('GET', '/chat/channels?scope=all');
 check('chat: disabled employee removed from every channel', plainMemberships.status === 200 && !arr(plainMemberships.body).some((c) => c.members.some((m) => m.employeeId === plainId)), short(plainMemberships.body).slice(0, 100));

@@ -6,6 +6,7 @@ import {
   EditMessageSchema,
   ListChannelsQuerySchema,
   ListMessagesQuerySchema,
+  ChatDirectoryQuerySchema,
   MarkReadSchema,
   SendMessageSchema,
   UpdateChannelSchema,
@@ -109,6 +110,13 @@ export class ChatController {
   @RequirePermission('chat.use')
   search(@CurrentUser() user: AuthenticatedUser, @Query() query: unknown) {
     return this.chat.search(user, ChatSearchQuerySchema.parse(query));
+  }
+
+  /** Directory for the direct-message picker: every active colleague, no employees.view needed. */
+  @Get('directory')
+  @RequirePermission('chat.use')
+  directory(@CurrentUser() user: AuthenticatedUser, @Query() query: unknown) {
+    return this.chat.directory(user, ChatDirectoryQuerySchema.parse(query));
   }
 
   @Get('unread')

@@ -65,7 +65,8 @@ export interface EmployeeOption {
   code: string;
   firstName: string;
   lastName: string;
-  status: string;
+  department: string | null;
+  team: string | null;
 }
 
 export const chatKeys = {
@@ -108,8 +109,9 @@ export function useChatSearch(q: string, channelId?: string) {
   return useQuery({ queryKey: chatKeys.search(q, channelId), queryFn: () => http.get<Page<ChatMessage>>('/chat/search', { q, channelId, limit: 30 }), enabled: q.trim().length > 0 });
 }
 
+/** /chat/directory: active colleagues (no employees.view needed), already excludes the caller. */
 export function useChatEmployees() {
-  return useQuery({ queryKey: chatKeys.employees, queryFn: () => http.get<EmployeeOption[] | { items: EmployeeOption[] }>('/employees', { status: 'active' }), select: (d) => (Array.isArray(d) ? d : d.items) });
+  return useQuery({ queryKey: chatKeys.employees, queryFn: () => http.get<Page<EmployeeOption>>('/chat/directory', { limit: 100 }), select: (d) => d.items });
 }
 
 function useChatMutation<TArgs, TResult = unknown>(fn: (args: TArgs) => Promise<TResult>, keys: ReadonlyArray<readonly unknown[]> = [chatKeys.all]) {

@@ -64,12 +64,12 @@ function ChatView() {
 
   // first channel opens by default
   useEffect(() => {
-    if (!channelId && list.length) setChannelId(list[0]!.id);
+    if (!channelId && list.length) setChannelId((list.find((c) => !c.archivedAt && c.isMember) ?? list[0]!).id);
   }, [channelId, list, setChannelId]);
 
   const filtered = useMemo(() => {
     const byTab = list.filter((c) => (tab === 'direct' ? c.kind === 'direct' : c.kind !== 'direct'));
-    return byTab;
+    return [...byTab.filter((c) => !c.archivedAt), ...byTab.filter((c) => c.archivedAt)]; // archived channels last
   }, [list, tab]);
   const unreadTotal = list.reduce((s, c) => s + c.unreadCount, 0);
   const directUnread = list.filter((c) => c.kind === 'direct').reduce((s, c) => s + c.unreadCount, 0);

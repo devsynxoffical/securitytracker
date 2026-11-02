@@ -461,11 +461,11 @@ await run('Chat: open channel, send a message, see it rendered', async () => {
   await go(page, 'chat');
   step('channel list');
   await page.getByRole('list', { name: 'Channels' }).waitFor({ timeout: 8000 });
-  const first = page.getByRole('list', { name: 'Channels' }).getByRole('button').first();
-  await first.click();
+  const open = page.getByRole('list', { name: 'Channels' }).getByRole('button').filter({ hasNot: page.locator('svg.lucide-lock') }).first();
+  await open.click();
   await wait(800);
   step('composer');
-  const box = page.getByLabel('Message');
+  const box = page.getByRole('textbox', { name: 'Message', exact: true });
   await box.waitFor({ timeout: 6000 });
   await box.fill(`QA chat hello ${S}`);
   await page.keyboard.press('Enter');

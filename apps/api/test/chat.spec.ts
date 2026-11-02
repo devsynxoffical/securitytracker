@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { JwtService } from '@nestjs/jwt';
 import { ClockService } from '../src/common/clock.service';
 import { ChatService } from '../src/chat/chat.service';
 import { ChatGateway } from '../src/chat/chat.gateway';
@@ -165,6 +166,15 @@ describe('ChatService access (FR-CHAT-04, FR-CHAT-13)', () => {
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });
 
+  it('directory lists only active colleagues of the company, never the caller', async () => {
+    prisma.employee.findMany.mockResolvedValue([{ id: A, firstName: 'Ann', lastName: 'Lee', code: 'E1', department: { name: 'Ops' }, team: null }]);
+    const res = await service.directory(user(B), { q: 'an', limit: 50 });
+    expect(res).toEqual({ items: [{ id: A, firstName: 'Ann', lastName: 'Lee', code: 'E1', department: 'Ops', team: null }], nextCursor: null });
+    const where = prisma.employee.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({ companyId: CO, status: 'active', deletedAt: null, id: { not: B } });
+    expect(where.OR).toHaveLength(3);
+  });
+
   it('archived channel rejects send; direct to self rejected', async () => {
     prisma.chatChannel.findFirst.mockResolvedValue({ ...channel, archivedAt: new Date() });
     await expect(service.sendMessage(user(B), CH, { body: 'hi' })).rejects.toMatchObject({ response: { code: 'CHAT_CHANNEL_ARCHIVED' } });
@@ -217,6 +227,21 @@ describe('ChatGateway (room join requires membership)', () => {
     expect(prisma.chatMember.findMany).toHaveBeenCalledWith({ where: { employeeId: A }, select: { channelId: true } });
     expect(client.join).toHaveBeenCalledWith(`user:${A}`);
     expect(client.join).toHaveBeenCalledWith([`chat:${CH}`]);
+  });
+
+  it('accepts a token signed like AuthService does (JWT_SECRET default) and rejects another secret', async () => {
+    const signer = new JwtService({ secret: 'company-os-dev-jwt-secret-key-32-chars-min' });
+    const token = signer.sign({ sub: A, companyId: CO, roleId: 'r1' }, { expiresIn: '15m' });
+    const prisma = prismaMock();
+    prisma.chatMember.findMany.mockResolvedValue([]);
+    const gw = new ChatGateway(new JwtService({}), { get: vi.fn().mockReturnValue(undefined) } as any, prisma);
+    const client: any = { id: 's1', handshake: { auth: { token }, headers: {} }, join: vi.fn() };
+    await gw.handleConnection(client);
+    expect(client.join).toHaveBeenCalledWith(`user:${A}`);
+    const wrong = new JwtService({ secret: 'jwt_access_secret_for_dev_mode_only' }).sign({ sub: A });
+    const client2: any = { id: 's2', handshake: { auth: { token: wrong }, headers: {} }, join: vi.fn() };
+    await gw.handleConnection(client2);
+    expect(client2.join).not.toHaveBeenCalled();
   });
 
   it('a bad token joins nothing', async () => {

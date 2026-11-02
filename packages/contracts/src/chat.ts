@@ -91,6 +91,22 @@ export const ChatSearchQuerySchema = z.object({
 });
 export type ChatSearchQueryDto = z.infer<typeof ChatSearchQuerySchema>;
 
+export const ChatDirectoryQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  cursor: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export type ChatDirectoryQueryDto = z.infer<typeof ChatDirectoryQuerySchema>;
+
+export interface ChatDirectoryEntryDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  code: string;
+  department: string | null;
+  team: string | null;
+}
+
 export const ListChannelsQuerySchema = z.object({
   /** chat.manage only: list every channel in scope for moderation, not just memberships (FR-CHAT-13). */
   scope: z.enum(['mine', 'all']).default('mine'),

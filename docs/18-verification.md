@@ -69,11 +69,18 @@ Re-run everything: `pnpm test` (unit), `pnpm --filter @company-os/api test:e2e` 
 | F28 Triage: views and counts, assign, status and snooze, labels, comments with mentions, events, CRM link, templates | mail-collab.spec (10) | auth-mail (assign, filter, comment, label, snooze validation, close, reopen, events, template render, contact threads) | inbox three-pane, assignments drawer |
 | Mailbox assignments with per-permission toggles | mail.service.spec | crm (assign route in earlier suite) | assignments drawer |
 
+## 6b. Internal chat (22)
+
+| Flow | Unit | API e2e | UI e2e |
+|---|---|---|---|
+| FR-CHAT-01 to 13: unit channel membership derivation and sync, direct key, edit window, unread cursor, mention parsing, typing limit, retention cutoff, non-member denied, moderation read audited, gateway room join requires membership and accepts AuthService tokens | chat.spec (21) | chat (49: company channel, group, direct reuse and self-refusal, Idempotency-Key, cursor paging, edit, read cursor forward-only, unread, typing 429, tsvector search, record card hidden, non-member 403, directory, moderation read + audit, delete, rename, archive refusal, retention job, disable removes membership) | Chat: open channel, send, see message, mentions filter, topbar badge |
+
 ## 7. Background jobs (02 section 6)
 
 | Job | Unit | API e2e |
 |---|---|---|
 | shift-heartbeat-check, attendance-close, activity-rollup, followup-reminder, hr-leave-rebalance, hr-document-expiry, mail-unsnooze, gmail-watch-renew, gmail-sync, retention-purge, partition-maintenance, target-progress | jobs.spec (11) | auth-mail (status, manual run) |
+| chat-retention (chatRetentionDays, default 365, audited per company) | chat.spec | chat (manual run) |
 | shift-start-reminder, shift-end-reminder, break-overrun (F5 rule 15, idempotent per notification key) | shift-reminder-jobs.spec (4) | modules (manual run ok) |
 | F5/F8 schedule-aware attendance: wall time to UTC (Karachi, Berlin DST), cross-midnight end, attendance date window, status matrix (holiday, weekly off, leave, absent, late, half day, present, left early, early start and clip, break allowance, unscheduled, short shift), start flags, heartbeat `shift_closed` reasons, events on a closed shift, shift policy settings | schedule.util.spec (9), attendance.service.spec (16), shifts.service.spec (11), settings.service.spec (4) | modules (policy round trip and range check, /me schedule and shiftPolicy, heartbeat shift_closed) |
 

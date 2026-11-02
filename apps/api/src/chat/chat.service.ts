@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 import { v7 as uuidv7 } from 'uuid';
 import {
   ChatAuthorDto,
+  ChatDirectoryEntryDto,
+  ChatDirectoryQueryDto,
   ChatChannelDto,
   ChatMemberDto,
   ChatMessageDto,
@@ -386,6 +388,30 @@ export class ChatService {
         AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id)
       GROUP BY m.channel_id`);
     return new Map(rows.map((r) => [r.channel_id, Number(r.unread)]));
+  }
+
+  // ------------------------------------------------------------------ directory
+
+  /** Active colleagues of the caller's company for the DM picker (FR-CHAT-02); suspended, disabled and invited employees are absent. */
+  async directory(user: AuthenticatedUser, query: ChatDirectoryQueryDto): Promise<{ items: ChatDirectoryEntryDto[]; nextCursor: string | null }> {
+    const q = query.q?.trim();
+    const rows = await this.prisma.employee.findMany({
+      where: {
+        companyId: user.companyId,
+        status: 'active',
+        deletedAt: null,
+        id: { not: user.id, ...(query.cursor ? { gt: query.cursor } : {}) },
+        ...(q ? { OR: [{ firstName: { contains: q, mode: 'insensitive' } }, { lastName: { contains: q, mode: 'insensitive' } }, { code: { contains: q, mode: 'insensitive' } }] } : {}),
+      },
+      orderBy: { id: 'asc' },
+      take: query.limit + 1,
+      select: { id: true, firstName: true, lastName: true, code: true, department: { select: { name: true } }, team: { select: { name: true } } },
+    });
+    const page = toCursorPage(rows, query.limit);
+    return {
+      items: page.items.map((e) => ({ id: e.id, firstName: e.firstName, lastName: e.lastName, code: e.code, department: e.department?.name ?? null, team: e.team?.name ?? null })),
+      nextCursor: page.nextCursor,
+    };
   }
 
   // ------------------------------------------------------------------ search

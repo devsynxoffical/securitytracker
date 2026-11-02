@@ -14,7 +14,7 @@ export function NewGroupModal({ open, onClose, selfId, onCreate, busy }: { open:
   const [picked, setPicked] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const employees = useChatEmployees();
-  const list = useMemo(() => (employees.data ?? []).filter((e) => e.id !== selfId && e.status === 'active').filter((e) => !q || name(e).toLowerCase().includes(q.toLowerCase())), [employees.data, q, selfId]);
+  const list = useMemo(() => (employees.data ?? []).filter((e) => e.id !== selfId).filter((e) => !q || name(e).toLowerCase().includes(q.toLowerCase())), [employees.data, q, selfId]);
   const reset = () => { setGroupName(''); setQ(''); setPicked([]); setError(null); };
   const submit = async () => {
     if (!groupName.trim()) { setError('Give the group a name.'); return; }
@@ -69,7 +69,7 @@ export function NewDirectModal({ open, onClose, selfId, onPick, busy }: { open: 
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const employees = useChatEmployees();
-  const list = useMemo(() => (employees.data ?? []).filter((e) => e.id !== selfId && e.status === 'active').filter((e) => !q || name(e).toLowerCase().includes(q.toLowerCase())).slice(0, 50), [employees.data, q, selfId]);
+  const list = useMemo(() => (employees.data ?? []).filter((e) => e.id !== selfId).filter((e) => !q || name(e).toLowerCase().includes(q.toLowerCase())).slice(0, 50), [employees.data, q, selfId]);
   return (
     <Modal open={open} onClose={onClose} title="New direct message" width={460}>
       <div className="space-y-2">
@@ -100,7 +100,7 @@ export function NewDirectModal({ open, onClose, selfId, onPick, busy }: { open: 
 export function MembersModal({ open, onClose, channel, canManage, onAdd, onRemove, busy }: { open: boolean; onClose: () => void; channel: ChatChannel; canManage: boolean; onAdd: (employeeId: string) => Promise<unknown>; onRemove: (employeeId: string) => Promise<unknown>; busy: boolean }) {
   const [adding, setAdding] = useState('');
   const employees = useChatEmployees();
-  const candidates = (employees.data ?? []).filter((e) => e.status === 'active' && !channel.members.some((m) => m.employeeId === e.id));
+  const candidates = (employees.data ?? []).filter((e) => !channel.members.some((m) => m.employeeId === e.id));
   const editable = canManage && channel.kind === 'group';
   return (
     <Modal open={open} onClose={onClose} title={`Members · ${channel.name}`} width={480}>

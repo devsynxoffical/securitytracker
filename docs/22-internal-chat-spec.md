@@ -65,6 +65,7 @@ Retention purge: `chat-retention` job daily, deletes messages older than `chatRe
 | POST | /chat/channels/:id/typing | rate limited 1/3 s, broadcast only |
 | GET | /chat/search?q&channelId?&cursor | FR-CHAT-09 |
 | GET | /chat/unread | total and per channel, for badges |
+| GET | /chat/directory?q&cursor&limit | Active colleagues of the caller's company for the direct-message picker (id, name, code, department, team); excludes the caller and suspended, disabled, invited employees; needs only `chat.use` |
 
 WebSocket (namespace `/ws`, same auth as notifications): server emits the events in FR-CHAT-05 to channel members; clients join rooms `chat:<channelId>` after auth.
 

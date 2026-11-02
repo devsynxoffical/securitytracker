@@ -28,7 +28,7 @@ export class ChatGateway implements OnGatewayConnection {
     try {
       const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.replace('Bearer ', '');
       if (!token) return; // notifications gateway disconnects the socket
-      const secret = this.config.get<string>('JWT_ACCESS_SECRET') || 'jwt_access_secret_for_dev_mode_only';
+      const secret = this.config.get<string>('JWT_SECRET') || 'company-os-dev-jwt-secret-key-32-chars-min'; // same as AuthModule
       const payload = this.jwtService.verify(token, { secret }) as { sub?: string };
       if (!payload.sub) return;
       client.join(`user:${payload.sub}`);

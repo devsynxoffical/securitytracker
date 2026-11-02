@@ -217,6 +217,7 @@ Workforce            Attendance, Schedules (+), Holidays (+), Leave and
                      Websites, Productivity Rules (+)
 Targets              Targets, Metrics, History (+), Leaderboard (+)
 Email                Accounts, Assign Accounts, Permissions, Email Logs
+Chat (+)             Channels, direct messages, moderation view (22)
 Reports              Attendance, Time, Productivity, CRM, Calls (+), Targets
 Security             Login History, Devices, Sessions, IP Logs, Audit Logs,
                      Alerts (+), Access Control
