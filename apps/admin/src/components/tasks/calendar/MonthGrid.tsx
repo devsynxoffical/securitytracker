@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { clsx } from 'clsx';
 import type { Task } from '@/lib/queries/tasks';
-import { priorityTone } from '@/components/tasks/shared';
+import { Avatar } from '@/components/ui';
+import { Tooltip } from '@/components/ui/advanced';
+import { PriorityFlag } from '@/components/tasks/shared';
+import { fullName } from '@/lib/format';
 
 /** UTC day key yyyy-mm-dd for grouping; the calendar is day-granular. */
 export function dayKey(d: Date): string {
@@ -22,33 +25,12 @@ export function monthRange(year: number, month: number): { from: Date; to: Date;
   return { from: start, to: new Date(Math.max(to.getTime(), cells[41]!.getTime())), cells };
 }
 
-const PRIORITY_DOT: Record<string, string> = {
-  red: 'bg-red',
-  amber: 'bg-amber',
-  blue: 'bg-blue',
-  gray: 'bg-gray-bar',
-  green: 'bg-green',
-  violet: 'bg-violet',
-  primary: 'bg-pri',
-};
+const MAX_VISIBLE = 3;
 
-export function MonthGrid({
-  year,
-  month,
-  tasks,
-  onOpen,
-  onMove,
-  today,
-}: {
-  year: number;
-  month: number;
-  tasks: Task[];
-  onOpen: (id: string) => void;
-  onMove: (taskId: string, day: string) => void;
-  today: string;
-}) {
+export function MonthGrid({ year, month, tasks, onOpen, onMove, today }: { year: number; month: number; tasks: Task[]; onOpen: (id: string) => void; onMove: (taskId: string, day: string) => void; today: string }) {
   const { cells } = monthRange(year, month);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const byDay = new Map<string, Task[]>();
   for (const t of tasks) {
     if (!t.dueAt) continue;
@@ -59,10 +41,8 @@ export function MonthGrid({
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
       <div className="grid grid-cols-7 border-b border-line bg-surface-2">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-          <div key={d} className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-ink-3">
-            {d}
-          </div>
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
+          <div key={d} className={clsx('px-2 py-1.5 text-2xs font-semibold uppercase text-ink-3', i >= 5 && 'text-ink-3/70')}>{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7">
@@ -71,65 +51,57 @@ export function MonthGrid({
           const inMonth = cell.getUTCMonth() === month;
           const items = byDay.get(key) ?? [];
           const isToday = key === today;
+          const isPast = key < today;
+          const weekend = i % 7 >= 5;
+          const showAll = expanded === key;
+          const visible = showAll ? items : items.slice(0, MAX_VISIBLE);
           return (
             <div
               key={key}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (dragOver !== key) setDragOver(key);
-              }}
+              onDragOver={(e) => { e.preventDefault(); if (dragOver !== key) setDragOver(key); }}
               onDragLeave={() => setDragOver((d) => (d === key ? null : d))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOver(null);
-                const id = e.dataTransfer.getData('text/task-id');
-                if (id) onMove(id, key);
-              }}
+              onDrop={(e) => { e.preventDefault(); setDragOver(null); const id = e.dataTransfer.getData('text/task-id'); if (id) onMove(id, key); }}
               className={clsx(
-                'min-h-[112px] border-b border-r border-line-2 p-1.5 align-top transition-colors',
+                'min-h-[118px] border-b border-r border-line-2 p-1.5 align-top transition-colors',
                 i % 7 === 6 && 'border-r-0',
                 !inMonth && 'bg-surface-2/60',
-                dragOver === key && 'bg-pri-soft',
+                inMonth && weekend && 'bg-surface-2/30',
+                dragOver === key && 'bg-pri-soft ring-1 ring-inset ring-pri',
               )}
             >
               <div className="mb-1 flex items-center justify-between">
-                <span
-                  className={clsx(
-                    'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-mono text-[11px]',
-                    isToday ? 'bg-pri font-semibold text-white' : inMonth ? 'text-ink-2' : 'text-ink-3',
-                  )}
-                >
-                  {cell.getUTCDate()}
-                </span>
-                {items.length > 3 && <span className="text-[10px] text-ink-3">{items.length}</span>}
+                <span className={clsx('inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-mono text-xs', isToday ? 'bg-pri font-semibold text-white' : inMonth ? 'text-ink-2' : 'text-ink-3')}>{cell.getUTCDate()}</span>
+                {items.length > 0 && <span className="font-mono text-2xs normal-case tracking-normal text-ink-3">{items.length}</span>}
               </div>
               <div className="space-y-1">
-                {items.slice(0, 3).map((t) => {
+                {visible.map((t) => {
                   const done = t.status === 'done' || t.status === 'cancelled';
+                  const overdue = !done && isPast;
+                  const colour = t.statusRef?.colour ?? (t.list?.space.colour ?? 'var(--gray-bar)');
                   return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      draggable={!done}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/task-id', t.id);
-                        e.dataTransfer.effectAllowed = 'move';
-                      }}
-                      onClick={() => onOpen(t.id)}
-                      title={t.title}
-                      className={clsx(
-                        'flex w-full items-center gap-1.5 truncate rounded-md border border-line px-1.5 py-[3px] text-left text-[11.5px] hover:bg-surface-2',
-                        done ? 'text-ink-3 line-through' : 'text-ink',
-                      )}
-                    >
-                      <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', PRIORITY_DOT[priorityTone(t.priority)] ?? 'bg-gray-bar')} />
-                      <span className="truncate">{t.title}</span>
-                    </button>
+                    <Tooltip key={t.id} label={<span>{t.title}{t.list ? ` · ${t.list.name}` : ''}</span>}>
+                      <button
+                        type="button"
+                        draggable={!done}
+                        onDragStart={(e) => { e.dataTransfer.setData('text/task-id', t.id); e.dataTransfer.effectAllowed = 'move'; }}
+                        onClick={() => onOpen(t.id)}
+                        className={clsx(
+                          'flex w-full items-center gap-1.5 overflow-hidden rounded-md border-l-[3px] bg-surface px-1.5 py-[3px] text-left text-xs shadow-card transition hover:shadow-pop',
+                          done ? 'text-ink-3 line-through' : overdue ? 'bg-red-soft/60 text-red-text' : 'text-ink',
+                          !done && 'cursor-grab active:cursor-grabbing',
+                        )}
+                        style={{ borderLeftColor: colour }}
+                      >
+                        <PriorityFlag priority={t.priority} size={11} />
+                        <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                        {t.assignees[0] && <Avatar name={fullName(t.assignees[0].employee)} size={14} />}
+                      </button>
+                    </Tooltip>
                   );
                 })}
-                {items.length > 3 && (
-                  <button type="button" onClick={() => onOpen(items[3]!.id)} className="w-full text-left text-[11px] text-pri hover:underline">
-                    +{items.length - 3} more
+                {items.length > MAX_VISIBLE && (
+                  <button type="button" onClick={() => setExpanded(showAll ? null : key)} className="w-full text-left text-xs font-medium text-pri hover:underline">
+                    {showAll ? 'Show less' : `+${items.length - MAX_VISIBLE} more`}
                   </button>
                 )}
               </div>
