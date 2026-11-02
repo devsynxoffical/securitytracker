@@ -34,13 +34,13 @@ function write(key: string, value: string) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('dark');
   const [density, setDensityState] = useState<Density>('comfortable');
   const [sidebarCollapsed, setCollapsedState] = useState(false);
   const [systemDark, setSystemDark] = useState(false);
 
   useEffect(() => {
-    setThemeState(read('cos.theme', 'system'));
+    setThemeState(read('cos.theme', 'dark'));
     setDensityState(read('cos.density', 'comfortable'));
     setCollapsedState(read<'open' | 'collapsed'>('cos.sidebar', 'open') === 'collapsed');
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
