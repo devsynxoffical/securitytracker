@@ -5,11 +5,18 @@
  * Dev-only IPC `dev:simulate` (registered only when COMPANYOS_DEV_SIM === '1'): lets a QA script or
  * Playwright drive the ShiftManager's schedule/policy/closure/reminder state without a server that
  * implements the schedule contract. Payload: { profile?, closure?, state?, reminder? } (see
- * ShiftManager.devSimulate). Never registered in production builds.
+ * ShiftManager.devSimulate). `revoke: 'suspended' | 'revoked'` runs the FR-SEC-25 wipe; `offline`
+ * flips the renderer's network state. Never registered in production builds.
+ *
+ * Lock-down (docs/08 section 9, FR-SEC-22): downloads cancelled, navigation pinned to the app's own
+ * document, no child windows, DevTools off when packaged, context menu limited to Copy/Paste inside
+ * inputs. FR-SEC-25: `revokeSession` stops tracking, wipes everything but the device identity and
+ * the server address, and sends the renderer back to sign-in.
  */
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, Notification, powerMonitor } from 'electron';
+import { app, shell, session, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, Notification, powerMonitor } from 'electron';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { pathToFileURL } from 'url';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { Store } from './store';
 import { DeviceIdentity } from './device';
@@ -18,6 +25,8 @@ import { ApiClient } from './api';
 import { AgentClient } from './agent-client';
 import { DevTelemetrySource } from './dev-telemetry';
 import { ShiftManager } from './shift-manager';
+import { RealtimeClient } from './realtime';
+import { filterRequestHeaders, isDevToolsShortcut, revokeReasonFromSocket, shouldAllowNavigation, wipeOnRevoke, type RevokeReason } from './lockdown';
 import type { TrackerSource } from './tracker-source';
 
 const store = new Store();
@@ -32,6 +41,10 @@ function createTracker(): TrackerSource {
 }
 const tracker = createTracker();
 const shifts = new ShiftManager(api, store, clock, tracker);
+const realtime = new RealtimeClient(api);
+
+const CHAT_CACHE_PREFIX = 'chat.cache.';
+const CHAT_CACHE_LIMIT = 200; // FR-CHAT-14
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -58,14 +71,17 @@ function createWindow(): void {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      devTools: !app.isPackaged, // FR-SEC-22
     },
   });
+  lockDown(mainWindow);
 
   // Started at logon with --hidden (09 §1): stay in the tray until the user opens the window.
   registerWindowSessionEnd(mainWindow);
   mainWindow.on('ready-to-show', () => {
     if (!process.argv.includes('--hidden')) mainWindow?.show();
   });
+  // Links open in the system browser; the app itself never opens a second window (FR-SEC-22).
   mainWindow.webContents.setWindowOpenHandler((details) => {
     if (/^https?:/.test(details.url)) void shell.openExternal(details.url);
     return { action: 'deny' };
@@ -85,6 +101,62 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
+}
+
+/** The document the renderer is allowed to show: the dev server in development, the packaged index.html otherwise. */
+function appDocumentUrl(): string {
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) return process.env['ELECTRON_RENDERER_URL'];
+  return pathToFileURL(join(__dirname, '../renderer/index.html')).href;
+}
+
+/** FR-SEC-22 on the window: navigation pinned to the app document, DevTools shortcuts ignored when packaged, context menu Copy/Paste in inputs only. */
+function lockDown(win: BrowserWindow): void {
+  const wc = win.webContents;
+  const own = appDocumentUrl();
+  wc.on('will-navigate', (e, url) => {
+    if (!shouldAllowNavigation(url, own)) e.preventDefault();
+  });
+  wc.on('will-redirect', (e) => e.preventDefault());
+  wc.on('will-attach-webview', (e) => e.preventDefault());
+  wc.on('before-input-event', (e, input) => {
+    if (app.isPackaged && isDevToolsShortcut(input)) e.preventDefault();
+  });
+  wc.on('devtools-opened', () => {
+    if (app.isPackaged) wc.closeDevTools();
+  });
+  wc.on('context-menu', (_e, params) => {
+    if (!params.isEditable) return; // nothing to copy or save outside inputs; selection copy still works with Ctrl+C
+    Menu.buildFromTemplate([
+      { role: 'cut', enabled: params.editFlags.canCut },
+      { role: 'copy', enabled: params.editFlags.canCopy },
+      { role: 'paste', enabled: params.editFlags.canPaste },
+    ]).popup({ window: win });
+  });
+}
+
+/** FR-SEC-25: stop tracking, upload nothing further, wipe tokens and every cached list, back to sign-in. */
+let revoking = false;
+async function revokeSession(reason: RevokeReason): Promise<void> {
+  if (revoking) return;
+  revoking = true;
+  try {
+    realtime.disconnect();
+    await shifts.halt();
+    api.clearTokens();
+    store.deleteMany(wipeOnRevoke(store.keys()));
+    send('auth:expired', { reason });
+    mainWindow?.show();
+  } finally {
+    revoking = false;
+  }
+}
+
+function chatCacheGet(channelId: string): unknown[] {
+  return store.get<unknown[]>(`${CHAT_CACHE_PREFIX}${channelId}`, []);
+}
+function chatCachePut(channelId: string, messages: unknown): void {
+  if (!Array.isArray(messages)) return;
+  store.set(`${CHAT_CACHE_PREFIX}${channelId}`, messages.slice(0, CHAT_CACHE_LIMIT));
 }
 
 /** Tray icons ship as extraResources (electron-builder.json); in dev they are read from ./resources. */
@@ -157,20 +229,31 @@ function registerIpc(): void {
   ipcMain.handle('auth:session', () => ({ hasSession: api.hasSession(), online: api.isOnline() }));
   ipcMain.handle('auth:login', async (_e, identifier: string, password: string) => {
     const res = await api.login(String(identifier), String(password));
-    if (res.ok && api.hasSession()) void shifts.start();
+    if (res.ok && api.hasSession()) {
+      void shifts.start();
+      realtime.connect();
+    }
     return res;
   });
   ipcMain.handle('auth:logout', async () => {
     if (shifts.snapshot().state !== 'OFF_SHIFT') await shifts.endShift();
     shifts.stop();
+    realtime.disconnect();
     await api.logout();
     return { ok: true };
   });
 
-  // ---- generic authenticated proxy for the renderer (02 §3 rule 1)
-  ipcMain.handle('api:request', (_e, method: string, path: string, body?: unknown) => {
+  // ---- generic authenticated proxy for the renderer (02 §3 rule 1); extra headers are allow-listed (Idempotency-Key)
+  ipcMain.handle('api:request', (_e, method: string, path: string, body?: unknown, headers?: unknown) => {
     if (typeof path !== 'string' || !path.startsWith('/')) return { ok: false, status: 0, error: { status: 0, code: 'BAD_PATH', message: 'Invalid path' } };
-    return api.request(String(method).toUpperCase(), path, body);
+    return api.request(String(method).toUpperCase(), path, body, filterRequestHeaders(headers));
+  });
+
+  // ---- realtime (socket lives here; the renderer only sees forwarded events) and the offline chat cache (FR-CHAT-14)
+  ipcMain.handle('realtime:status', () => realtime.status());
+  ipcMain.handle('chat:cacheGet', (_e, channelId: string) => (typeof channelId === 'string' ? chatCacheGet(channelId) : []));
+  ipcMain.handle('chat:cachePut', (_e, channelId: string, messages: unknown) => {
+    if (typeof channelId === 'string' && api.hasSession()) chatCachePut(channelId, messages);
   });
 
   // ---- shift
@@ -186,7 +269,12 @@ function registerIpc(): void {
   ipcMain.handle('shift:snoozeEndReminder', () => shifts.snoozeEndReminder());
   ipcMain.handle('shift:dismissReminder', (_e, kind: 'start' | 'end' | 'break') => shifts.dismissReminder(kind === 'end' || kind === 'break' ? kind : 'start'));
   if (process.env.COMPANYOS_DEV_SIM === '1') {
-    ipcMain.handle('dev:simulate', (_e, payload: Parameters<ShiftManager['devSimulate']>[0]) => shifts.devSimulate(payload ?? {}));
+    ipcMain.handle('dev:simulate', async (_e, payload: Parameters<ShiftManager['devSimulate']>[0] & { revoke?: RevokeReason; offline?: boolean }) => {
+      const { revoke, offline, ...rest } = payload ?? {};
+      if (revoke) await revokeSession(revoke === 'suspended' ? 'suspended' : 'revoked');
+      if (offline !== undefined) send('net:status', { online: !offline }); // renderer-side offline state only (FR-CHAT-14 screenshots)
+      return shifts.devSimulate(rest);
+    });
   }
 
   shifts.onChange((snap) => send('shift:update', snap));
@@ -202,9 +290,14 @@ function registerIpc(): void {
     send('shift:notice', notice);
   });
   api.onNetwork((online) => send('net:status', { online }));
-  api.onUnauthorized(() => {
-    shifts.stop();
-    send('auth:expired', {});
+  api.onUnauthorized((reason) => void revokeSession(reason));
+  realtime.onStatus((s) => send('realtime:status', s));
+  realtime.onEvent((e) => {
+    if (e.event === 'session.revoked') {
+      void revokeSession(revokeReasonFromSocket(e.payload));
+      return;
+    }
+    send('realtime:event', e);
   });
 
   ipcMain.handle('notify:toast', (_e, title: string, body: string) => {
@@ -215,11 +308,15 @@ function registerIpc(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.devsynx.workpulse'); // must equal appId in electron-builder.json for Windows notifications
   if (!is.dev) app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] }); // 09 §1: auto start at logon, tray
+  session.defaultSession.on('will-download', (e) => e.preventDefault()); // FR-SEC-22: no downloads, ever
   registerIpc();
   createWindow();
   createTray();
   registerPowerHooks();
-  if (api.hasSession()) void shifts.start();
+  if (api.hasSession()) {
+    void shifts.start();
+    realtime.connect();
+  }
 
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
   app.on('activate', () => {

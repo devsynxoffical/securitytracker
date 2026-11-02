@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ShieldCheck, Lock, Settings2, Server, CheckCircle2, ChevronDown, Timer, EyeOff, WifiOff, ArrowLeft, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Lock, Settings2, Server, CheckCircle2, ChevronDown, Timer, EyeOff, WifiOff, ArrowLeft, RefreshCw, ShieldAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import { bridge, http, type ApiResult } from '../lib/bridge';
 import { Button, Field, Input, Banner, Checkbox } from '../components/ui';
@@ -83,8 +83,16 @@ function AuthHeading({ icon, title, subtitle }: { icon?: ReactNode; title: strin
   );
 }
 
+/** Why the user is back on this screen (FR-SEC-25). `suspended` reads as an access notice, anything else as an ended session. */
+export type SignInNotice = { reason: 'suspended' | 'revoked' } | null;
+
+export function signInNoticeText(notice: SignInNotice): string | null {
+  if (!notice) return null;
+  return notice.reason === 'suspended' ? 'Your access was suspended. Contact your administrator.' : 'Your session ended. Sign in again.';
+}
+
 /** F2/F3: company credentials, device registration result and approval wait. */
-export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
+export function LoginScreen({ onLoggedIn, notice = null }: { onLoggedIn: () => void; notice?: SignInNotice }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -117,6 +125,7 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
       : code === 'DEVICE_REVOKED' ? 'This device was revoked. Contact your administrator.'
       : code === 'ACCOUNT_LOCKED' ? 'Too many attempts. Try again in 15 minutes.'
       : code === 'ACCOUNT_DISABLED' ? 'This account is disabled.'
+      : code === 'ACCOUNT_SUSPENDED' ? res.error?.message ?? 'This account is suspended. Contact your administrator.'
       : code === 'INVALID_CREDENTIALS' ? 'Wrong employee code, email or password.'
       : res.status === 0 ? 'Cannot reach the server. First login needs an internet connection.'
       : res.error?.message ?? 'Login failed';
@@ -154,6 +163,11 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
         }}
       >
         <AuthHeading title="Welcome back" subtitle="Sign in with your company account to start your day." />
+        {notice && !outcome && (
+          <Banner tone={notice.reason === 'suspended' ? 'amber' : 'blue'} icon={<ShieldAlert size={14} className="shrink-0" />} className="!items-start py-2.5">
+            <span data-testid="signin-notice" className="font-medium">{signInNoticeText(notice)}</span>
+          </Banner>
+        )}
         <Field label="Employee code or company email">
           <Input autoFocus value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="EMP-0021 or name@company.com" autoComplete="username" />
         </Field>

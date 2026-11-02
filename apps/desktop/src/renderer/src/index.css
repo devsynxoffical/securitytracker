@@ -115,8 +115,15 @@ body {
 input,
 textarea,
 [contenteditable],
-.selectable {
+.selectable,
+.select-text {
   user-select: text;
+}
+
+/* FR-SEC-22: nothing can be dragged out of the window (images, links, selected text) */
+img,
+a {
+  -webkit-user-drag: none;
 }
 
 .font-mono {

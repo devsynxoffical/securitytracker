@@ -11,6 +11,7 @@
     "dist:win": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
     "typecheck": "tsc --noEmit",
     "test:smoke": "node test/smoke.mjs",
+    "test:lockdown": "tsc src/main/lockdown.ts --outDir out/lockdown-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/lockdown.spec.mjs",
     "dist:linux": "electron-vite build && electron-builder --linux",
     "pack": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
     "test:policy": "tsc src/main/shift-policy.ts --outDir out/policy-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/policy.spec.mjs"
@@ -21,6 +22,7 @@
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io-client": "4.8.1",
     "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {

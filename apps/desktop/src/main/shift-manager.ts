@@ -184,6 +184,25 @@ export class ShiftManager {
     this.tickTimer = this.heartbeatTimer = this.uploadTimer = this.policyTimer = null;
   }
 
+  /**
+   * FR-SEC-25: the session was revoked or the account suspended. Stop every timer, stop the tracker
+   * and drop the local shift, queued events and profile WITHOUT uploading anything further. The
+   * store keys themselves are wiped by the caller (index.ts) right after.
+   */
+  async halt(): Promise<void> {
+    this.stop();
+    this.syncing = true; // blocks a sync already scheduled on the event loop
+    await this.safe(() => this.tracker.stopTracking());
+    this.resetShiftState();
+    this.events = [];
+    this.longIdleSegmentIds = [];
+    this.profile = null;
+    this.lastClosure = null;
+    this.reminder = { ...EMPTY_REMINDER };
+    this.syncing = false;
+    this.broadcast();
+  }
+
   /** Behaviour 3: the renderer asks before Start shift; all time math stays here. */
   startContext(): StartContext {
     return startContext(this.clock.now(), this.profile?.schedule, this.policy());

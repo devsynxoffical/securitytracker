@@ -22,21 +22,29 @@ export interface ApiResult<T = unknown> {
   error?: ApiError;
 }
 
-export async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = (await bridge.api.request(method, path, body)) as ApiResult<T>;
+export async function api<T = unknown>(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+  const res = (await bridge.api.request(method, path, body, headers)) as ApiResult<T>;
   if (!res.ok) throw Object.assign(new Error(res.error?.message ?? 'Request failed'), { api: res.error, status: res.status });
   return res.data as T;
 }
 
 export const http = {
   get: <T>(path: string) => api<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => api<T>('POST', path, body),
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) => api<T>('POST', path, body, headers),
   patch: <T>(path: string, body?: unknown) => api<T>('PATCH', path, body),
   del: <T>(path: string) => api<T>('DELETE', path),
 };
 
 export function isOfflineError(e: unknown): boolean {
   return Boolean(e && typeof e === 'object' && (e as { status?: number }).status === 0);
+}
+
+export function errorStatus(e: unknown): number | undefined {
+  return e && typeof e === 'object' ? (e as { status?: number }).status : undefined;
+}
+
+export function errorCode(e: unknown): string | undefined {
+  return e && typeof e === 'object' ? (e as { api?: { code?: string } }).api?.code : undefined;
 }
 
 export function errorMessage(e: unknown): string {

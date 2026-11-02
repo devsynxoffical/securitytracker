@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
+import { clsx } from 'clsx';
 import { CalendarX, Clock, Info } from 'lucide-react';
-import { bridge, http } from './lib/bridge';
+import { bridge, http, errorStatus } from './lib/bridge';
 import { useQuery } from './lib/useQuery';
+import { useRealtime } from './lib/realtime';
 import { useTheme } from './lib/theme';
-import type { Me, NotificationItem, ShiftNotice, ShiftSnapshot, StartContext } from './lib/types';
+import type { ChatUnread, Me, NotificationItem, ShiftNotice, ShiftSnapshot, StartContext } from './lib/types';
 import { TitleBar, Sidebar, type Screen } from './shell/Shell';
-import { LoginScreen, ConsentScreen } from './screens/Auth';
+import { LoginScreen, ConsentScreen, type SignInNotice } from './screens/Auth';
+import { ChatScreen } from './screens/Chat';
 import { Dashboard } from './screens/Dashboard';
 import { TasksScreen } from './screens/Tasks';
 import { CrmScreen } from './screens/Crm';
@@ -29,6 +32,7 @@ export default function App() {
   const [online, setOnline] = useState(true);
   const [startConfirm, setStartConfirm] = useState<StartContext | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [signInNotice, setSignInNotice] = useState<SignInNotice>(null);
 
   /** Behaviour 3: the main process decides whether now is outside the schedule; we only ask. */
   const requestStartShift = useCallback(async () => {
@@ -79,8 +83,12 @@ export default function App() {
         if (notice.kind === 'autoStarted') setToast(`Shift started automatically at ${time(notice.at)} (company policy)`);
         if (notice.kind === 'closedByServer') setScreen('dashboard');
       }),
-      bridge.auth.onExpired(() => {
+      bridge.auth.onExpired((p) => {
+        // FR-SEC-25: the main process already stopped tracking and wiped the store; we only show why.
+        const reason = (p as { reason?: string } | undefined)?.reason;
+        setSignInNotice({ reason: reason === 'suspended' ? 'suspended' : 'revoked' });
         setMe(null);
+        setScreen('dashboard');
         setPhase('login');
       }),
     ];
@@ -94,6 +102,13 @@ export default function App() {
   const unread = notifList.filter((n) => !n.readAt).length;
   const myTasks = useQuery(() => http.get<{ items: unknown[] } | unknown[]>('/tasks/my?range=today'), [], { intervalMs: 120_000, enabled: phase === 'app' });
   const todayCount = Array.isArray(myTasks.data) ? myTasks.data.length : myTasks.data?.items.length ?? 0;
+  // Chat badge (FR-CHAT-06): 15 s poll, refreshed early on socket events; a server without chat (404) simply shows no badge.
+  const chatUnread = useQuery(() => http.get<ChatUnread>('/chat/unread').catch((e) => (errorStatus(e) === 404 ? { total: 0, channels: [] } : Promise.reject(e))), [], { intervalMs: 15_000, enabled: phase === 'app' });
+  useRealtime((e) => {
+    if (e.event.startsWith('chat.message.') || e.event === 'chat.read' || e.event === 'chat.channel.changed') void chatUnread.refetch();
+    if (e.event === 'notification.new') void notifications.refetch();
+  }, phase === 'app');
+  const chatCount = chatUnread.data?.total ?? 0;
 
   const logout = async () => {
     await bridge.auth.logout();
@@ -117,7 +132,7 @@ export default function App() {
       <div className="flex h-full flex-col bg-bg">
         <TitleBar theme={theme} onToggleTheme={toggle} />
         <div className="min-h-0 flex-1">
-          <LoginScreen onLoggedIn={() => void loadMe()} />
+          <LoginScreen notice={signInNotice} onLoggedIn={() => { setSignInNotice(null); void loadMe(); }} />
         </div>
       </div>
     );
@@ -140,12 +155,13 @@ export default function App() {
     <div className="flex h-full flex-col bg-bg">
       <TitleBar theme={theme} onToggleTheme={toggle} online={online} unread={unread} onBell={() => setBell(true)} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar screen={screen} onNavigate={setScreen} shift={shiftWithNet} me={me} counts={{ tasks: todayCount }} onLogout={() => void logout()} onStartShift={requestStartShift} />
-        <main key={screen} className="fade-in min-h-0 min-w-0 flex-1 overflow-y-auto p-6">
+        <Sidebar screen={screen} onNavigate={setScreen} shift={shiftWithNet} me={me} counts={{ tasks: todayCount, chat: chatCount }} onLogout={() => void logout()} onStartShift={requestStartShift} />
+        <main key={screen} className={clsx('fade-in min-h-0 min-w-0 flex-1', screen === 'chat' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto p-6')}>
           {screen === 'dashboard' && <Dashboard me={me} shift={shiftWithNet} unread={unread} notifications={notifList} longIdle={longIdle} onClaimIdle={(claim) => void bridge.shift.claimIdle(claim).then(() => setLongIdle(null))} onOpen={setScreen} onBell={() => setBell(true)} onStartShift={requestStartShift} />}
           {screen === 'tasks' && <TasksScreen online={online} />}
           {screen === 'crm' && <CrmScreen online={online} />}
           {screen === 'mail' && <MailScreen online={online} meId={me.id} />}
+          {screen === 'chat' && <ChatScreen online={online} me={me} onUnreadChanged={() => void chatUnread.refetch()} />}
           {screen === 'leave' && <LeaveScreen online={online} meId={me.id} />}
           {screen === 'activity' && <ActivityScreen meId={me.id} shift={shiftWithNet} />}
         </main>

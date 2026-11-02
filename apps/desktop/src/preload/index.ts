@@ -30,7 +30,19 @@ const bridge = {
     onExpired: on('auth:expired'),
   },
   api: {
-    request: (method: string, path: string, body?: unknown) => ipcRenderer.invoke('api:request', method, path, body),
+    /** `headers` is allow-listed in the main process (Idempotency-Key only). */
+    request: (method: string, path: string, body?: unknown, headers?: Record<string, string>) => ipcRenderer.invoke('api:request', method, path, body, headers),
+  },
+  /** Socket events forwarded by the main process (the socket and its token stay there). */
+  realtime: {
+    status: () => ipcRenderer.invoke('realtime:status'),
+    onEvent: on('realtime:event'),
+    onStatus: on('realtime:status'),
+  },
+  /** FR-CHAT-14: last 200 messages per channel, plain values in the main-process store, wiped on revocation. */
+  chat: {
+    cacheGet: (channelId: string) => ipcRenderer.invoke('chat:cacheGet', channelId),
+    cachePut: (channelId: string, messages: unknown[]) => ipcRenderer.invoke('chat:cachePut', channelId, messages),
   },
   shift: {
     state: () => ipcRenderer.invoke('shift:state'),

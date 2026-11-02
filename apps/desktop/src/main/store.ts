@@ -34,6 +34,18 @@ export class Store {
     this.flush();
   }
 
+  /** Every stored key, secrets included (prefixed `secret:`). Used by the revocation wipe. */
+  keys(): string[] {
+    return Object.keys(this.data);
+  }
+
+  /** Removes the given keys in one write (FR-SEC-25 wipe). */
+  deleteMany(keys: string[]): void {
+    if (keys.length === 0) return;
+    for (const k of keys) delete this.data[k];
+    this.flush();
+  }
+
   getSecret(key: string): string | null {
     const raw = this.data[`secret:${key}`] as string | undefined;
     if (!raw) return null;

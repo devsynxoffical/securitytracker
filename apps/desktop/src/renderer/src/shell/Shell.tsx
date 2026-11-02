@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { Minus, Square, X, Bell, Wifi, WifiOff, LayoutDashboard, CheckSquare, Target, Mail, Plane, Activity, Coffee, Play, Square as Stop, LogOut, RefreshCw } from 'lucide-react';
+import { Minus, Square, X, Bell, Wifi, WifiOff, LayoutDashboard, CheckSquare, Target, Mail, MessageSquare, Plane, Activity, Coffee, Play, Square as Stop, LogOut, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { bridge } from '../lib/bridge';
 import { hms, fullName } from '../lib/format';
@@ -7,13 +7,14 @@ import type { Theme } from '../lib/theme';
 import type { Me, ShiftSnapshot } from '../lib/types';
 import { Avatar, Button, IconButton, Modal, Select, StatusDot, ThemeToggle } from '../components/ui';
 
-export type Screen = 'dashboard' | 'tasks' | 'crm' | 'mail' | 'leave' | 'activity';
+export type Screen = 'dashboard' | 'tasks' | 'crm' | 'mail' | 'chat' | 'leave' | 'activity';
 
 const NAV: Array<{ key: Screen; label: string; icon: typeof LayoutDashboard }> = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'tasks', label: 'My tasks', icon: CheckSquare },
   { key: 'crm', label: 'CRM', icon: Target },
   { key: 'mail', label: 'Mail', icon: Mail },
+  { key: 'chat', label: 'Chat', icon: MessageSquare },
   { key: 'leave', label: 'Leave', icon: Plane },
   { key: 'activity', label: 'My activity', icon: Activity },
 ];
@@ -93,7 +94,7 @@ export function Sidebar({ screen, onNavigate, shift, me, counts, onLogout, onSta
             <button key={item.key} type="button" onClick={() => onNavigate(item.key)} aria-current={active ? 'page' : undefined} className={clsx('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-base font-medium transition-colors', active ? 'bg-pri-soft text-pri-2' : 'text-ink-2 hover:bg-surface-2 hover:text-ink')}>
               <Icon size={16} strokeWidth={1.85} className={clsx('shrink-0', active ? 'text-pri' : 'text-ink-3')} />
               <span className="flex-1 truncate text-left">{item.label}</span>
-              {count ? <span className={clsx('rounded-full px-1.5 font-mono text-2xs tracking-normal', active ? 'bg-pri/20 text-pri-2' : 'bg-gray-soft text-ink-2')}>{count > 99 ? '99+' : count}</span> : null}
+              {count ? <span data-testid={`nav-count-${item.key}`} className={clsx('rounded-full px-1.5 font-mono text-2xs tracking-normal', item.key === 'chat' ? 'bg-pri text-on-pri' : active ? 'bg-pri/20 text-pri-2' : 'bg-gray-soft text-ink-2')}>{count > 99 ? '99+' : count}</span> : null}
             </button>
           );
         })}

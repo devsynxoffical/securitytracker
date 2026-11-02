@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { Store } from './store';
 import { DeviceIdentity } from './device';
 import { AnchoredClock } from './clock';
+import { revokeReasonFromError, type RevokeReason } from './lockdown';
 
 export interface ApiError {
   status: number;
@@ -18,6 +19,7 @@ export interface ApiResult<T = unknown> {
 }
 
 type NetListener = (online: boolean) => void;
+type TokenListener = (hasToken: boolean) => void;
 
 /**
  * Server address. Baked in at build time with MAIN_VITE_API_URL (IT builds), overridable in dev with
@@ -36,7 +38,9 @@ export class ApiClient {
   private lastSuccessAt = Date.now();
   private online = true;
   private netListeners: NetListener[] = [];
-  private unauthorizedHandler: (() => void) | null = null;
+  private unauthorizedHandler: ((reason: RevokeReason) => void) | null = null;
+  private tokenListeners: TokenListener[] = [];
+  private lastAuthError: ApiError | null = null;
 
   constructor(
     private store: Store,
@@ -81,8 +85,19 @@ export class ApiClient {
     this.netListeners.push(fn);
   }
 
-  onUnauthorized(fn: () => void): void {
+  /** Fired once the session is gone for good: a 401 that a refresh could not repair (FR-SEC-25). */
+  onUnauthorized(fn: (reason: RevokeReason) => void): void {
     this.unauthorizedHandler = fn;
+  }
+
+  /** Fired when the access token changes (login, refresh, wipe). The realtime client re-authenticates on it. */
+  onTokens(fn: TokenListener): void {
+    this.tokenListeners.push(fn);
+  }
+
+  /** Main process only: the realtime client sends it in the socket handshake. Never crosses the bridge. */
+  currentAccessToken(): string | null {
+    return this.accessToken;
   }
 
   hasSession(): boolean {
@@ -93,12 +108,14 @@ export class ApiClient {
     this.accessToken = access;
     this.store.setSecret('auth.accessToken', access);
     this.store.setSecret('auth.refreshToken', refresh);
+    this.tokenListeners.forEach((l) => l(true));
   }
 
   clearTokens(): void {
     this.accessToken = null;
     this.store.setSecret('auth.accessToken', null);
     this.store.setSecret('auth.refreshToken', null);
+    this.tokenListeners.forEach((l) => l(false));
   }
 
   /** Signed desktop login (F2/F3). Returns the raw API body so the renderer can branch on DEVICE_PENDING. */
@@ -147,8 +164,10 @@ export class ApiClient {
       res = await this.raw<T>(method, path, body, true, headers);
     }
     if (res.status === 401) {
+      const reason = revokeReasonFromError(this.lastAuthError ?? res.error);
+      this.lastAuthError = null;
       this.clearTokens();
-      this.unauthorizedHandler?.();
+      this.unauthorizedHandler?.(reason);
     }
     return res;
   }
@@ -167,7 +186,10 @@ export class ApiClient {
         this.setTokens(res.data.accessToken, res.data.refreshToken);
         return true;
       }
-      if (res.status === 401 || res.status === 403) this.clearTokens();
+      if (res.status === 401 || res.status === 403) {
+        this.lastAuthError = res.error ?? null;
+        this.clearTokens();
+      }
       return false;
     })();
     try {

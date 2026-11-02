@@ -293,3 +293,101 @@ export interface TrackingSummary {
   days?: Array<{ date: string; trackedS: number; activeS: number; idleS: number; productiveS: number; neutralS: number; unproductiveS: number }>;
   [key: string]: unknown;
 }
+
+// ---- Internal chat (docs/22 section 5; shapes mirror packages/contracts chat.ts DTOs) ----------------
+
+export type ChatChannelKind = 'company' | 'department' | 'team' | 'group' | 'direct';
+
+export interface ChatAuthor {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ChatMember {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  joinedAt: string;
+}
+
+export interface ChatRecordRef {
+  type: 'task' | 'lead' | 'deal' | 'contact' | 'mail';
+  id: string;
+}
+
+export interface ChatRecordCard extends ChatRecordRef {
+  title: string;
+  status: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  channelId: string;
+  authorId: string;
+  author: ChatAuthor | null;
+  /** Empty when deleted. */
+  body: string;
+  mentions: string[];
+  recordRef: ChatRecordRef | null;
+  recordCard: ChatRecordCard | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  /** Renderer only: optimistic send not yet confirmed / failed. */
+  pending?: boolean;
+  failed?: boolean;
+}
+
+export interface ChatChannel {
+  id: string;
+  kind: ChatChannelKind;
+  name: string;
+  departmentId: string | null;
+  teamId: string | null;
+  createdBy: string | null;
+  archivedAt: string | null;
+  lastMessageAt: string | null;
+  createdAt: string;
+  isMember: boolean;
+  unreadCount: number;
+  lastMessage: { id: string; authorId: string; body: string; createdAt: string } | null;
+  members?: ChatMember[];
+  counterpart: ChatAuthor | null;
+}
+
+export interface ChatUnread {
+  total: number;
+  channels: Array<{ channelId: string; unreadCount: number }>;
+}
+
+export interface ChatTypingPayload {
+  channelId: string;
+  employeeId: string;
+  name: string;
+  at: string;
+}
+
+export interface ChatReadPayload {
+  channelId: string;
+  employeeId: string;
+  lastReadMessageId: string;
+}
+
+export interface ChatMessageDeletedPayload {
+  channelId: string;
+  id: string;
+  deletedAt: string;
+}
+
+/** Directory row as GET /employees returns it (subset the chat picker needs). */
+export interface DirectoryEmployee {
+  id: string;
+  code: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  department?: { id: string; name: string } | null;
+  role?: { id: string; name: string } | null;
+}
