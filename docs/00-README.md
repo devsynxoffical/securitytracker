@@ -36,6 +36,7 @@ One platform with which a company controls identity, CRM, company email access, 
 | 15-hr-spec.md | Leave types and balances, profiles, documents, checklists, announcements, attendance screens | HR work |
 | 16-tracking-admin-spec.md | Timesheets, manual time, team activity, apps and URLs, uncategorised queue | Tracking admin work |
 | 17-mail-collaboration-spec.md | Shared inbox assignment, status, comments, labels, templates, CRM linking | Mail work |
+| 18-verification.md | Flow verification matrix: which test proves which flow, and what still needs a real environment | Before release |
 
 ## 3. Conventions
 
