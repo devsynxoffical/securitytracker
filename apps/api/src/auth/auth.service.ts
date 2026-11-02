@@ -116,6 +116,8 @@ export class AuthService {
         });
 
     if (!device) {
+      // First contact: the key is self-asserted, the signature proves the client holds it.
+      this.assertDeviceSignature(dto.device.publicKey, dto.timestamp, { identifier: dto.identifier, timestamp: dto.timestamp, hardwareHash: dto.device.hardwareHash }, dto.signature);
       // Check company device limits
       const approvedDevicesCount = await this.prisma.device.count({
         where: { employeeId: employee.id, status: 'approved' },
@@ -149,6 +151,8 @@ export class AuthService {
         },
       });
     } else {
+      // FR-AUTH-04: an existing device must prove possession of its registered private key.
+      this.assertDeviceSignature(device.publicKey, dto.timestamp, { identifier: dto.identifier, timestamp: dto.timestamp, hardwareHash: dto.device.hardwareHash }, dto.signature);
       // Update device versions & last seen
       await this.prisma.device.update({
         where: { id: device.id },
@@ -348,6 +352,21 @@ export class AuthService {
     return { tokens: await this.createAdminSession(employee, ip, userAgent) };
   }
 
+  /**
+   * 08 section 2: signature = sign(deviceKey, timestamp + sha256(body)) with a 2 minute
+   * timestamp tolerance. The body is the canonical JSON the client signed.
+   */
+  private assertDeviceSignature(publicKey: string, timestamp: string, body: Record<string, unknown>, signature: string): void {
+    const skew = Math.abs(this.clock.now().getTime() - new Date(timestamp).getTime());
+    if (!Number.isFinite(skew) || skew > 2 * 60 * 1000) {
+      throw new UnauthorizedException({ code: ErrorCodes.INVALID_DEVICE_SIGNATURE, message: 'Request timestamp outside the allowed window' });
+    }
+    const payload = `${timestamp}.${CryptoUtil.sha256(JSON.stringify(body))}`;
+    if (!CryptoUtil.verifyDeviceSignature(publicKey, payload, signature)) {
+      throw new UnauthorizedException({ code: ErrorCodes.INVALID_DEVICE_SIGNATURE, message: 'Device signature is invalid' });
+    }
+  }
+
   private encryptionKey(): string {
     return this.configService.get<string>('ENCRYPTION_SECRET') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   }
@@ -445,6 +464,18 @@ export class AuthService {
         code: ErrorCodes.SESSION_REVOKED,
         message: 'Session has expired or been revoked',
       });
+    }
+
+    // FR-AUTH-04: desktop refreshes are bound to the device that opened the session.
+    if (session.client === 'desktop') {
+      if (!session.deviceId || session.deviceId !== dto.deviceId) {
+        throw new UnauthorizedException({ code: ErrorCodes.INVALID_DEVICE_SIGNATURE, message: 'Refresh token is bound to another device' });
+      }
+      const device = await this.prisma.device.findUnique({ where: { id: dto.deviceId } });
+      if (!device || device.status !== 'approved') {
+        throw new UnauthorizedException({ code: ErrorCodes.DEVICE_REVOKED, message: 'Device is not approved' });
+      }
+      this.assertDeviceSignature(device.publicKey, dto.timestamp, { refreshToken: dto.refreshToken, deviceId: dto.deviceId, timestamp: dto.timestamp }, dto.signature);
     }
 
     // Rotate refresh token
