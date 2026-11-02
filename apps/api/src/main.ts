@@ -12,6 +12,7 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     credentials: true,
+    maxAge: 86400,
   });
 
   app.use(cookieParser());

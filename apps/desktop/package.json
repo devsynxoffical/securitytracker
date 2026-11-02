@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@company-os/contracts": "workspace:*",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",

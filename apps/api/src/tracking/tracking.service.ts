@@ -70,6 +70,17 @@ export class TrackingService {
     const appDeltas: Record<string, { appName: string; category: string; activeS: number; idleS: number }> = {};
     const domainDeltas: Record<string, { category: string; activeS: number }> = {};
 
+    // Batch lookup existing segment IDs to eliminate N+1 roundtrips
+    const segmentIds = dto.segments.map((s) => s.id);
+    const existingRecords = await this.prisma.activitySegment.findMany({
+      where: { id: { in: segmentIds } },
+      select: { id: true },
+    });
+    const existingIdSet = new Set(existingRecords.map((r) => r.id));
+
+    const segmentsToInsert: any[] = [];
+    const nowTime = this.clock.now().getTime();
+
     for (const seg of dto.segments) {
       const start = new Date(seg.startedAt);
       const end = new Date(seg.endedAt);
@@ -80,12 +91,7 @@ export class TrackingService {
         continue;
       }
 
-      // Check if segment already exists (idempotent upsert)
-      const existing = await this.prisma.activitySegment.findUnique({
-        where: { id: seg.id },
-      });
-
-      if (existing) {
+      if (existingIdSet.has(seg.id)) {
         accepted.push(seg.id);
         continue;
       }
@@ -99,62 +105,64 @@ export class TrackingService {
       // Determine productivity category
       const category = this.evaluateProductivityCategory(seg.processName, domain, rules);
 
-      try {
-        await this.prisma.activitySegment.create({
-          data: {
-            id: seg.id,
-            employeeId,
-            deviceId,
-            shiftId: shift.id,
-            startedAt: start,
-            endedAt: end,
-            durationS,
-            kind: seg.kind,
-            processName: seg.processName,
-            appName: seg.appName,
-            domain,
-            windowTitle: seg.windowTitle || null,
-            keyCount: seg.keyCount,
-            mouseCount: seg.mouseCount,
-            exception: seg.exception,
-            claim: seg.claim,
-            late: (this.clock.now().getTime() - end.getTime()) > 3600 * 1000,
-          },
-        });
+      segmentsToInsert.push({
+        id: seg.id,
+        employeeId,
+        deviceId,
+        shiftId: shift.id,
+        startedAt: start,
+        endedAt: end,
+        durationS,
+        kind: seg.kind,
+        processName: seg.processName,
+        appName: seg.appName,
+        domain,
+        windowTitle: seg.windowTitle || null,
+        keyCount: seg.keyCount,
+        mouseCount: seg.mouseCount,
+        exception: seg.exception,
+        claim: seg.claim,
+        late: (nowTime - end.getTime()) > 3600 * 1000,
+      });
 
-        accepted.push(seg.id);
+      accepted.push(seg.id);
 
-        if (seg.kind === 'active') {
-          newActiveSeconds += durationS;
-        } else if (seg.kind === 'idle') {
-          newIdleSeconds += durationS;
-        }
-        newKeyCount += seg.keyCount;
-        newMouseCount += seg.mouseCount;
-
-        // App Rollup Delta
-        const appKey = seg.processName;
-        if (!appDeltas[appKey]) {
-          appDeltas[appKey] = {
-            appName: seg.appName,
-            category,
-            activeS: 0,
-            idleS: 0,
-          };
-        }
-        if (seg.kind === 'active') appDeltas[appKey]!.activeS += durationS;
-        if (seg.kind === 'idle') appDeltas[appKey]!.idleS += durationS;
-
-        // Domain Rollup Delta
-        if (domain && domain !== 'excluded' && domain !== 'unknown' && seg.kind === 'active') {
-          if (!domainDeltas[domain]) {
-            domainDeltas[domain] = { category, activeS: 0 };
-          }
-          domainDeltas[domain]!.activeS += durationS;
-        }
-      } catch (err) {
-        rejected.push({ id: seg.id, reason: 'INVALID' });
+      if (seg.kind === 'active') {
+        newActiveSeconds += durationS;
+      } else if (seg.kind === 'idle') {
+        newIdleSeconds += durationS;
       }
+      newKeyCount += seg.keyCount;
+      newMouseCount += seg.mouseCount;
+
+      // App Rollup Delta
+      const appKey = seg.processName;
+      if (!appDeltas[appKey]) {
+        appDeltas[appKey] = {
+          appName: seg.appName,
+          category,
+          activeS: 0,
+          idleS: 0,
+        };
+      }
+      if (seg.kind === 'active') appDeltas[appKey]!.activeS += durationS;
+      if (seg.kind === 'idle') appDeltas[appKey]!.idleS += durationS;
+
+      // Domain Rollup Delta
+      if (domain && domain !== 'excluded' && domain !== 'unknown' && seg.kind === 'active') {
+        if (!domainDeltas[domain]) {
+          domainDeltas[domain] = { category, activeS: 0 };
+        }
+        domainDeltas[domain]!.activeS += durationS;
+      }
+    }
+
+    // Bulk insert all valid new activity segments in 1 operation
+    if (segmentsToInsert.length > 0) {
+      await this.prisma.activitySegment.createMany({
+        data: segmentsToInsert,
+        skipDuplicates: true,
+      });
     }
 
     // Apply Rollups to DB

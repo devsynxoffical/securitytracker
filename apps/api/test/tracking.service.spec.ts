@@ -23,7 +23,9 @@ describe('TrackingService (Unit)', () => {
       },
       activitySegment: {
         findUnique: vi.fn(),
+        findMany: vi.fn(),
         create: vi.fn(),
+        createMany: vi.fn(),
       },
       activityDailyApp: {
         upsert: vi.fn(),
@@ -59,8 +61,8 @@ describe('TrackingService (Unit)', () => {
       },
     ]);
     prismaMock.trackingExclusion.findMany.mockResolvedValue([]);
-    prismaMock.activitySegment.findUnique.mockResolvedValue(null);
-    prismaMock.activitySegment.create.mockResolvedValue({});
+    prismaMock.activitySegment.findMany.mockResolvedValue([]);
+    prismaMock.activitySegment.createMany.mockResolvedValue({ count: 1 });
     prismaMock.shift.update.mockResolvedValue({});
     prismaMock.activityDailyApp.upsert.mockResolvedValue({});
     prismaMock.activityDailyDomain.upsert.mockResolvedValue({});
@@ -88,7 +90,7 @@ describe('TrackingService (Unit)', () => {
 
     expect(result.accepted).toContain(segId);
     expect(result.rejected).toHaveLength(0);
-    expect(prismaMock.activitySegment.create).toHaveBeenCalled();
+    expect(prismaMock.activitySegment.createMany).toHaveBeenCalled();
     expect(prismaMock.activityDailyDomain.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
@@ -111,7 +113,7 @@ describe('TrackingService (Unit)', () => {
     });
     prismaMock.productivityRule.findMany.mockResolvedValue([]);
     prismaMock.trackingExclusion.findMany.mockResolvedValue([]);
-    prismaMock.activitySegment.findUnique.mockResolvedValue({ id: segId }); // Already exists
+    prismaMock.activitySegment.findMany.mockResolvedValue([{ id: segId }]); // Already exists
 
     const result = await trackingService.ingestSegments('emp-1', 'dev-1', {
       shiftId,
@@ -134,6 +136,6 @@ describe('TrackingService (Unit)', () => {
     });
 
     expect(result.accepted).toContain(segId);
-    expect(prismaMock.activitySegment.create).not.toHaveBeenCalled();
+    expect(prismaMock.activitySegment.createMany).not.toHaveBeenCalled();
   });
 });

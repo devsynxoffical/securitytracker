@@ -272,19 +272,22 @@ export class TelemetryEngine {
     this.currentIdleStreakSeconds = 0;
   }
 
+  private isDetectingApp = false;
+
   private startTelemetryLoop() {
     if (this.loopTimer) clearInterval(this.loopTimer);
     if (this.activeAppTimer) clearInterval(this.activeAppTimer);
 
-    // 1-second Main Telemetry Tick
+    // 1-second Main Telemetry & Active Seconds Accumulator
     this.loopTimer = setInterval(() => {
       this.tick();
     }, 1000);
 
-    // 1-second Active Foreground App Poller
+    // 3-second Active Foreground App Poller (Reduced CPU footprint)
+    this.detectActiveApplication(); // Initial immediate check
     this.activeAppTimer = setInterval(() => {
       this.detectActiveApplication();
-    }, 1000);
+    }, 3000);
   }
 
   private stopTelemetryLoop() {
@@ -303,7 +306,7 @@ export class TelemetryEngine {
 
     this.shiftDurationSeconds += 1;
 
-    // Measure Cursor Movement
+    // Measure Cursor Movement (Velocity distance, without fake mouse clicks)
     try {
       const currentPos = screen.getCursorScreenPoint();
       const dx = currentPos.x - this.lastCursorPos.x;
@@ -313,7 +316,6 @@ export class TelemetryEngine {
       if (distance > 3) {
         this.totalCursorDistance += Math.round(distance);
         this.cursorMovementSeconds += 1;
-        this.segmentMouseCount += 1;
         this.currentIdleStreakSeconds = 0;
       }
       this.lastCursorPos = currentPos;
@@ -345,9 +347,9 @@ export class TelemetryEngine {
 
     // Broadcast Real-Time Telemetry to Renderer UI
     this.broadcastState();
-  }
-
-  private async detectActiveApplication() {
+  }  private async detectActiveApplication() {
+    if (this.isDetectingApp) return;
+    this.isDetectingApp = true;
     try {
       let appName = 'WorkPulse Workstation';
       let processName = 'WorkPulse.app';
@@ -447,6 +449,8 @@ export class TelemetryEngine {
       this.broadcastState();
     } catch {
       // Non-blocking fallback
+    } finally {
+      this.isDetectingApp = false;
     }
   }
 

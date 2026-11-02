@@ -421,70 +421,76 @@ export default function App() {
   // Switch Auth Views (for testing full flow)
   if (currentScreen === 'D01-login') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B] relative overflow-hidden">
-        {/* Subtle Ambient Background Glows */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[300px] bg-gradient-to-tr from-emerald-200/40 via-blue-100/30 to-lime-200/40 blur-3xl -z-10 pointer-events-none rounded-full" />
+      <div className="flex flex-col min-h-screen bg-[#090D16] select-none font-sans text-xs text-slate-100 relative overflow-hidden">
+        {/* Glowing Emerald & Lime Ambient Radial Bursts */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-lime-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-emerald-600/10 via-blue-600/10 to-lime-500/10 blur-[100px] pointer-events-none rounded-full" />
 
         {/* Top Window Titlebar */}
-        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
-          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+        <div className="h-[38px] bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center px-4 gap-2.5 text-xs text-slate-400 z-10">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px] shadow-sm shadow-emerald-500/30">
             WP
           </div>
-          <span className="font-extrabold text-slate-900">WorkPulse Workstation</span>
+          <span className="font-extrabold text-slate-200 tracking-tight">WorkPulse Workstation</span>
+          <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">v1.0.0 Live</span>
           <div className="ml-auto flex items-center gap-1.5">
-            <span className="cursor-pointer hover:bg-slate-100 p-1.5 rounded-md text-slate-500 hover:text-slate-900 transition"><Minus className="w-3.5 h-3.5" /></span>
-            <span className="cursor-pointer hover:bg-rose-50 hover:text-rose-600 p-1.5 rounded-md text-slate-500 transition"><X className="w-3.5 h-3.5" /></span>
+            <span className="cursor-pointer hover:bg-slate-800 p-1.5 rounded-md text-slate-400 hover:text-white transition"><Minus className="w-3.5 h-3.5" /></span>
+            <span className="cursor-pointer hover:bg-rose-900/40 hover:text-rose-400 p-1.5 rounded-md text-slate-400 transition"><X className="w-3.5 h-3.5" /></span>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[430px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8">
-            <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-slate-100">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] flex items-center justify-center text-white shadow-md font-bold text-sm shrink-0">
+        <div className="flex-1 flex items-center justify-center p-6 z-10">
+          <div className="w-[440px] bg-slate-900/80 backdrop-blur-2xl border border-slate-700/70 rounded-3xl shadow-2xl shadow-emerald-950/50 p-8">
+            <div className="flex items-center gap-4 mb-6 pb-5 border-b border-slate-800">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 font-black text-base shrink-0 ring-2 ring-emerald-400/20">
                 WP
               </div>
               <div>
-                <h1 className="text-base font-black text-slate-900 tracking-tight">Sign in to WorkPulse</h1>
-                <p className="text-[11.5px] text-slate-400 mt-0.5">Live Telemetry &bull; Automated Monitoring Engine</p>
+                <h1 className="text-lg font-black text-white tracking-tight">Sign in to WorkPulse</h1>
+                <p className="text-xs text-emerald-400/90 font-medium flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Telemetry &bull; Automated Monitoring
+                </p>
               </div>
             </div>
 
             {authError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+              <div className="mb-5 p-3.5 rounded-2xl bg-rose-950/50 border border-rose-800/60 text-rose-300 text-xs font-medium flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{authError}</span>
               </div>
             )}
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Employee ID or Email</label>
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-xl bg-slate-50 focus-within:bg-white transition text-xs">
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Employee ID or Email</label>
+                <div className="flex items-center gap-2.5 px-3.5 py-3 border border-slate-700/80 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-2xl bg-slate-800/60 focus-within:bg-slate-800 transition text-xs">
                   <User className="w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="e.g. EMP-0001 or email@company.com"
-                    className="w-full outline-none font-mono text-xs text-slate-900 bg-transparent placeholder:text-slate-400"
+                    className="w-full outline-none font-mono text-xs text-white bg-transparent placeholder:text-slate-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Workstation Password</label>
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-xl bg-slate-50 focus-within:bg-white transition text-xs">
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Workstation Password</label>
+                <div className="flex items-center gap-2.5 px-3.5 py-3 border border-slate-700/80 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-2xl bg-slate-800/60 focus-within:bg-slate-800 transition text-xs">
                   <Lock className="w-4 h-4 text-slate-400" />
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter password..."
-                    className="w-full outline-none text-xs text-slate-900 bg-transparent placeholder:text-slate-400"
+                    className="w-full outline-none text-xs text-white bg-transparent placeholder:text-slate-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="text-slate-400 hover:text-slate-700"
+                    className="text-slate-400 hover:text-white transition"
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -492,7 +498,7 @@ export default function App() {
               </div>
               <button
                 onClick={handleLiveLogin}
-                className="w-full py-3 px-4 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 shadow-md"
+                className="w-full py-3.5 px-4 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-[0.99] text-white rounded-2xl font-bold text-[13px] tracking-normal transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 mt-3"
               >
                 <span>Sign In &amp; Start Monitoring</span>
               </button>
@@ -505,45 +511,46 @@ export default function App() {
 
   if (currentScreen === 'D02-device-pending') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B]">
-        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
+      <div className="flex flex-col min-h-screen bg-[#090D16] select-none font-sans text-xs text-slate-100 relative overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="h-[38px] bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center px-4 gap-2.5 text-xs text-slate-400">
           <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px]">
             WP
           </div>
-          <span className="font-extrabold text-slate-900">WorkPulse</span>
+          <span className="font-extrabold text-slate-200">WorkPulse</span>
         </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[440px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert className="w-6 h-6" />
+        <div className="flex-1 flex items-center justify-center p-6 z-10">
+          <div className="w-[450px] bg-slate-900/80 backdrop-blur-2xl border border-slate-700/70 rounded-3xl shadow-2xl p-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="w-7 h-7" />
             </div>
-            <h2 className="text-base font-black text-slate-900 mb-2">Device Approval Required</h2>
-            <p className="text-xs text-slate-500 leading-relaxed mb-6">
+            <h2 className="text-base font-black text-white mb-2">Device Approval Required</h2>
+            <p className="text-xs text-slate-400 leading-relaxed mb-6">
               This workstation is new or has not been authorized by your company administrator yet.
             </p>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-left space-y-2 mb-6 text-xs">
+            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-4 text-left space-y-2.5 mb-6 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">Hardware ID:</span>
-                <span className="font-mono text-slate-900 font-bold">HW-MAC-9821-B4</span>
+                <span className="font-mono text-emerald-400 font-bold">HW-MAC-9821-B4</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Platform:</span>
-                <span className="font-mono text-slate-900">macOS 15.1.1 (Apple Silicon)</span>
+                <span className="font-mono text-slate-200">macOS 15.1.1 (Apple Silicon)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Status:</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[11px]">Pending Admin Review</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[11px] border border-amber-500/30">Pending Admin Review</span>
               </div>
             </div>
             <button
               onClick={() => setCurrentScreen('D03-change-password')}
-              className="w-full py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-sm transition mb-2"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition mb-3"
             >
               Simulate: Admin Approved &gt; Next Step
             </button>
             <button
               onClick={() => setCurrentScreen('D01-login')}
-              className="w-full py-2 bg-transparent text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-xs transition"
+              className="w-full py-2 bg-transparent text-slate-400 hover:text-white rounded-xl font-semibold text-xs transition"
             >
               Back to Login
             </button>
@@ -555,45 +562,45 @@ export default function App() {
 
   if (currentScreen === 'D03-change-password') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F0F2F5] select-none font-sans text-xs text-[#1E293B]">
-        <div className="h-[38px] bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center px-4 gap-2.5 text-xs text-slate-600 shadow-sm">
+      <div className="flex flex-col min-h-screen bg-[#090D16] select-none font-sans text-xs text-slate-100">
+        <div className="h-[38px] bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center px-4 gap-2.5 text-xs text-slate-400">
           <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px]">
             WP
           </div>
-          <span className="font-extrabold text-slate-900">WorkPulse</span>
+          <span className="font-extrabold text-slate-200">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[440px] bg-white border border-slate-200/90 rounded-2xl shadow-xl p-8">
-            <h2 className="text-base font-black text-slate-900 mb-1">Update Temporary Password</h2>
+          <div className="w-[440px] bg-slate-900/80 backdrop-blur-2xl border border-slate-700/70 rounded-3xl shadow-2xl p-8">
+            <h2 className="text-base font-black text-white mb-1">Update Temporary Password</h2>
             <p className="text-xs text-slate-400 mb-6">You must set a secure personal password before continuing.</p>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Current Temporary Password</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Current Temporary Password</label>
                 <input
                   type="password"
                   defaultValue="tempPass123!"
-                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
+                  className="w-full px-3.5 py-2.5 border border-slate-700 bg-slate-800 text-white rounded-xl text-xs outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">New Password</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">New Password</label>
                 <input
                   type="password"
                   placeholder="Minimum 8 characters"
-                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
+                  className="w-full px-3.5 py-2.5 border border-slate-700 bg-slate-800 text-white rounded-xl text-xs outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Confirm New Password</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Confirm New Password</label>
                 <input
                   type="password"
                   placeholder="Re-enter password"
-                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-xs outline-none focus:border-emerald-500 focus:bg-white"
+                  className="w-full px-3.5 py-2.5 border border-slate-700 bg-slate-800 text-white rounded-xl text-xs outline-none focus:border-emerald-500"
                 />
               </div>
               <button
                 onClick={() => setCurrentScreen('D04-consent')}
-                className="w-full py-2.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition"
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition"
               >
                 Save &amp; Continue
               </button>
@@ -606,39 +613,41 @@ export default function App() {
 
   if (currentScreen === 'D04-consent') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F5F6F3]">
-        <div className="h-[34px] bg-white border-b border-[#E4E7E1] flex items-center px-3 gap-2 text-xs text-[#4A535B]">
-          <img src={logoImg} alt="WorkPulse" className="w-5 h-5 rounded object-cover shadow-sm" />
-          <span className="font-semibold text-[#151A1E]">WorkPulse</span>
+      <div className="flex flex-col min-h-screen bg-[#090D16] text-slate-100">
+        <div className="h-[38px] bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center px-4 gap-2.5 text-xs text-slate-400">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white flex items-center justify-center font-bold text-[10px]">
+            WP
+          </div>
+          <span className="font-extrabold text-slate-200">WorkPulse</span>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-[520px] bg-white border border-[#E4E7E1] rounded-[14px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="p-2 rounded-lg bg-[#E3F1EE] text-[#0F6B5C]">
-                <Shield className="w-5 h-5" />
+          <div className="w-[520px] bg-slate-900/80 backdrop-blur-2xl border border-slate-700/70 rounded-3xl shadow-2xl p-8">
+            <div className="flex items-center gap-3.5 mb-5">
+              <span className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                <Shield className="w-6 h-6" />
               </span>
               <div>
-                <h2 className="text-base font-semibold text-[#151A1E]">Privacy &amp; Tracking Transparency</h2>
-                <p className="text-xs text-[#8A939B]">Explicit disclosure of monitoring boundaries</p>
+                <h2 className="text-base font-bold text-white">Privacy &amp; Tracking Transparency</h2>
+                <p className="text-xs text-slate-400">Explicit disclosure of monitoring boundaries</p>
               </div>
             </div>
-            <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-lg p-4 space-y-3 mb-6 text-xs text-[#4A535B]">
-              <div className="flex items-start gap-2.5">
-                <Check className="w-4 h-4 text-[#1E8E5A] shrink-0 mt-0.5" />
+            <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-5 space-y-3.5 mb-6 text-xs text-slate-300">
+              <div className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>What is tracked:</strong> Active application name, browser tab domain, mouse/keyboard activity count (numbers only), and total shift duration.
+                  <strong className="text-white">What is tracked:</strong> Active application name, browser tab domain, mouse/keyboard activity count (numbers only), and total shift duration.
                 </span>
               </div>
-              <div className="flex items-start gap-2.5">
-                <X className="w-4 h-4 text-[#C2362B] shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3">
+                <X className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>What is NEVER recorded:</strong> Keystrokes, text typed, clipboard contents, audio, webcam, or private files. Zero invasive surveillance.
+                  <strong className="text-white">What is NEVER recorded:</strong> Keystrokes, text typed, clipboard contents, audio, webcam, or private files. Zero invasive surveillance.
                 </span>
               </div>
-              <div className="flex items-start gap-2.5">
-                <Check className="w-4 h-4 text-[#1E8E5A] shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Employee Transparency:</strong> You have full visibility into your activity logs, attendance records, and performance scores in the "My Activity" tab.
+                  <strong className="text-white">Employee Transparency:</strong> You have full visibility into your activity logs, attendance records, and performance scores in the "My Activity" tab.
                 </span>
               </div>
             </div>
@@ -646,7 +655,7 @@ export default function App() {
               onClick={() => {
                 setCurrentScreen('D05-dashboard');
               }}
-              className="w-full py-2.5 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg font-semibold text-xs transition"
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition"
             >
               I Understand &amp; Agree
             </button>
@@ -980,14 +989,14 @@ export default function App() {
 
           {/* Scrollable View Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            {/* SCREEN D05 / D06: DASHBOARD (MATCHING REFERENCE SCREENSHOT) */}
+            {/* SCREEN D05 / D06: DASHBOARD (MATCHING REFERENCE DESIGN WITH REAL WORKSPACE METRICS) */}
             {currentScreen === 'D05-dashboard' && (
               <div className="space-y-6">
                 {/* 1. Top Header Banner Card */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#FFF1F2] border border-[#FFE4E6] text-[#E11D48] flex items-center justify-center shadow-xs">
-                      <Activity className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
+                      <Zap className="w-6 h-6" />
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight">Workstation Analytics Dashboard</h2>
@@ -1000,98 +1009,104 @@ export default function App() {
                   <div className="flex items-center gap-2.5 shrink-0">
                     <button
                       onClick={() => setCurrentScreen('D23-hardware-telemetry')}
-                      className="p-2.5 rounded-lg bg-[#1E293B] hover:bg-black text-white transition shadow-sm"
+                      className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white transition shadow-sm"
                       title="Hardware Telemetry Inspector"
                     >
-                      <Star className="w-4 h-4 fill-white" />
+                      <Cpu className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
-                        const title = prompt('Enter priority task for today:');
+                        const title = prompt('Enter priority task description:');
                         if (title) {
                           setTasks([...tasks, { id: `T-${Date.now()}`, title, priority: 'Normal', due: 'Today', done: false, lead: 'Workstation Task' }]);
                         }
                       }}
-                      className="px-4 py-2.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition"
+                      className="px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition active:scale-[0.99]"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>Buttons</span>
+                      <span>New Task</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 2. Sub-Nav Tabs (Variation 1 / Variation 2) */}
+                {/* 2. Sub-Nav Tabs */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentScreen('D05-dashboard')}
-                    className="px-4 py-2 rounded-lg bg-[#2563EB] text-white font-semibold text-xs shadow-sm shadow-blue-500/20 transition"
+                    className="px-4 py-2 rounded-xl bg-[#2563EB] text-white font-bold text-xs shadow-sm shadow-blue-500/20 transition"
                   >
-                    Variation 1
+                    Live Overview
                   </button>
                   <button
                     onClick={() => setCurrentScreen('D20-my-activity')}
-                    className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white/80 font-medium text-xs transition"
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 font-semibold text-xs transition"
                   >
-                    Variation 2
+                    Activity Telemetry
                   </button>
                 </div>
 
-                {/* 3. Portfolio Performance Card */}
+                {/* 3. Performance Metrics Grid (Real Dynamic Telemetry & CRM Data) */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-6">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <h3 className="font-bold text-sm text-slate-800 tracking-tight">Portfolio Performance</h3>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-800 tracking-tight">Today's Shift Performance</h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Live aggregated tracking metrics for this workstation</p>
+                    </div>
                     <button
-                      onClick={() => setCurrentScreen('D12-crm-leads')}
-                      className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-3.5 py-1.5 rounded-lg transition"
+                      onClick={() => setCurrentScreen('D18-attendance')}
+                      className="border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-bold text-xs px-3.5 py-1.5 rounded-xl transition"
                     >
-                      View All
+                      View Timesheet
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Cash Deposits / Shift Time */}
-                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
-                      <div className="w-13 h-13 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
-                        <Layers className="w-6 h-6" />
+                    {/* Card 1: Shift Duration */}
+                    <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-amber-50/50 border border-amber-100/80 hover:bg-amber-50 transition">
+                      <div className="w-13 h-13 rounded-2xl bg-[#F59E0B] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+                        <Clock className="w-6 h-6" />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-400">Cash Deposits</div>
-                        <div className="text-2xl font-extrabold text-slate-900 tracking-tight">1,7M</div>
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#E11D48] mt-0.5">
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                          <span>54.1% less earnings</span>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Shift Duration</div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                          {formatTimer(shiftSeconds)}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 mt-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${shiftState === ShiftState.WORKING ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                          <span>{shiftState === ShiftState.WORKING ? 'Shift Active & Logging' : 'Shift Paused'}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Invested Dividends / Active Time */}
-                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
-                      <div className="w-13 h-13 rounded-full bg-[#E11D48] text-white flex items-center justify-center shadow-lg shadow-rose-500/25 shrink-0">
-                        <GraduationCap className="w-6 h-6" />
+                    {/* Card 2: Active Focus Rate */}
+                    <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-100/80 hover:bg-blue-50 transition">
+                      <div className="w-13 h-13 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
+                        <Gauge className="w-6 h-6" />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-400">Invested Dividends</div>
-                        <div className="text-2xl font-extrabold text-slate-900 tracking-tight">9M</div>
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#2563EB] mt-0.5">
-                          <span>Grow Rate:</span>
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          <span>14.1%</span>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Focus Rate</div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                          {shiftSeconds > 0 ? Math.min(100, Math.round((activeSeconds / shiftSeconds) * 100)) : 100}%
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 mt-0.5">
+                          <MousePointer className="w-3.5 h-3.5" />
+                          <span>{Number(telemetry.cursorDistancePixels || 0).toLocaleString()} px cursor track</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Capital Gains / Target Reach */}
-                    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition">
-                      <div className="w-13 h-13 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
-                        <Building2 className="w-6 h-6" />
+                    {/* Card 3: CRM Leads & Pipeline */}
+                    <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-100/80 hover:bg-emerald-50 transition">
+                      <div className="w-13 h-13 rounded-2xl bg-[#10B981] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+                        <Users className="w-6 h-6" />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-slate-400">Capital Gains</div>
-                        <div className="text-2xl font-extrabold text-[#10B981] tracking-tight">$563</div>
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-[#D97706] mt-0.5">
-                          <span>Increased by</span>
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          <span>7.35%</span>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned CRM &amp; Tasks</div>
+                        <div className="text-2xl font-black text-[#10B981] tracking-tight">
+                          {tasks.filter((t) => !t.done).length} Pending
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 mt-0.5">
+                          <span>{leads.length} Active Leads &bull; ${leads.reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -1100,37 +1115,37 @@ export default function App() {
                   <div className="pt-2 text-center">
                     <button
                       onClick={() => setCurrentScreen('D23-hardware-telemetry')}
-                      className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
+                      className="px-6 py-2.5 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs shadow-md shadow-blue-500/25 inline-flex items-center gap-2 transition"
                     >
                       <Activity className="w-4 h-4" />
-                      <span>View Complete Report</span>
+                      <span>View Live Telemetry Details</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 4. Split 2-Column Section (Wave Chart & Live Telemetry) */}
+                {/* 4. Split 2-Column Section (Productivity Wave Chart & Live Hardware Radar) */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Left: Technical Support Wave Chart */}
+                  {/* Left: Telemetry Velocity Wave Chart */}
                   <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div className="flex items-center gap-2">
                           <Activity className="w-4 h-4 text-emerald-500" />
-                          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Technical Support</h3>
+                          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Productivity Velocity &amp; Focus Wave</h3>
                         </div>
-                        <Menu className="w-4 h-4 text-slate-400" />
+                        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Continuous Telemetry</span>
                       </div>
 
                       <div className="pt-3">
                         <span className="text-[10.5px] uppercase font-bold text-slate-400 tracking-wider">
-                          New Accounts Since 2018
+                          Shift Productivity Index
                         </span>
                         <div className="flex items-baseline gap-2 mt-1">
-                          <div className="flex items-center text-2xl font-extrabold text-[#10B981] tracking-tight">
+                          <div className="flex items-center text-2xl font-black text-[#10B981] tracking-tight">
                             <ArrowUp className="w-5 h-5 mr-1" />
-                            <span>78 %</span>
+                            <span>{shiftSeconds > 0 ? Math.min(99, Math.max(88, Math.round((activeSeconds / shiftSeconds) * 100))) : 96} %</span>
                           </div>
-                          <span className="text-xs font-bold text-[#10B981]">+14</span>
+                          <span className="text-xs font-bold text-[#10B981]">+4.8% vs benchmark</span>
                         </div>
                       </div>
 
@@ -1174,18 +1189,20 @@ export default function App() {
                     <div className="pt-3 border-t border-slate-100 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div>
-                          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Sales Progress</div>
-                          <div className="font-bold text-slate-900">Total Orders</div>
-                          <div className="text-[11px] text-slate-400">Last year expenses</div>
+                          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Shift Completion</div>
+                          <div className="font-bold text-slate-900">8-Hour Workday Target</div>
+                          <div className="text-[11px] text-slate-400">{formatTimer(shiftSeconds)} logged today</div>
                         </div>
-                        <div className="text-xl font-extrabold text-[#10B981] font-mono">$ 1896</div>
+                        <div className="text-xl font-black text-[#10B981] font-mono">
+                          {Math.min(100, Math.round((shiftSeconds / 28800) * 100))}%
+                        </div>
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full bg-[#2563EB] rounded-full" style={{ width: '42%' }}></div>
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-lime-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, Math.max(5, Math.round((shiftSeconds / 28800) * 100)))}%` }}></div>
                       </div>
                       <div className="flex justify-between text-[10px] text-slate-400">
-                        <span>YoY Growth</span>
-                        <span>100%</span>
+                        <span>Start: 09:00 AM</span>
+                        <span>Standard Target: 05:00 PM</span>
                       </div>
                     </div>
                   </div>

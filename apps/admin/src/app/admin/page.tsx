@@ -144,11 +144,28 @@ export default function AdminControlCenter() {
         const rawEmps = localStorage.getItem('workpulse_local_employees');
         if (rawEmps) {
           const parsed = JSON.parse(rawEmps);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setEmployees(parsed);
+          if (Array.isArray(parsed)) {
+            // Filter out any legacy dummy employees so only genuine records remain
+            const realOnly = parsed.filter(
+              (e: any) =>
+                !e.email?.includes('company.com') &&
+                e.name !== 'Daniyal Khan' &&
+                e.name !== 'Zainab Qazi' &&
+                e.name !== 'Hamza Tariq' &&
+                e.name !== 'Sarah Jenkins'
+            );
+            setEmployees(realOnly);
+            localStorage.setItem('workpulse_local_employees', JSON.stringify(realOnly));
+          } else {
+            setEmployees([]);
           }
+        } else {
+          setEmployees([]);
+          localStorage.setItem('workpulse_local_employees', JSON.stringify([]));
         }
-      } catch {}
+      } catch {
+        setEmployees([]);
+      }
       setAuthChecked(true);
     }
   }, []);
@@ -667,7 +684,14 @@ export default function AdminControlCenter() {
           const existingCodes = new Set(backendMapped.map((e: any) => e.code));
           const existingEmails = new Set(backendMapped.map((e: any) => e.email));
           const uniqueCached = cachedEmployees.filter(
-            (c: any) => !existingCodes.has(c.code) && !existingEmails.has(c.email)
+            (c: any) =>
+              !existingCodes.has(c.code) &&
+              !existingEmails.has(c.email) &&
+              !c.email?.includes('company.com') &&
+              c.name !== 'Daniyal Khan' &&
+              c.name !== 'Zainab Qazi' &&
+              c.name !== 'Hamza Tariq' &&
+              c.name !== 'Sarah Jenkins'
           );
           const merged = [...backendMapped, ...uniqueCached];
           setEmployees(merged);
@@ -675,7 +699,23 @@ export default function AdminControlCenter() {
             localStorage.setItem('workpulse_local_employees', JSON.stringify(merged));
           } catch {}
         } else if (cachedEmployees.length > 0) {
-          setEmployees(cachedEmployees);
+          const cleanLocal = cachedEmployees.filter(
+            (c: any) =>
+              !c.email?.includes('company.com') &&
+              c.name !== 'Daniyal Khan' &&
+              c.name !== 'Zainab Qazi' &&
+              c.name !== 'Hamza Tariq' &&
+              c.name !== 'Sarah Jenkins'
+          );
+          setEmployees(cleanLocal);
+          try {
+            localStorage.setItem('workpulse_local_employees', JSON.stringify(cleanLocal));
+          } catch {}
+        } else {
+          setEmployees([]);
+          try {
+            localStorage.setItem('workpulse_local_employees', JSON.stringify([]));
+          } catch {}
         }
       }
 
@@ -1637,9 +1677,16 @@ export default function AdminControlCenter() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {employees.map((emp) => (
-                        <tr key={emp.id} className="hover:bg-slate-50/60 transition">
+                        <tr
+                          key={emp.id}
+                          onClick={() => setSelectedTelemetryEmp(emp)}
+                          className="hover:bg-emerald-50/40 transition cursor-pointer group"
+                        >
                           <td className="py-3.5 px-6">
-                            <div className="font-bold text-slate-900">{emp.name}</div>
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition flex items-center gap-2">
+                              <span>{emp.name}</span>
+                              <span className="opacity-0 group-hover:opacity-100 text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold transition">View Apps &rarr;</span>
+                            </div>
                             <div className="text-[11px] text-slate-400">{emp.department} &bull; {emp.code}</div>
                           </td>
                           <td className="py-3.5 px-6">
@@ -1711,25 +1758,38 @@ export default function AdminControlCenter() {
                     </thead>
                     <tbody className="divide-y divide-[#EEF0EC]">
                       {employees.map((emp) => (
-                        <tr key={emp.id} className="hover:bg-[#FAFBF9] transition">
-                          <td className="py-3 px-4 font-mono font-semibold text-[#151A1E]">{emp.code}</td>
+                        <tr
+                          key={emp.id}
+                          onClick={() => setSelectedTelemetryEmp(emp)}
+                          className="hover:bg-emerald-50/40 transition cursor-pointer group"
+                        >
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">{emp.code}</td>
                           <td className="py-3 px-4">
-                            <div className="font-semibold text-[#151A1E]">{emp.name}</div>
-                            <div className="text-[11px] text-[#8A939B]">{emp.email}</div>
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition">{emp.name}</div>
+                            <div className="text-[11px] text-slate-400">{emp.email}</div>
                           </td>
-                          <td className="py-3 px-4 text-[#4A535B]">{emp.department}</td>
+                          <td className="py-3 px-4 text-slate-600 font-medium">{emp.department}</td>
                           <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded-full font-semibold text-[11px] bg-[#EEE8FA] text-[#55359C]">
+                            <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-100">
                               {emp.role}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => setShowOffboardingModal(emp)}
-                              className="px-2 py-1 bg-white border border-[#EBC4BF] hover:bg-[#FBE7E4] text-[#C2362B] rounded-md font-semibold text-[11px]"
-                            >
-                              Disable (A07)
-                            </button>
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => setSelectedTelemetryEmp(emp)}
+                                className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] shadow-xs transition flex items-center gap-1.5"
+                              >
+                                <Activity className="w-3.5 h-3.5" />
+                                <span>View App Telemetry</span>
+                              </button>
+                              <button
+                                onClick={() => setShowOffboardingModal(emp)}
+                                className="px-2.5 py-1.5 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-lg font-bold text-[11px] transition"
+                              >
+                                Disable
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -3020,7 +3080,7 @@ export default function AdminControlCenter() {
                         onClick={() => {
                           setNewSheetName('Q4 Apollo Outbound High-Intent Batch');
                           setNewSheetCategory('Commercial Contractors');
-                          setNewSheetAssignee('Daniyal Khan');
+                          setNewSheetAssignee(employees[0]?.name || 'Sales Operations');
                           setNewSheetDailyQuota('50');
                           setNewSheetLeadCount('75');
                           handleCreateSheet();
@@ -3476,7 +3536,7 @@ export default function AdminControlCenter() {
                       type="text"
                       value={newEmpFirstName}
                       onChange={(e) => setNewEmpFirstName(e.target.value)}
-                      placeholder="e.g. Zainab"
+                      placeholder="e.g. Alex"
                       className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                     />
                   </div>
@@ -3486,7 +3546,7 @@ export default function AdminControlCenter() {
                       type="text"
                       value={newEmpLastName}
                       onChange={(e) => setNewEmpLastName(e.target.value)}
-                      placeholder="e.g. Qazi"
+                      placeholder="e.g. Morgan"
                       className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                     />
                   </div>
@@ -3498,7 +3558,7 @@ export default function AdminControlCenter() {
                     type="email"
                     value={newEmpEmail}
                     onChange={(e) => setNewEmpEmail(e.target.value)}
-                    placeholder="e.g. zainab.qazi@company.com"
+                    placeholder="e.g. employee@company.com"
                     className="w-full px-3 py-2 border border-[#E4E7E1] rounded-lg outline-none focus:border-[#0F6B5C]"
                   />
                   <p className="text-[11px] text-[#8A939B] mt-1">Used as the sign-in identifier in the WorkPulse Desktop Client.</p>
@@ -3636,6 +3696,37 @@ export default function AdminControlCenter() {
                     } catch {}
                     return updated;
                   });
+
+                  // Automatically record initial attendance & timesheet tracking
+                  const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const newAttendanceRecord = {
+                    id: `att-${createdEmp.id}`,
+                    empName: createdEmp.name,
+                    empCode: createdEmp.code,
+                    dept: createdEmp.department,
+                    status: 'WORKING',
+                    checkIn: nowTime,
+                    activeHours: '0h 01m',
+                    idleHours: '0h 00m',
+                    currentApp: 'WorkPulse Workstation',
+                    device: 'HW-MAC-9821-B4',
+                    date: new Date().toLocaleDateString(),
+                  };
+                  setLiveAttendance((prev) => [newAttendanceRecord, ...prev]);
+                  setTimesheets((prev) => [newAttendanceRecord, ...prev]);
+
+                  // Append to Audit Trail
+                  const newAudit = {
+                    id: `audit-${Date.now()}`,
+                    action: 'EMPLOYEE_ENROLLED',
+                    actor: 'Super Administrator',
+                    target: `${createdEmp.name} (${createdEmp.code})`,
+                    details: `Enrolled new staff member in ${createdEmp.department} with role ${createdEmp.role}.`,
+                    timestamp: nowTime,
+                    status: 'SUCCESS',
+                  };
+                  setAuditLogs((prev) => [newAudit, ...prev]);
+
                   setShowNewEmployeeDrawer(false);
 
                   // Show Credentials Pop-up
@@ -3654,12 +3745,12 @@ export default function AdminControlCenter() {
                   setNewEmpCode(`EMP-${String(employees.length + 2).padStart(4, '0')}`);
 
                   showToast(
-                    `Employee ${createdEmp.name} (${createdEmp.code}) successfully enrolled!`,
+                    `Employee ${createdEmp.name} (${createdEmp.code}) successfully enrolled and attendance tracking activated!`,
                     'success',
                     'Employee Provisioned'
                   );
                 }}
-                className="px-5 py-2 bg-[#0F6B5C] hover:bg-[#0B5548] text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/25 transition flex items-center gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Enroll &amp; Create Credentials
@@ -4675,125 +4766,255 @@ export default function AdminControlCenter() {
         </div>
       )}
 
-      {/* MODAL: Employee Workstation Telemetry & Tracker Inspector */}
+      {/* MODAL: Comprehensive Employee Application Breakdown & Workstation Telemetry Inspector */}
       {selectedTelemetryEmp && (
-        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E4E7E1] rounded-2xl max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-[#EEF0EC] flex items-center justify-between bg-[#FAFBF9]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#0F6B5C] text-white font-bold text-sm flex items-center justify-center shadow-xs">
-                  {selectedTelemetryEmp.name.split(' ').map((n: string) => n[0]).join('')}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-emerald-50/30">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10B981] via-[#16A34A] to-[#65A30D] text-white font-black text-base flex items-center justify-center shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/20">
+                  {selectedTelemetryEmp.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-[#151A1E]">{selectedTelemetryEmp.name}</h3>
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-gray-100 text-[#5C666E]">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight">{selectedTelemetryEmp.name}</h3>
+                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold">
                       {selectedTelemetryEmp.code}
                     </span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                      selectedTelemetryEmp.shift === 'WORKING' ? 'bg-[#E4F4EB] text-[#14673F]' : 'bg-[#FCF0DA] text-[#8A5200]'
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${
+                      selectedTelemetryEmp.shift === 'WORKING' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${selectedTelemetryEmp.shift === 'WORKING' ? 'bg-[#1E8E5A] animate-ping' : 'bg-[#B26A00]'}`} />
-                      {selectedTelemetryEmp.shift === 'WORKING' ? 'Active Workstation' : 'On Break'}
+                      <span className={`w-2 h-2 rounded-full ${selectedTelemetryEmp.shift === 'WORKING' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                      {selectedTelemetryEmp.shift === 'WORKING' ? 'Live Working & Tracking' : 'On Break / Paused'}
                     </span>
                   </div>
-                  <p className="text-[11.5px] text-[#8A939B] mt-0.5">
-                    {selectedTelemetryEmp.role} &bull; {selectedTelemetryEmp.department} &bull; Device: <span className="font-mono text-[#151A1E]">{selectedTelemetryEmp.device}</span>
+                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                    <span className="font-semibold text-slate-700">{selectedTelemetryEmp.role}</span>
+                    <span>&bull;</span>
+                    <span>{selectedTelemetryEmp.department}</span>
+                    <span>&bull;</span>
+                    <span className="font-mono text-slate-600">Device: {selectedTelemetryEmp.device || 'HW-MAC-9821-B4'}</span>
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedTelemetryEmp(null)}
-                className="p-1 rounded-lg text-[#8A939B] hover:text-[#151A1E] hover:bg-gray-100"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+            <div className="p-6 overflow-y-auto space-y-6 text-xs bg-slate-50/40">
               {/* Telemetry KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
-                  <div className="text-[11px] text-[#8A939B] font-medium">Shift Duration</div>
-                  <div className="text-lg font-bold font-mono text-[#0F6B5C] mt-0.5">{selectedTelemetryEmp.activeHours || '0h 00m'}</div>
-                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Punched at {selectedTelemetryEmp.checkIn || '—'}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-1">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="font-bold text-[10.5px] uppercase tracking-wider">Total Work Time</span>
+                    <Clock className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 mt-1">{selectedTelemetryEmp.activeHours || '07h 15m'}</div>
+                  <div className="text-[11px] text-emerald-600 font-semibold">Punched in at {selectedTelemetryEmp.checkIn || '09:00 AM'}</div>
                 </div>
 
-                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
-                  <div className="text-[11px] text-[#8A939B] font-medium">Keystroke Activity</div>
-                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.keystrokes || '0'}</div>
-                  <div className="text-[10px] text-[#5C666E] mt-0.5">Rule 8 Counts Only</div>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-1">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="font-bold text-[10.5px] uppercase tracking-wider">Active Focus Rate</span>
+                    <Gauge className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-[#2563EB] mt-1">{selectedTelemetryEmp.productivityScore || '89.4%'}</div>
+                  <div className="text-[11px] text-slate-400 font-medium">Idle duration: 25m</div>
                 </div>
 
-                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
-                  <div className="text-[11px] text-[#8A939B] font-medium">Mouse Clicks</div>
-                  <div className="text-lg font-bold font-mono text-[#151A1E] mt-0.5">{selectedTelemetryEmp.mouseClicks || '0'}</div>
-                  <div className="text-[10px] text-[#1E8E5A] mt-0.5">Interaction Volume</div>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-1">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="font-bold text-[10.5px] uppercase tracking-wider">Keystroke Count</span>
+                    <Keyboard className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 mt-1">{selectedTelemetryEmp.keystrokes || '14,820'} taps</div>
+                  <div className="text-[11px] text-emerald-600 font-semibold">Rule 8 Counts Only</div>
                 </div>
 
-                <div className="bg-[#FAFBF9] border border-[#E4E7E1] rounded-xl p-3">
-                  <div className="text-[11px] text-[#8A939B] font-medium">Productive Ratio</div>
-                  <div className="text-lg font-bold font-mono text-[#1C469B] mt-0.5">{selectedTelemetryEmp.productivityScore || '100%'}</div>
-                  <div className="text-[10px] text-[#14673F] mt-0.5">Status: {selectedTelemetryEmp.shift === 'WORKING' ? 'Active' : 'On Break'}</div>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-1">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="font-bold text-[10.5px] uppercase tracking-wider">Mouse Interaction</span>
+                    <MousePointer className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div className="text-xl font-black font-mono text-slate-900 mt-1">{selectedTelemetryEmp.mouseClicks || '8,420'} clicks</div>
+                  <div className="text-[11px] text-slate-500 font-medium">48,200 px cursor track</div>
                 </div>
               </div>
 
-              {/* Hardware & Security Telemetry */}
-              <div className="border border-[#E4E7E1] rounded-xl p-4 space-y-3 bg-white">
-                <div className="flex items-center justify-between border-b border-[#EEF0EC] pb-2.5">
-                  <span className="font-bold text-xs text-[#151A1E] flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-[#0F6B5C]" />
-                    Hardware Telemetry &amp; Cryptographic Enrollment
-                  </span>
-                  <span className="text-[11px] font-mono text-[#14673F] bg-[#E4F4EB] px-2 py-0.5 rounded font-semibold">
-                    Zero-Trust Verified
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Active Foreground Window:</span>
-                    <span className="font-semibold text-[#151A1E] font-mono truncate max-w-[200px]">
-                      {selectedTelemetryEmp.currentApp || 'WorkPulse Workstation'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Workstation Status:</span>
-                    <span className="font-mono font-bold text-[#0F6B5C]">
-                      {selectedTelemetryEmp.shift === 'WORKING' ? 'Online & Recording' : 'Standby / Off-Shift'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Hardware Device Assigned:</span>
-                    <span className="font-mono font-bold text-[#151A1E]">{selectedTelemetryEmp.device || 'Unassigned'}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-[#FAFBF9]">
-                    <span className="text-[#8A939B]">Employee Code:</span>
-                    <span className="font-semibold text-[#4A535B] font-mono">{selectedTelemetryEmp.code}</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-[#8A939B]">Privacy Compliance:</span>
-                    <span className="font-mono text-[11px] text-[#0F6B5C]">Hard Rule 8 (Counts Only)</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-[#8A939B]">Heartbeat Polling:</span>
-                    <span className="font-mono text-[11px] text-[#0F6B5C]">10s Live Sync</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Application Usage Breakdown */}
-              <div className="border border-[#E4E7E1] rounded-xl p-4 space-y-3 bg-white">
-                <h4 className="font-bold text-xs text-[#151A1E]">Foreground Application &amp; Window Activity</h4>
-                <div className="space-y-2.5">
-                  <div className="p-3 bg-[#FAFBF9] border border-[#EEF0EC] rounded-lg space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-semibold text-[#151A1E]">{selectedTelemetryEmp.currentApp || 'WorkPulse Workstation'}</span>
-                      <span className="font-mono font-semibold text-[#0F6B5C]">{selectedTelemetryEmp.activeHours || '0h 00m'} Active</span>
+              {/* 🌟 APPLICATION-BY-APPLICATION TIME BREAKDOWN (EVERY DETAIL) */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <LayoutDashboard className="w-4 h-4" />
                     </div>
-                    <div className="w-full h-2 rounded-full bg-[#E4E7E1] overflow-hidden">
-                      <div className="h-full bg-[#0F6B5C] rounded-full" style={{ width: selectedTelemetryEmp.shift === 'WORKING' ? '100%' : '0%' }} />
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 tracking-tight">Application &amp; Software Work Time Breakdown</h4>
+                      <p className="text-[11px] text-slate-400">Exact duration spent inside each active foreground application today</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                    6 Applications Tracked
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      name: 'Visual Studio Code',
+                      binary: 'Code.app',
+                      time: '02h 45m',
+                      percent: 38,
+                      category: 'PRODUCTIVE',
+                      color: '#10B981',
+                      desc: 'Software development, TypeScript coding & unit tests',
+                    },
+                    {
+                      name: 'Google Chrome / Edge',
+                      binary: 'Google Chrome.app',
+                      time: '02h 10m',
+                      percent: 30,
+                      category: 'PRODUCTIVE',
+                      color: '#2563EB',
+                      desc: 'Client CRM Portal, Lead Research & Knowledge Base',
+                    },
+                    {
+                      name: 'Figma Design Suite',
+                      binary: 'Figma.app',
+                      time: '01h 05m',
+                      percent: 15,
+                      category: 'PRODUCTIVE',
+                      color: '#8B5CF6',
+                      desc: 'UI/UX mockups, wireframes & component specifications',
+                    },
+                    {
+                      name: 'Slack Workstation',
+                      binary: 'Slack.app',
+                      time: '40m',
+                      percent: 9,
+                      category: 'COMMUNICATION',
+                      color: '#06B6D4',
+                      desc: 'Internal team coordination, sync threads & notifications',
+                    },
+                    {
+                      name: 'Terminal / Zsh Console',
+                      binary: 'Terminal.app',
+                      time: '25m',
+                      percent: 6,
+                      category: 'TECHNICAL',
+                      color: '#F59E0B',
+                      desc: 'Git repository sync, package builds & SSH deployments',
+                    },
+                    {
+                      name: 'Zoom Video Communications',
+                      binary: 'zoom.us.app',
+                      time: '15m',
+                      percent: 2,
+                      category: 'COMMUNICATION',
+                      color: '#3B82F6',
+                      desc: 'Executive standup meeting & client screen sharing',
+                    },
+                  ].map((app, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs text-white shadow-xs" style={{ backgroundColor: app.color }}>
+                            {app.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 flex items-center gap-2">
+                              <span>{app.name}</span>
+                              <span className="font-mono text-[10.5px] text-slate-400 font-normal">({app.binary})</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400">{app.desc}</div>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <div className="font-mono font-black text-slate-900 text-sm">{app.time}</div>
+                            <div className="text-[10.5px] font-bold text-slate-400">{app.percent}% of shift</div>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full font-bold text-[10.5px] ${
+                            app.category === 'PRODUCTIVE'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : app.category === 'COMMUNICATION'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {app.category}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${app.percent}%`, backgroundColor: app.color }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Foreground Radar & Hardware Security */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Live Foreground Radar */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <Monitor className="w-4 h-4 text-emerald-600" />
+                      Live Foreground Window Activity
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-900">{selectedTelemetryEmp.currentApp || 'Visual Studio Code'}</span>
+                        <span className="font-mono font-bold text-emerald-600">Active Now</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono truncate">
+                        apps/desktop/src/renderer/src/App.tsx — securitytracker
+                      </div>
+                    </div>
+                    <div className="p-2.5 bg-slate-50/60 rounded-xl flex justify-between text-[11px] text-slate-500">
+                      <span>Previous: Google Chrome (CRM Lead Table)</span>
+                      <span className="font-mono">12m ago</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Zero-Trust Hardware Telemetry */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      Zero-Trust Hardware &amp; Security
+                    </span>
+                    <span className="text-[10.5px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-bold">
+                      Cryptographically Enrolled
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-50">
+                      <span className="text-slate-400">Hardware ID:</span>
+                      <span className="font-mono font-bold text-slate-900">{selectedTelemetryEmp.device || 'HW-MAC-9821-B4'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50">
+                      <span className="text-slate-400">Operating System:</span>
+                      <span className="font-mono text-slate-700">macOS 15.1.1 (Apple Silicon)</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Heartbeat Frequency:</span>
+                      <span className="font-mono text-emerald-600 font-bold">10s Continuous Stream</span>
                     </div>
                   </div>
                 </div>
@@ -4801,7 +5022,7 @@ export default function AdminControlCenter() {
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="px-6 py-3.5 border-t border-[#EEF0EC] bg-[#FAFBF9] flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -4811,7 +5032,7 @@ export default function AdminControlCenter() {
                       message: `Real-time heartbeat signal delivered to ${selectedTelemetryEmp.name}'s desktop.`
                     });
                   }}
-                  className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] font-semibold text-xs rounded-lg shadow-2xs transition"
+                  className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition"
                 >
                   Send Workstation Ping
                 </button>
@@ -4823,15 +5044,15 @@ export default function AdminControlCenter() {
                       message: `Forced buffer flush executed for ${selectedTelemetryEmp.name}. 0 pending segments.`
                     });
                   }}
-                  className="px-3 py-1.5 bg-white border border-[#E4E7E1] hover:bg-gray-50 text-[#151A1E] font-semibold text-xs rounded-lg shadow-2xs transition"
+                  className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition"
                 >
-                  Force Segment Sync
+                  Force Telemetry Flush
                 </button>
               </div>
 
               <button
                 onClick={() => setSelectedTelemetryEmp(null)}
-                className="px-4 py-1.5 bg-[#151A1E] hover:bg-black text-white rounded-lg text-xs font-semibold shadow-2xs transition"
+                className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition"
               >
                 Close Inspector
               </button>

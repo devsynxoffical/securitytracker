@@ -31,8 +31,8 @@ module.exports = {
         'gray-bar': '#B5BCC2',
       },
       fontFamily: {
-        sans: ['IBM Plex Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['IBM Plex Mono', 'monospace'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
       borderRadius: {
         card: '10px',
