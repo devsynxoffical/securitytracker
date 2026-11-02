@@ -1,0 +1,222 @@
+export interface Me {
+  id: string;
+  companyId: string;
+  code: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  role: { id: string; name: string; rank: number; permissions: Array<{ key: string; scope: string }> };
+  department?: { id: string; name: string } | null;
+  team?: { id: string; name: string } | null;
+  consentRequired?: boolean;
+  policyVersion?: number;
+  mustChangePassword?: boolean;
+}
+
+export interface ShiftSnapshot {
+  state: 'OFF_SHIFT' | 'WORKING' | 'ON_BREAK';
+  shiftId: string | null;
+  startedAt: string | null;
+  currentBreakType: string | null;
+  breakStartedAt: string | null;
+  durationSeconds: number;
+  breakSeconds: number;
+  activeSeconds: number;
+  idleSeconds: number;
+  pendingEvents: number;
+  queuedSegments: number;
+  lastSyncAt: string | null;
+  online: boolean;
+  anchored: boolean;
+  tracker: {
+    source: 'agent' | 'dev' | 'none';
+    connected: boolean;
+    tracking: boolean;
+    paused: boolean;
+    queueSize: number;
+    queuePercent: number;
+    extensionConnected: boolean;
+    currentApp: { processName: string; appName: string; domain: string | null } | null;
+  } | null;
+}
+
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  statusId?: string | null;
+  statusRef?: { id: string; name: string; colour: string; group: string } | null;
+  priority: string;
+  dueAt: string | null;
+  startAt?: string | null;
+  listId?: string | null;
+  list?: { id: string; name: string; space?: { id: string; name: string; colour: string } } | null;
+  assignees?: Array<{ employee: { id: string; firstName: string; lastName: string } }>;
+  lead?: { id: string; name: string } | null;
+  timeEstimateS?: number | null;
+  timeSpentS?: number;
+  completedAt?: string | null;
+}
+
+export interface TaskComment {
+  id: string;
+  body: string;
+  authorId: string;
+  createdAt: string;
+  author?: { firstName: string; lastName: string } | null;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  companyName: string | null;
+  value: string | number | null;
+  currency: string;
+  followUpAt: string | null;
+  doNotCall: boolean;
+  isClient: boolean;
+  convertedAt?: string | null;
+  priority?: string;
+  stage: { id: string; name: string; type: string; position: number };
+  pipeline?: { id: string; name: string; stages?: Stage[] };
+  owner?: { id: string; firstName: string; lastName: string } | null;
+  phones: Array<{ phoneE164: string; label: string; isPrimary: boolean }>;
+  emails: Array<{ emailLower: string; label: string; isPrimary: boolean }>;
+  notes?: Array<{ id: string; body: string; createdAt: string }>;
+  callLogs?: Array<{ id: string; direction: string; outcome: string; durationSeconds: number; notes: string | null; occurredAt: string }>;
+  appointments?: Array<{ id: string; title: string; startsAt: string; endsAt: string; status: string }>;
+  timeline?: Array<{ id: string; type: string; data: Record<string, unknown>; occurredAt: string }>;
+}
+
+export interface Stage {
+  id: string;
+  name: string;
+  type: 'open' | 'won' | 'lost';
+  position: number;
+}
+export interface Pipeline {
+  id: string;
+  name: string;
+  entity: 'lead' | 'deal';
+  isDefault: boolean;
+  stages: Stage[];
+}
+
+export interface Mailbox {
+  id: string;
+  address: string;
+  displayName: string;
+  tokenStatus: string;
+  permissions?: string[];
+}
+export interface Conversation {
+  id: string;
+  subject: string;
+  snippet: string | null;
+  participants: Array<{ name?: string; email: string }> | unknown;
+  lastMessageAt: string;
+  unread: boolean;
+  status: string;
+  assigneeId: string | null;
+  labels?: Array<{ label: { id: string; name: string; colour: string } }>;
+}
+export interface ThreadDetail {
+  id: string;
+  subject: string;
+  messages: Array<{ id: string; fromAddr: string; toAddrs: string[]; sentAt: string; snippet: string | null; gmailMessageId: string }>;
+}
+
+export interface LeaveType {
+  id: string;
+  name: string;
+  code: string;
+  colour: string;
+  paid: boolean;
+  allowHalfDay: boolean;
+  isActive: boolean;
+}
+export interface LeaveBalance {
+  leaveTypeId: string;
+  leaveType?: LeaveType;
+  year: number;
+  entitledDays: string | number;
+  carriedOverDays: string | number;
+  usedDays: string | number;
+  pendingDays: string | number;
+  adjustmentsDays: string | number;
+  availableDays?: string | number;
+}
+export interface LeaveRequest {
+  id: string;
+  leaveTypeId: string | null;
+  leaveType?: { name: string; colour: string } | null;
+  type: string;
+  dateFrom: string;
+  dateTo: string;
+  days: string | number;
+  halfDay: boolean;
+  reason: string;
+  status: string;
+  comment: string | null;
+  createdAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  publishedAt: string;
+  read?: boolean;
+  readAt?: string | null;
+}
+
+export interface TargetProgress {
+  targetId?: string;
+  metricKey: string;
+  period: string;
+  value: number;
+  targetValue: number;
+  percent?: number;
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface Activity {
+  id: string;
+  type: string;
+  subject: string | null;
+  body: string | null;
+  status: string | null;
+  dueAt: string | null;
+  entityType: string;
+  entityId: string;
+  entityName?: string | null;
+}
+
+export interface TrackingSummary {
+  trackedS?: number;
+  activeS?: number;
+  idleS?: number;
+  productiveS?: number;
+  neutralS?: number;
+  unproductiveS?: number;
+  days?: Array<{ date: string; trackedS: number; activeS: number; idleS: number; productiveS: number; neutralS: number; unproductiveS: number }>;
+  [key: string]: unknown;
+}
