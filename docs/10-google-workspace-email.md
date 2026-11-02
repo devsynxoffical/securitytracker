@@ -141,9 +141,26 @@ Disabling an employee or removing an assignment needs no action at Google: the e
 
 Bodies are not stored. `GET /mail/mailboxes/:id/messages/:messageId/body` fetches the message from the provider on demand (Gmail `messages.get format=full`, IMAP `FETCH` by UID), sanitises the HTML server side (scripts, forms, remote images blocked until the user allows them per FR-MAIL-05) and returns it with the attachment list. `GET /mail/mailboxes/:id/messages/:messageId/attachments/:partId` streams one attachment to callers holding the `download` permission and writes a `download_attachment` audit entry.
 
+## 8c. IMAP/SMTP mailboxes (option D)
+
+| Method | Path | Permission | Behaviour |
+|---|---|---|---|
+| POST | /mail/mailboxes/imap/test | mail.accounts.manage | Logs in to IMAP (SELECT INBOX) and SMTP (EHLO + AUTH) with the submitted settings; returns `{imap:{ok,messages,error}, smtp:{ok,error}}`; stores nothing |
+| POST | /mail/mailboxes/imap | mail.accounts.manage | Runs the same test, then creates the mailbox (`provider=imap`, password AES-256-GCM encrypted), grants the admin every mailbox permission, writes audit `connect` and triggers the first sync |
+| PATCH | /mail/mailboxes/:id/imap | mail.accounts.manage | Changes host, port, TLS, username, display name or password; re-tested before saving; a changed server or account resets the UID cursor; audit `reconnect` |
+| DELETE | /mail/mailboxes/:id | mail.accounts.manage | Disconnect for Gmail and IMAP: credentials wiped, `tokenStatus=disconnected`, threads, messages and audit kept; audit `disconnect` |
+
+Sync: INBOX is polled by UID (`UIDVALIDITY` + last UID cursor stored on the mailbox; a changed `UIDVALIDITY` restarts from the last 30 days). Messages are parsed once; the conversation key is the referenced message's thread (In-Reply-To, then References newest first), otherwise the message's own Message-ID. Mail sent from the mailbox itself (From equals the mailbox address) is stored as outbound and never reopens a conversation. IMAP is read-only: nothing is flagged, moved or deleted. Sync runs through the same `gmail-sync` queue job as Gmail; without Redis the two-minute fallback job syncs IMAP mailboxes inline. A rejected login sets `tokenStatus=revoked`, raises the `mailbox_token_revoked` alert and notifies the connecting admin, exactly as for Gmail.
+
+Send: SMTP with the mailbox credentials; the message carries a generated `Message-ID`, `In-Reply-To` and `References` built from the conversation, and the identical bytes are appended to the provider's `\Sent` folder (best effort). Threads, messages, audit (`send`/`reply`), lead timeline and the `emails_sent` metric are written as for Gmail. Gmail mailboxes still send through the Gmail API.
+
+Credentials: `password_enc` and `refresh_token_enc` never leave the API (every mailbox response is stripped). The health view reports `provider`, `imapHost`, `smtpHost` and `username` so admins can recognise the account.
+
+Platform mail (password reset links, F30) is a separate transactional sender configured with `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM`; when unset, non-production responses keep returning `devResetUrl`.
+
 ## 9. Out of scope for 1.0
 
-Calendar, contacts sync, label management, mail templates and sequences, tracking pixels, thread assignment, non-Google mail providers.
+Calendar, contacts sync, label management, mail templates and sequences, tracking pixels, thread assignment.
 
 ## 10. Implementation notes
 

@@ -24,8 +24,9 @@ function syncService(prisma: any, client: Partial<GmailClient>, configured = tru
   const notifications: any = { sendNotification: vi.fn().mockResolvedValue({}) };
   const gateway: any = { emitToUser: vi.fn() };
   const factory: any = { configured: () => configured, oauth: () => (configured ? { clientId: 'x', clientSecret: 'y', redirectUri: 'z' } : null), forRefreshToken: vi.fn().mockReturnValue(client) };
-  const svc = new MailSyncService(prisma, clock, config, conversations, notifications, gateway, factory);
-  return { svc, conversations, notifications, gateway, clock };
+  const imapSync: any = { syncMailbox: vi.fn().mockResolvedValue({ mailboxId: MB, mode: 'incremental', fetched: 0, inbound: 0, outbound: 0, historyId: null }) };
+  const svc = new MailSyncService(prisma, clock, config, conversations, notifications, gateway, factory, imapSync);
+  return { svc, conversations, notifications, gateway, clock, imapSync };
 }
 
 const mailboxRow = (over: Record<string, unknown> = {}) => ({
@@ -177,7 +178,7 @@ describe('MailService demo refusal', () => {
     prisma.mailboxAssignment.findUnique.mockResolvedValue({ permissions: ['send'] });
     prisma.mailbox.findUnique.mockResolvedValue(mailboxRow({ tokenStatus: 'demo' }));
     const clock = new ClockService();
-    const mail = new MailService(prisma, clock, new ConfigService({}), { get: vi.fn() } as any, { emitToUser: vi.fn() } as any, { recordMetricEvent: vi.fn() } as any, { configured: () => false, oauth: () => null, forRefreshToken: vi.fn() } as any, { trigger: vi.fn(), setHandler: vi.fn() } as any);
+    const mail = new MailService(prisma, clock, new ConfigService({}), { get: vi.fn() } as any, { emitToUser: vi.fn() } as any, { recordMetricEvent: vi.fn() } as any, { configured: () => false, oauth: () => null, forRefreshToken: vi.fn() } as any, { trigger: vi.fn(), setHandler: vi.fn() } as any, { settingsFor: vi.fn(), imap: vi.fn(), forMailbox: vi.fn(), verifySmtp: vi.fn(), sendSmtp: vi.fn(), encryptPassword: vi.fn() } as any);
     await expect(mail.sendMail(MB, 'emp', 'c1', { to: ['a@x.com'], subject: 'x', html: '<p>x</p>' }, '127.0.0.1')).rejects.toMatchObject({ status: 422, message: expect.stringContaining('demo') });
   });
 });

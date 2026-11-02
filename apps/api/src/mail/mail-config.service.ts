@@ -92,16 +92,17 @@ export class MailConfigService {
     const now = this.clock.now();
     const rows = await this.prisma.mailbox.findMany({
       where: { companyId },
-      select: { id: true, address: true, displayName: true, tokenStatus: true, lastSyncAt: true, watchExpiresAt: true, createdAt: true, _count: { select: { assignments: true, threads: true } } },
+      select: { id: true, address: true, displayName: true, provider: true, imapHost: true, smtpHost: true, username: true, tokenStatus: true, lastSyncAt: true, watchExpiresAt: true, createdAt: true, _count: { select: { assignments: true, threads: true } } },
       orderBy: { address: 'asc' },
     });
     const items = rows.map((m) => {
       const staleSync = m.lastSyncAt ? now.getTime() - m.lastSyncAt.getTime() > 15 * 60_000 : true;
-      const watchExpired = m.watchExpiresAt ? m.watchExpiresAt.getTime() < now.getTime() : true;
-      const health = m.tokenStatus === 'demo' ? 'demo' : m.tokenStatus !== 'ok' ? 'error' : staleSync || watchExpired ? 'warning' : 'ok';
+      // IMAP mailboxes poll; only Gmail has a push watch that can expire.
+      const watchExpired = m.provider === 'imap' ? false : m.watchExpiresAt ? m.watchExpiresAt.getTime() < now.getTime() : true;
+      const health = m.tokenStatus === 'demo' ? 'demo' : m.tokenStatus === 'disconnected' ? 'disconnected' : m.tokenStatus !== 'ok' ? 'error' : staleSync || watchExpired ? 'warning' : 'ok';
       return { ...m, assignmentsCount: m._count.assignments, threadsCount: m._count.threads, staleSync, watchExpired, health };
     });
-    return { items, googleConfigured: this.googleConfigured() };
+    return { items, googleConfigured: this.googleConfigured(), imapSupported: true };
   }
 
   googleConfigured(): boolean {

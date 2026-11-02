@@ -17,14 +17,36 @@ import {
   SaveDraftDto,
   MailboxAssignmentDto,
   MailboxPermission,
+  MailProvider,
   WebSocketEvents,
   MetricKey,
   NotificationType,
+  ImapMailboxSettingsDto,
+  UpdateImapMailboxDto,
 } from '@company-os/contracts';
 import { Prisma } from '@prisma/client';
 import { UnprocessableEntityException } from '@nestjs/common';
-import { GmailClient, GmailClientFactory, buildRawMessage } from './gmail-client.js';
+import { GmailClient, GmailClientFactory, buildRawMessage, extractGmailBody } from './gmail-client.js';
 import { MailSyncTrigger, DEMO_TOKEN_STATUS } from './mail-sync.trigger.js';
+import { ImapClientFactory, ImapConnectionError, ImapSettings, SmtpSettings, angleBracketed, composeRaw, extractAttachment, makeMessageId, parseRfc822, AttachmentMeta } from './imap-client.js';
+import { sanitizeMailHtml } from './mail-sanitizer.js';
+
+/** Columns that never leave the server (rule 6). */
+const SECRET_COLUMNS = ['refreshTokenEnc', 'passwordEnc'] as const;
+
+export function publicMailbox<T extends Record<string, unknown>>(row: T): Omit<T, (typeof SECRET_COLUMNS)[number]> {
+  const copy: Record<string, unknown> = { ...row };
+  for (const c of SECRET_COLUMNS) delete copy[c];
+  return copy as Omit<T, (typeof SECRET_COLUMNS)[number]>;
+}
+
+export interface MessageBody {
+  id: string;
+  html: string;
+  text: string | null;
+  attachments: AttachmentMeta[];
+  remoteImagesBlocked: number;
+}
 
 @Injectable()
 export class MailService {
@@ -40,6 +62,7 @@ export class MailService {
     private readonly targetsService: TargetsService,
     private readonly gmail: GmailClientFactory,
     private readonly syncTrigger: MailSyncTrigger,
+    private readonly imap: ImapClientFactory,
   ) {
     this.encryptionKey =
       this.config.get<string>('ENCRYPTION_SECRET') ||
@@ -165,7 +188,7 @@ export class MailService {
    */
   async listMailboxes(companyId: string, employeeId: string, isAdmin = false) {
     if (isAdmin) {
-      return this.prisma.mailbox.findMany({
+      const rows = await this.prisma.mailbox.findMany({
         where: { companyId },
         include: {
           assignments: {
@@ -177,6 +200,7 @@ export class MailService {
           },
         },
       });
+      return rows.map((r) => publicMailbox(r));
     }
 
     const assignments = await this.prisma.mailboxAssignment.findMany({
@@ -187,9 +211,211 @@ export class MailService {
     });
 
     return assignments.map((a) => ({
-      ...a.mailbox,
+      ...publicMailbox(a.mailbox),
       permissions: a.permissions,
     }));
+  }
+
+  // ---- IMAP/SMTP mailboxes (10 section 2 option D) ---------------------------
+
+  /** Logs in to IMAP and SMTP with the given settings; nothing is stored. */
+  async testImap(dto: Omit<ImapMailboxSettingsDto, 'address' | 'displayName'>): Promise<{ imap: { ok: boolean; messages?: number; error?: string }; smtp: { ok: boolean; error?: string } }> {
+    const settings = this.imapSettings(dto);
+    const imap = await this.imap
+      .imap(settings.imap)
+      .testConnection()
+      .then((r) => ({ ok: true as const, messages: r.messages }))
+      .catch((e: Error) => ({ ok: false as const, error: e.message }));
+    const smtp = await this.imap
+      .verifySmtp(settings.smtp)
+      .then(() => ({ ok: true as const }))
+      .catch((e: Error) => ({ ok: false as const, error: e.message }));
+    return { imap, smtp };
+  }
+
+  /** Creates an IMAP mailbox after a successful connection test; the admin gets every permission. */
+  async connectImap(companyId: string, adminId: string, dto: ImapMailboxSettingsDto, ip: string) {
+    const address = dto.address.toLowerCase();
+    const existing = await this.prisma.mailbox.findUnique({ where: { address }, select: { id: true, companyId: true, tokenStatus: true } });
+    if (existing && (existing.companyId !== companyId || existing.tokenStatus !== 'disconnected')) {
+      throw new UnprocessableEntityException(`A mailbox for ${address} is already connected`);
+    }
+    await this.assertImapWorks(dto);
+    const now = this.clock.now();
+    const data = {
+      displayName: dto.displayName,
+      provider: MailProvider.IMAP,
+      refreshTokenEnc: null,
+      imapHost: dto.imapHost,
+      imapPort: dto.imapPort,
+      imapSecure: dto.imapSecure,
+      smtpHost: dto.smtpHost,
+      smtpPort: dto.smtpPort,
+      smtpSecure: dto.smtpSecure,
+      username: dto.username,
+      passwordEnc: this.imap.encryptPassword(dto.password),
+      tokenStatus: 'ok',
+      historyId: null,
+      lastUidValidity: null,
+      lastUid: null,
+      watchExpiresAt: null,
+    };
+    const mailbox = existing
+      ? await this.prisma.mailbox.update({ where: { id: existing.id }, data })
+      : await this.prisma.mailbox.create({ data: { ...data, companyId, address, connectedBy: adminId, createdAt: now } });
+    await this.prisma.mailboxAssignment.upsert({
+      where: { mailboxId_employeeId: { mailboxId: mailbox.id, employeeId: adminId } },
+      create: { mailboxId: mailbox.id, employeeId: adminId, permissions: Object.values(MailboxPermission), assignedBy: adminId, createdAt: now },
+      update: { permissions: Object.values(MailboxPermission) },
+    });
+    await this.prisma.mailAudit.create({ data: { mailboxId: mailbox.id, employeeId: adminId, action: 'connect', subject: address, ip, occurredAt: now } });
+    await this.syncTrigger.trigger(mailbox.id);
+    return publicMailbox(mailbox);
+  }
+
+  /** Changes server settings or the password of an IMAP mailbox; re-tested before saving. */
+  async updateImap(companyId: string, adminId: string, mailboxId: string, dto: UpdateImapMailboxDto, ip: string) {
+    const mailbox = await this.getCompanyMailbox(companyId, mailboxId);
+    if (mailbox.provider !== MailProvider.IMAP) throw new UnprocessableEntityException('Only IMAP mailboxes have server settings; Gmail mailboxes reconnect through Google.');
+    const current = mailbox.passwordEnc ? this.imap.settingsFor(mailbox) : null;
+    const merged: Omit<ImapMailboxSettingsDto, 'address' | 'displayName'> = {
+      imapHost: dto.imapHost ?? mailbox.imapHost ?? '',
+      imapPort: dto.imapPort ?? mailbox.imapPort ?? 993,
+      imapSecure: dto.imapSecure ?? mailbox.imapSecure,
+      smtpHost: dto.smtpHost ?? mailbox.smtpHost ?? '',
+      smtpPort: dto.smtpPort ?? mailbox.smtpPort ?? 465,
+      smtpSecure: dto.smtpSecure ?? mailbox.smtpSecure,
+      username: dto.username ?? mailbox.username ?? '',
+      password: dto.password ?? current?.imap.password ?? '',
+    };
+    if (!merged.password) throw new BadRequestException('A password is required to reconnect this mailbox');
+    await this.assertImapWorks(merged);
+    const hostChanged = merged.imapHost !== mailbox.imapHost || merged.username !== mailbox.username;
+    const updated = await this.prisma.mailbox.update({
+      where: { id: mailbox.id },
+      data: {
+        displayName: dto.displayName ?? undefined,
+        imapHost: merged.imapHost,
+        imapPort: merged.imapPort,
+        imapSecure: merged.imapSecure,
+        smtpHost: merged.smtpHost,
+        smtpPort: merged.smtpPort,
+        smtpSecure: merged.smtpSecure,
+        username: merged.username,
+        passwordEnc: dto.password ? this.imap.encryptPassword(dto.password) : undefined,
+        tokenStatus: 'ok',
+        // a different server or account means the UID cursor is meaningless
+        ...(hostChanged ? { lastUidValidity: null, lastUid: null } : {}),
+      },
+    });
+    await this.prisma.mailAudit.create({ data: { mailboxId: mailbox.id, employeeId: adminId, action: 'reconnect', subject: mailbox.address, ip, occurredAt: this.clock.now() } });
+    await this.syncTrigger.trigger(mailbox.id);
+    return publicMailbox(updated);
+  }
+
+  /** Removes the credentials and stops syncing; threads, messages and audit stay for the record. */
+  async disconnectMailbox(companyId: string, adminId: string, mailboxId: string, ip: string) {
+    const mailbox = await this.getCompanyMailbox(companyId, mailboxId);
+    this.assertNotDemo(mailbox);
+    const updated = await this.prisma.mailbox.update({
+      where: { id: mailbox.id },
+      data: { refreshTokenEnc: null, passwordEnc: null, tokenStatus: 'disconnected', watchExpiresAt: null },
+    });
+    await this.prisma.mailAudit.create({ data: { mailboxId: mailbox.id, employeeId: adminId, action: 'disconnect', subject: mailbox.address, ip, occurredAt: this.clock.now() } });
+    return publicMailbox(updated);
+  }
+
+  private imapSettings(dto: Omit<ImapMailboxSettingsDto, 'address' | 'displayName'>): { imap: ImapSettings; smtp: SmtpSettings } {
+    return {
+      imap: { host: dto.imapHost, port: dto.imapPort, secure: dto.imapSecure, username: dto.username, password: dto.password },
+      smtp: { host: dto.smtpHost, port: dto.smtpPort, secure: dto.smtpSecure, username: dto.username, password: dto.password },
+    };
+  }
+
+  private async assertImapWorks(dto: Omit<ImapMailboxSettingsDto, 'address' | 'displayName'>) {
+    const r = await this.testImap(dto);
+    const errors = [r.imap.ok ? null : r.imap.error, r.smtp.ok ? null : r.smtp.error].filter(Boolean);
+    if (errors.length > 0) throw new UnprocessableEntityException(errors.join(' '));
+  }
+
+  // ---- bodies and attachments (10 section 8b) ---------------------------------
+
+  /** Fetches the body from the provider on open; HTML is sanitised and remote images are blocked by default. */
+  async getMessageBody(mailboxId: string, employeeId: string, messageId: string, allowRemote: boolean, ip: string, deviceId?: string): Promise<MessageBody> {
+    await this.verifyPermission(mailboxId, employeeId, MailboxPermission.READ);
+    const { message, mailbox } = await this.messageWithMailbox(mailboxId, messageId);
+    let html: string | null = null;
+    let text: string | null = null;
+    let attachments: AttachmentMeta[] = [];
+    if (mailbox.tokenStatus === DEMO_TOKEN_STATUS) {
+      text = message.snippet ?? '';
+    } else if (mailbox.provider === MailProvider.IMAP) {
+      const parsed = await this.imapSource(mailbox, message);
+      html = parsed.html;
+      text = parsed.text;
+      attachments = parsed.attachments;
+    } else {
+      const body = extractGmailBody(await this.gmailClient(mailbox).getMessageFull(message.gmailMessageId));
+      html = body.html;
+      text = body.text;
+      attachments = body.attachments.map(({ attachmentId: _a, ...meta }) => meta);
+    }
+    const sanitised = sanitizeMailHtml(html, allowRemote);
+    await this.prisma.mailAudit.create({
+      data: { mailboxId, employeeId, action: 'open', gmailMessageId: message.gmailMessageId, subject: message.thread.subject, ip, deviceId: deviceId || null, occurredAt: this.clock.now() },
+    });
+    return { id: message.id, html: sanitised.html, text, attachments, remoteImagesBlocked: sanitised.remoteImagesBlocked };
+  }
+
+  async getAttachment(mailboxId: string, employeeId: string, messageId: string, partId: string, ip: string, deviceId?: string): Promise<{ fileName: string; mime: string; content: Buffer }> {
+    await this.verifyPermission(mailboxId, employeeId, MailboxPermission.DOWNLOAD);
+    const { message, mailbox } = await this.messageWithMailbox(mailboxId, messageId);
+    this.assertNotDemo(mailbox);
+    let file: { fileName: string; mime: string; content: Buffer } | null = null;
+    if (mailbox.provider === MailProvider.IMAP) {
+      file = await extractAttachment(await this.imapRawSource(mailbox, message), partId);
+    } else {
+      const client = this.gmailClient(mailbox);
+      const body = extractGmailBody(await client.getMessageFull(message.gmailMessageId));
+      const att = body.attachments.find((a) => a.partId === partId);
+      if (att) file = { fileName: att.fileName, mime: att.mime, content: await client.getAttachment(message.gmailMessageId, att.attachmentId) };
+    }
+    if (!file) throw new NotFoundException('Attachment not found');
+    await this.prisma.mailAudit.create({
+      data: { mailboxId, employeeId, action: 'download_attachment', gmailMessageId: message.gmailMessageId, subject: file.fileName, ip, deviceId: deviceId || null, occurredAt: this.clock.now() },
+    });
+    return file;
+  }
+
+  private async messageWithMailbox(mailboxId: string, messageId: string) {
+    const message = await this.prisma.mailMessage.findFirst({
+      where: { id: messageId, thread: { mailboxId } },
+      include: { thread: { select: { subject: true, mailbox: true } } },
+    });
+    if (!message) throw new NotFoundException('Message not found');
+    return { message, mailbox: message.thread.mailbox };
+  }
+
+  private gmailClient(mailbox: { refreshTokenEnc: string | null; address: string }): GmailClient {
+    if (!this.gmail.configured()) throw new UnprocessableEntityException('Google OAuth client is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)');
+    if (!mailbox.refreshTokenEnc) throw new UnprocessableEntityException(`Mailbox ${mailbox.address} is not connected. Reconnect it under Mail > Mailboxes.`);
+    return this.gmail.forRefreshToken(CryptoUtil.decryptField(mailbox.refreshTokenEnc, this.encryptionKey));
+  }
+
+  private async imapRawSource(mailbox: Parameters<ImapClientFactory['forMailbox']>[0], message: { uid: number | null; gmailMessageId: string; id: string }): Promise<Buffer> {
+    const client = this.imap.forMailbox(mailbox);
+    let uid = message.uid;
+    if (uid === null) {
+      uid = await client.findUidByMessageId(message.gmailMessageId);
+      if (uid !== null) await this.prisma.mailMessage.update({ where: { id: message.id }, data: { uid } });
+    }
+    const source = uid === null ? null : await client.fetchSource(uid);
+    if (!source) throw new NotFoundException('The message is no longer on the mail server');
+    return source;
+  }
+
+  private async imapSource(mailbox: Parameters<ImapClientFactory['forMailbox']>[0], message: { uid: number | null; gmailMessageId: string; id: string; sentAt: Date }) {
+    return parseRfc822(await this.imapRawSource(mailbox, message), { date: message.sentAt, messageId: message.gmailMessageId });
   }
 
   /**
@@ -354,16 +580,37 @@ export class MailService {
     }
 
     const now = this.clock.now();
-    let gmailMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    let gmailThreadId = dto.replyToThreadId || `th_${Date.now()}`;
+    let gmailMessageId = `msg_${now.getTime()}_${Math.random().toString(36).slice(2, 8)}`;
+    let gmailThreadId = dto.replyToThreadId || `th_${now.getTime()}`;
+    const replyTo = dto.replyToThreadId
+      ? await this.prisma.mailThread.findFirst({
+          where: { mailboxId, OR: [{ id: dto.replyToThreadId }, { gmailThreadId: dto.replyToThreadId }] },
+          select: { gmailThreadId: true, messages: { orderBy: { sentAt: 'asc' }, select: { gmailMessageId: true }, take: 20 } },
+        })
+      : null;
 
-    // Real send through Gmail when the OAuth client is configured (10 section 4.4).
-    if (this.gmail.configured()) {
-      const replyTo = dto.replyToThreadId
-        ? await this.prisma.mailThread.findFirst({ where: { mailboxId, OR: [{ id: dto.replyToThreadId }, { gmailThreadId: dto.replyToThreadId }] }, select: { gmailThreadId: true } })
-        : null;
-      const raw = buildRawMessage({ from: mailbox.address, to: dto.to, cc: dto.cc, bcc: dto.bcc, subject: dto.subject, html: dto.html, inReplyTo: dto.replyToMessageId, references: dto.replyToMessageId });
-      const client = this.gmail.forRefreshToken(CryptoUtil.decryptField(mailbox.refreshTokenEnc ?? '', this.encryptionKey));
+    if (mailbox.provider === MailProvider.IMAP) {
+      // SMTP send with In-Reply-To/References threading, then a copy into the Sent folder (10 option D).
+      const settings = this.imap.settingsFor(mailbox);
+      const references = replyTo ? replyTo.messages.map((m) => m.gmailMessageId).filter((id) => !id.startsWith('uid-')) : [];
+      const inReplyTo = dto.replyToMessageId ?? references[references.length - 1];
+      const messageId = makeMessageId(mailbox.address);
+      const raw = await composeRaw({ from: mailbox.address, fromName: mailbox.displayName, to: dto.to, cc: dto.cc, bcc: dto.bcc, subject: dto.subject, html: dto.html, inReplyTo, references, messageId });
+      try {
+        await this.imap.sendSmtp(settings.smtp, raw, { from: mailbox.address, to: [...dto.to, ...(dto.cc ?? []), ...(dto.bcc ?? [])] });
+      } catch (e) {
+        throw new UnprocessableEntityException(`The mail server refused the message: ${(e as Error).message}`);
+      }
+      this.imap
+        .imap(settings.imap)
+        .appendSent(raw, now)
+        .catch((e: ImapConnectionError) => this.logger.warn(`sent-folder append failed for mailbox ${mailbox.id}: ${e.message}`));
+      gmailMessageId = messageId.replace(/^<|>$/g, '');
+      gmailThreadId = replyTo?.gmailThreadId ?? gmailMessageId;
+    } else if (this.gmail.configured()) {
+      // Real send through Gmail when the OAuth client is configured (10 section 4.4).
+      const raw = buildRawMessage({ from: mailbox.address, to: dto.to, cc: dto.cc, bcc: dto.bcc, subject: dto.subject, html: dto.html, inReplyTo: dto.replyToMessageId ? angleBracketed(dto.replyToMessageId) : undefined, references: dto.replyToMessageId ? angleBracketed(dto.replyToMessageId) : undefined });
+      const client = this.gmailClient(mailbox);
       const sent = await client.send(raw, replyTo?.gmailThreadId);
       gmailMessageId = sent.id;
       gmailThreadId = sent.threadId;
@@ -552,7 +799,7 @@ export class MailService {
   /** Demo mailboxes carry synthetic data and never talk to Google. */
   assertNotDemo(mailbox: { tokenStatus: string }) {
     if (mailbox.tokenStatus === DEMO_TOKEN_STATUS) {
-      throw new UnprocessableEntityException('This is a demo mailbox with synthetic data. Connect a real Google Workspace mailbox to send or sync.');
+      throw new UnprocessableEntityException('This is a demo mailbox with synthetic data. Connect a real mailbox (Google Workspace or IMAP) to send or sync.');
     }
   }
 

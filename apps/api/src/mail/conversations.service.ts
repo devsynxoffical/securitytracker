@@ -30,6 +30,10 @@ export interface InboundMessage {
   snippet?: string;
   sentAt: Date;
   hasAttachments?: boolean;
+  /** [{partId, fileName, mime, size}] when the provider delivers the MIME tree at sync time (IMAP). */
+  attachments?: Array<{ partId: string; fileName: string; mime: string; size: number }>;
+  /** IMAP UID inside INBOX; lets the body endpoint fetch the source without a header search. */
+  uid?: number;
 }
 
 /** Shared-inbox collaboration layer on top of mail_threads (17-mail-collaboration-spec.md). */
@@ -323,6 +327,8 @@ export class ConversationsService {
           sentAt: msg.sentAt,
           snippet: msg.snippet ?? null,
           hasAttachments: msg.hasAttachments ?? false,
+          attachments: (msg.attachments ?? []) as Prisma.InputJsonValue,
+          uid: msg.uid ?? null,
         },
         update: {},
       });

@@ -102,6 +102,50 @@ export function toMessageMeta(raw: {
   };
 }
 
+export interface GmailPart {
+  partId?: string;
+  mimeType?: string;
+  filename?: string;
+  headers?: Array<{ name: string; value: string }>;
+  body?: { attachmentId?: string; size?: number; data?: string };
+  parts?: GmailPart[];
+}
+
+export interface GmailFullMessage {
+  id: string;
+  threadId: string;
+  payload?: GmailPart;
+}
+
+export interface GmailBody {
+  html: string | null;
+  text: string | null;
+  attachments: Array<{ partId: string; fileName: string; mime: string; size: number; attachmentId: string }>;
+}
+
+function decodeBody(data: string | undefined): string {
+  return data ? Buffer.from(data, 'base64url').toString('utf8') : '';
+}
+
+/** Walks a `messages.get?format=full` payload: first text/html and text/plain bodies plus attachment parts. */
+export function extractGmailBody(msg: GmailFullMessage): GmailBody {
+  const out: GmailBody = { html: null, text: null, attachments: [] };
+  const walk = (part: GmailPart | undefined) => {
+    if (!part) return;
+    const mime = (part.mimeType ?? '').toLowerCase();
+    if (part.filename && part.body?.attachmentId) {
+      out.attachments.push({ partId: part.partId ?? String(out.attachments.length), fileName: part.filename, mime: mime || 'application/octet-stream', size: part.body.size ?? 0, attachmentId: part.body.attachmentId });
+    } else if (mime === 'text/html' && out.html === null && part.body?.data) {
+      out.html = decodeBody(part.body.data);
+    } else if (mime === 'text/plain' && out.text === null && part.body?.data) {
+      out.text = decodeBody(part.body.data);
+    }
+    for (const p of part.parts ?? []) walk(p);
+  };
+  walk(msg.payload);
+  return out;
+}
+
 /** Builds an RFC 2822 message and returns the base64url string Gmail expects. */
 export function buildRawMessage(opts: { from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; html: string; inReplyTo?: string; references?: string }): string {
   const boundary = `b_${Date.now().toString(36)}`;
@@ -229,6 +273,16 @@ export class GmailClient {
   }
 
   /** users.watch on INBOX and SENT; expiration is a ms epoch string. */
+  /** Full MIME tree for the body endpoint (10 section 8b); not stored, fetched on open. */
+  getMessageFull(id: string): Promise<GmailFullMessage> {
+    return this.call<GmailFullMessage>(`/messages/${encodeURIComponent(id)}?format=full`);
+  }
+
+  async getAttachment(messageId: string, attachmentId: string): Promise<Buffer> {
+    const res = await this.call<{ data?: string; size?: number }>(`/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`);
+    return Buffer.from(res.data ?? '', 'base64url');
+  }
+
   async watch(): Promise<{ historyId: string; expiration: Date }> {
     if (!this.oauth.pubsubTopic) throw new GmailApiError(400, 'GMAIL_PUBSUB_TOPIC is not configured');
     const body = await this.call<{ historyId: string; expiration: string }>('/watch', {

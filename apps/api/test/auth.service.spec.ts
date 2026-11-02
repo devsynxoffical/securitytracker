@@ -185,3 +185,39 @@ describe('AuthService (Unit)', () => {
     ).rejects.toMatchObject({ response: { code: 'INVALID_DEVICE_SIGNATURE' } });
   });
 });
+
+describe('AuthService forgotPassword delivery (F30)', () => {
+  function build(mailer: any) {
+    const clock = new ClockService();
+    clock.setMockTime(new Date('2026-11-02T10:00:00.000Z'));
+    const prisma: any = {
+      employee: { findFirst: vi.fn().mockResolvedValue({ id: 'emp-1', email: 'ann@acme.com' }) },
+      loginEvent: { create: vi.fn().mockResolvedValue({}) },
+    };
+    const config: any = { get: vi.fn((k: string) => (k === 'ADMIN_ORIGIN' ? 'https://admin.acme.com' : k === 'NODE_ENV' ? 'production' : undefined)) };
+    return { svc: new AuthService(prisma, {} as any, config, clock, undefined, mailer), prisma };
+  }
+
+  it('sends the reset link by mail when the mailer is configured and hides the token in production', async () => {
+    const mailer = { configured: () => true, send: vi.fn().mockResolvedValue(true) };
+    const { svc } = build(mailer);
+    const r = await svc.forgotPassword({ email: 'Ann@Acme.com' } as any, '127.0.0.1');
+    expect(r).toEqual({ ok: true });
+    expect(mailer.send).toHaveBeenCalledWith(expect.objectContaining({ to: 'ann@acme.com', subject: 'Reset your password', text: expect.stringContaining('https://admin.acme.com/admin/reset?token=') }), 'password_reset');
+  });
+
+  it('still answers ok when the mail transport fails', async () => {
+    const mailer = { configured: () => true, send: vi.fn().mockRejectedValue(new Error('EAUTH')) };
+    const { svc } = build(mailer);
+    await expect(svc.forgotPassword({ email: 'ann@acme.com' } as any, '127.0.0.1')).resolves.toEqual({ ok: true });
+  });
+
+  it('does not call the mailer for unknown addresses or when it is not configured', async () => {
+    const mailer = { configured: () => false, send: vi.fn() };
+    const { svc, prisma } = build(mailer);
+    await svc.forgotPassword({ email: 'ann@acme.com' } as any, '127.0.0.1');
+    prisma.employee.findFirst.mockResolvedValue(null);
+    await svc.forgotPassword({ email: 'nobody@acme.com' } as any, '127.0.0.1');
+    expect(mailer.send).not.toHaveBeenCalled();
+  });
+});

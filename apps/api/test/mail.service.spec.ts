@@ -71,6 +71,7 @@ describe('MailService (Unit)', () => {
       targetsMock,
       { configured: () => false, oauth: () => null, forRefreshToken: vi.fn() } as any,
       { trigger: vi.fn().mockResolvedValue(false), setHandler: vi.fn() } as any,
+      { settingsFor: vi.fn(), imap: vi.fn(), forMailbox: vi.fn(), verifySmtp: vi.fn(), sendSmtp: vi.fn(), encryptPassword: vi.fn() } as any,
     );
   });
 

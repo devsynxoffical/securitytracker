@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -9,7 +11,9 @@ import {
   Request,
   Ip,
   Headers,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { MailService } from './mail.service.js';
 import { JwtAuthGuard, Public } from '../auth/guards/jwt-auth.guard.js';
 import { RbacGuard } from '../auth/guards/rbac.guard.js';
@@ -21,10 +25,21 @@ import {
   SendMailDto,
   SaveDraftDto,
   MailboxAssignmentDto,
+  ImapMailboxSettingsSchema,
+  ImapMailboxSettingsDto,
+  UpdateImapMailboxSchema,
+  UpdateImapMailboxDto,
+  PresenceSchema,
+  PresenceDto,
 } from '@company-os/contracts';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { PermissionsService } from '../auth/permissions.service.js';
 import { MailSyncService } from './mail-sync.service.js';
+import { PresenceService } from './presence.service.js';
+import { PrismaService } from '../common/prisma.service.js';
+
+const ImapTestSchema = ImapMailboxSettingsSchema.omit({ address: true, displayName: true });
+type ImapTestDto = Omit<ImapMailboxSettingsDto, 'address' | 'displayName'>;
 
 @Controller('mail')
 export class MailController {
@@ -32,7 +47,99 @@ export class MailController {
     private readonly mailService: MailService,
     private readonly permissions: PermissionsService,
     private readonly mailSync: MailSyncService,
+    private readonly presence: PresenceService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  // ---- IMAP/SMTP mailboxes (10 section 2 option D) ---------------------------
+
+  /** Connection test without saving anything; used by the connect form before submit. */
+  @Post('mailboxes/imap/test')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.accounts.manage')
+  testImap(@Body(new ZodValidationPipe(ImapTestSchema)) dto: ImapTestDto) {
+    return this.mailService.testImap(dto);
+  }
+
+  @Post('mailboxes/imap')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.accounts.manage')
+  connectImap(@Request() req: any, @Body(new ZodValidationPipe(ImapMailboxSettingsSchema)) dto: ImapMailboxSettingsDto, @Ip() ip: string) {
+    return this.mailService.connectImap(req.user.companyId, req.user.id, dto, ip);
+  }
+
+  @Patch('mailboxes/:id/imap')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.accounts.manage')
+  updateImap(@Request() req: any, @Param('id') mailboxId: string, @Body(new ZodValidationPipe(UpdateImapMailboxSchema)) dto: UpdateImapMailboxDto, @Ip() ip: string) {
+    return this.mailService.updateImap(req.user.companyId, req.user.id, mailboxId, dto, ip);
+  }
+
+  /** Disconnect: credentials are wiped, threads stay. Works for Gmail and IMAP mailboxes. */
+  @Delete('mailboxes/:id')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.accounts.manage')
+  disconnect(@Request() req: any, @Param('id') mailboxId: string, @Ip() ip: string) {
+    return this.mailService.disconnectMailbox(req.user.companyId, req.user.id, mailboxId, ip);
+  }
+
+  // ---- bodies and attachments (10 section 8b) ---------------------------------
+
+  @Get('mailboxes/:id/messages/:messageId/body')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.use')
+  getMessageBody(
+    @Request() req: any,
+    @Param('id') mailboxId: string,
+    @Param('messageId') messageId: string,
+    @Query('allowRemote') allowRemote: string | undefined,
+    @Ip() ip: string,
+    @Headers('x-device-id') deviceId?: string,
+  ) {
+    return this.mailService.getMessageBody(mailboxId, req.user.id, messageId, allowRemote === 'true', ip, deviceId);
+  }
+
+  @Get('mailboxes/:id/messages/:messageId/attachments/:partId')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.use')
+  async getAttachment(
+    @Request() req: any,
+    @Param('id') mailboxId: string,
+    @Param('messageId') messageId: string,
+    @Param('partId') partId: string,
+    @Ip() ip: string,
+    @Res() res: Response,
+    @Headers('x-device-id') deviceId?: string,
+  ) {
+    const file = await this.mailService.getAttachment(mailboxId, req.user.id, messageId, partId, ip, deviceId);
+    const safeName = file.fileName.replace(/[^\w.\-]+/g, '_').slice(0, 120) || 'attachment';
+    res.setHeader('Content-Type', file.mime);
+    res.setHeader('Content-Length', String(file.content.length));
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.end(file.content);
+  }
+
+  // ---- presence (FR-MAIL-19) ---------------------------------------------------
+
+  @Post('mailboxes/:id/threads/:threadId/presence')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.use')
+  async heartbeat(@Request() req: any, @Param('id') mailboxId: string, @Param('threadId') threadId: string, @Body(new ZodValidationPipe(PresenceSchema)) dto: PresenceDto) {
+    await this.mailService.verifyPermission(mailboxId, req.user.id, 'read');
+    const me = await this.prisma.employee.findUnique({ where: { id: req.user.id }, select: { firstName: true, lastName: true } });
+    const viewers = await this.presence.heartbeat(threadId, { employeeId: req.user.id, name: me ? `${me.firstName} ${me.lastName}`.trim() : 'Colleague' }, dto.action);
+    return { viewers };
+  }
+
+  @Get('mailboxes/:id/threads/:threadId/presence')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermission('mail.use')
+  async viewers(@Request() req: any, @Param('id') mailboxId: string, @Param('threadId') threadId: string) {
+    await this.mailService.verifyPermission(mailboxId, req.user.id, 'read');
+    return { viewers: await this.presence.viewers(threadId, req.user.id) };
+  }
 
   @Get('oauth/url')
   @UseGuards(JwtAuthGuard, RbacGuard)

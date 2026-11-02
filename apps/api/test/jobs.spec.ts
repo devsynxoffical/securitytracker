@@ -176,12 +176,15 @@ describe('MailJobsService', () => {
     const prisma = prismaMock();
     const { clock, config, registry } = deps();
     const conversations: any = { unsnoozeDue: vi.fn().mockResolvedValue({ reopened: 3 }) };
-    const mailSync: any = { configured: () => false, renewExpiringWatches: vi.fn(), syncMailbox: vi.fn() };
+    const mailSync: any = { configured: () => false, renewExpiringWatches: vi.fn(), syncMailbox: vi.fn().mockResolvedValue({ mode: 'incremental' }) };
     const trigger: any = { setHandler: vi.fn() };
     const svc = new MailJobsService(prisma, clock, config, conversations, registry, mailSync, trigger);
     expect(await svc.unsnooze()).toEqual({ reopened: 3 });
-    prisma.mailbox.findMany.mockResolvedValue([{ id: UUID(5) }]);
-    expect(await svc.enqueueAll()).toEqual({ mailboxes: 1, enqueued: 0, queueAvailable: false });
+    prisma.mailbox.findMany.mockResolvedValue([{ id: UUID(5), provider: 'gmail' }, { id: UUID(6), provider: 'imap' }]);
+    // without a queue, IMAP mailboxes still sync inline; Gmail ones wait for the queue
+    expect(await svc.enqueueAll()).toEqual({ mailboxes: 2, enqueued: 0, inline: 1, queueAvailable: false });
+    expect(mailSync.syncMailbox).toHaveBeenCalledTimes(1);
+    expect(mailSync.syncMailbox).toHaveBeenCalledWith(UUID(6));
     expect(await svc.watchRenew()).toMatchObject({ renewed: 0, skipped: true });
   });
 });

@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { NotificationType, WebSocketEvents } from '@company-os/contracts';
+import { MailProvider, NotificationType, WebSocketEvents } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service.js';
 import { ClockService } from '../common/clock.service.js';
 import { CryptoUtil } from '../common/crypto.util.js';
@@ -9,6 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { NotificationsGateway } from '../notifications/notifications.gateway.js';
 import { ConversationsService, InboundMessage } from './conversations.service.js';
 import { GmailApiError, GmailClient, GmailClientFactory, GmailMessageMeta } from './gmail-client.js';
+import { ImapSyncService } from './imap-sync.service.js';
 
 export interface SyncResult {
   mailboxId: string;
@@ -66,14 +67,27 @@ export class MailSyncService {
     private readonly notifications: NotificationsService,
     private readonly gateway: NotificationsGateway,
     private readonly gmail: GmailClientFactory,
+    private readonly imapSync: ImapSyncService,
   ) {}
 
-  /** Entry point for the worker, the webhook and the manual trigger. */
+  /**
+   * Entry point for the worker, the webhook and the manual trigger. Dispatches by provider: IMAP
+   * mailboxes never touch Google; Gmail mailboxes are skipped while the OAuth client is missing.
+   */
   async syncMailbox(mailboxId: string): Promise<SyncResult> {
     const mailbox = await this.prisma.mailbox.findUnique({ where: { id: mailboxId } });
     if (!mailbox) throw new NotFoundException('Mailbox not found');
     this.assertSyncable(mailbox);
+    if (mailbox.provider === MailProvider.IMAP) return this.imapSync.syncMailbox(mailbox);
+    if (!this.gmail.configured()) return { mailboxId, mode: 'skipped', fetched: 0, inbound: 0, outbound: 0, historyId: mailbox.historyId };
     return mailbox.historyId ? this.incrementalSync(mailboxId) : this.initialSync(mailboxId);
+  }
+
+  /** True when a sync for this mailbox can do something right now (used by the inline trigger). */
+  async canSync(mailboxId: string): Promise<boolean> {
+    const mailbox = await this.prisma.mailbox.findUnique({ where: { id: mailboxId }, select: { provider: true, tokenStatus: true } });
+    if (!mailbox || mailbox.tokenStatus === DEMO_TOKEN_STATUS || mailbox.tokenStatus === 'revoked' || mailbox.tokenStatus === 'disconnected') return false;
+    return mailbox.provider === MailProvider.IMAP || this.gmail.configured();
   }
 
   async initialSync(mailboxId: string): Promise<SyncResult> {
@@ -163,7 +177,7 @@ export class MailSyncService {
   /** Renews every healthy mailbox whose watch expires within 24 hours. */
   async renewExpiringWatches(): Promise<{ checked: number; renewed: number; failed: number }> {
     const now = this.clock.now();
-    const rows = await this.prisma.mailbox.findMany({ where: { tokenStatus: 'ok' }, select: { id: true, watchExpiresAt: true } });
+    const rows = await this.prisma.mailbox.findMany({ where: { tokenStatus: 'ok', provider: MailProvider.GMAIL }, select: { id: true, watchExpiresAt: true } });
     let renewed = 0;
     let failed = 0;
     for (const m of rows) {
@@ -190,7 +204,10 @@ export class MailSyncService {
       throw new UnprocessableEntityException('This is a demo mailbox with synthetic data; it cannot sync with Gmail.');
     }
     if (mailbox.tokenStatus === 'revoked') {
-      throw new UnprocessableEntityException('Mailbox access was revoked at Google. Reconnect the mailbox.');
+      throw new UnprocessableEntityException('Mailbox access was revoked by the provider. Reconnect the mailbox.');
+    }
+    if (mailbox.tokenStatus === 'disconnected') {
+      throw new UnprocessableEntityException('Mailbox was disconnected. Connect it again under Mail > Mailboxes.');
     }
   }
 

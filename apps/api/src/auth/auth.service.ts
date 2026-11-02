@@ -29,6 +29,7 @@ import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { CryptoUtil } from '../common/crypto.util';
 import { RedisService } from '../common/redis.service';
+import { MailerService } from '../common/mailer.service';
 
 const RESET_TTL_SECONDS = 30 * 60;
 
@@ -44,6 +45,7 @@ export class AuthService {
     private configService: ConfigService,
     private clock: ClockService,
     @Optional() private redis?: RedisService,
+    @Optional() private mailer?: MailerService,
   ) {}
 
   /**
@@ -66,7 +68,14 @@ export class AuthService {
 
     const isProd = this.configService.get<string>('NODE_ENV') === 'production';
     const adminOrigin = this.configService.get<string>('ADMIN_ORIGIN') || 'http://localhost:3000';
-    return isProd ? { ok: true } : { ok: true, devResetUrl: `${adminOrigin}/admin/reset?token=${raw}` };
+    const resetUrl = `${adminOrigin}/admin/reset?token=${raw}`;
+    if (this.mailer?.configured() && employee.email) {
+      // F30: the link goes by mail when SMTP_* is configured; the token itself is never logged.
+      await this.mailer.send(passwordResetMail(employee.email, resetUrl, RESET_TTL_SECONDS), 'password_reset').catch((e: Error) => {
+        this.logger.warn(`Password reset mail failed for employee ${employee.id}: ${e.message}`);
+      });
+    }
+    return isProd ? { ok: true } : { ok: true, devResetUrl: resetUrl };
   }
 
   /** F30 - Consumes a single-use token and sets the new password; all sessions of the account are revoked. */
@@ -755,4 +764,15 @@ export class AuthService {
       console.error('Failed to record login event:', e);
     }
   }
+}
+
+/** Plain transactional template; no personal data beyond the recipient address. */
+export function passwordResetMail(to: string, resetUrl: string, ttlSeconds: number): { to: string; subject: string; html: string; text: string } {
+  const minutes = Math.round(ttlSeconds / 60);
+  return {
+    to,
+    subject: 'Reset your password',
+    text: `We received a request to reset your password.\n\nOpen this link within ${minutes} minutes to choose a new one:\n${resetUrl}\n\nIf you did not ask for this, you can ignore this message; your password stays unchanged.`,
+    html: `<p>We received a request to reset your password.</p><p><a href="${resetUrl}">Choose a new password</a> (the link is valid for ${minutes} minutes).</p><p>If you did not ask for this, you can ignore this message; your password stays unchanged.</p>`,
+  };
 }

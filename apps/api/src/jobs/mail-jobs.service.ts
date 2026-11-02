@@ -81,11 +81,24 @@ export class MailJobsService implements OnModuleInit, OnModuleDestroy {
     return true;
   }
 
+  /** With a queue every healthy mailbox is enqueued; without one, IMAP mailboxes sync inline (they need no Google client). */
   async enqueueAll(): Promise<JobResult> {
-    const mailboxes = await this.prisma.mailbox.findMany({ where: { tokenStatus: 'ok' }, select: { id: true } });
+    const mailboxes = await this.prisma.mailbox.findMany({ where: { tokenStatus: 'ok' }, select: { id: true, provider: true } });
     let enqueued = 0;
-    for (const m of mailboxes) if (await this.enqueueSync(m.id)) enqueued += 1;
-    return { mailboxes: mailboxes.length, enqueued, queueAvailable: this.getQueue() !== null };
+    let inline = 0;
+    for (const m of mailboxes) {
+      if (await this.enqueueSync(m.id)) {
+        enqueued += 1;
+      } else if (m.provider === 'imap') {
+        try {
+          await this.mailSync.syncMailbox(m.id);
+          inline += 1;
+        } catch (e) {
+          this.logger.warn(`inline imap sync failed for ${m.id}: ${(e as Error).message}`);
+        }
+      }
+    }
+    return { mailboxes: mailboxes.length, enqueued, inline, queueAvailable: this.getQueue() !== null };
   }
 
   private connection() {
@@ -104,14 +117,13 @@ export class MailJobsService implements OnModuleInit, OnModuleDestroy {
     return this.queue;
   }
 
-  /** Worker: incremental history sync per mailbox (initial sync when no historyId yet). */
+  /** Worker: provider-aware sync per mailbox (Gmail history or IMAP UID cursor; initial sync when no cursor yet). */
   private startWorker() {
     this.worker = new Worker(
       GMAIL_SYNC_QUEUE,
       async (job) => {
         const mailboxId = String(job.data.mailboxId);
-        if (!this.mailSync.configured()) return { mailboxId, skipped: true, reason: 'google_not_configured' };
-        const r = await this.mailSync.syncMailbox(mailboxId);
+        const r = await this.mailSync.syncMailbox(mailboxId); // 'skipped' for Gmail without Google credentials
         return { mailboxId, mode: r.mode, fetched: r.fetched, inbound: r.inbound, outbound: r.outbound };
       },
       { connection: this.connection(), concurrency: 2 },

@@ -9,7 +9,7 @@ export const MAIL_SYNC_TOKEN = 'MAIL_SYNC_SERVICE';
 /**
  * Lets MailService trigger a sync without importing JobsModule or MailSyncService (both of which
  * depend on this module). JobsModule registers the queue-backed handler on start; otherwise the
- * sync runs inline when Google is configured.
+ * sync runs inline when the mailbox can sync (IMAP, or Gmail with Google configured).
  */
 @Injectable()
 export class MailSyncTrigger {
@@ -25,7 +25,7 @@ export class MailSyncTrigger {
   async trigger(mailboxId: string): Promise<boolean> {
     if (this.handler && (await this.handler(mailboxId))) return true;
     const sync = this.moduleRef.get<MailSyncService>(MAIL_SYNC_TOKEN, { strict: false });
-    if (!sync?.configured()) return false;
+    if (!sync || !(await sync.canSync(mailboxId))) return false;
     sync.syncMailbox(mailboxId).catch(() => undefined);
     return false;
   }
