@@ -12,7 +12,7 @@ Employee Management + Security + CRM Platform
 
 ## 1. What this is
 
-One platform with which a company controls identity, CRM, company email access, attendance, targets, activity tracking, devices and security from a single Admin Panel. Employees receive only a Windows desktop application and log in with company-issued credentials.
+One platform with which a company controls identity, CRM, company email access, attendance, targets, activity tracking, devices and security from a single Admin Panel. Employees receive only a desktop application (Windows and macOS) and log in with company-issued credentials.
 
 ## 2. Document set
 
@@ -37,6 +37,8 @@ One platform with which a company controls identity, CRM, company email access, 
 | 16-tracking-admin-spec.md | Timesheets, manual time, team activity, apps and URLs, uncategorised queue | Tracking admin work |
 | 17-mail-collaboration-spec.md | Shared inbox assignment, status, comments, labels, templates, CRM linking | Mail work |
 | 18-verification.md | Flow verification matrix: which test proves which flow, and what still needs a real environment | Before release |
+| 19-deployment-guide.md | Go-live on a VPS: DNS, Docker, environment, first start, GitHub secrets, desktop releases, smoke checks | Before hosting |
+| 20-desktop-install-guide.md | Desktop platforms, install steps for Windows and macOS, what the smoke test proves, data locations | Rollout and support |
 
 ## 3. Conventions
 

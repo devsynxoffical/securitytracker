@@ -9,7 +9,7 @@ Re-run everything: `pnpm test` (unit), `pnpm --filter @company-os/api test:e2e` 
 | Flow | What it covers | Unit | API e2e | UI e2e | Manual |
 |---|---|---|---|---|---|
 | F1 Setup | `GET /setup/status`, `POST /setup/bootstrap` creates company, system roles, Super Admin and module defaults; refused once any employee exists | setup.service.spec (3) | auth-mail (status, bootstrap guard) | sign-up wizard | - |
-| F2 First login, device registration, consent | Desktop login with device key pair, pending approval, consent | auth.service.spec (3: pending device, bad password, bad signature) | - | - | Desktop app on Windows |
+| F2 First login, device registration, consent | Desktop login with device key pair, pending approval, consent | auth.service.spec (3: pending device, bad password, bad signature) | apps/desktop/test/smoke.mjs (9: window, first-run server screen, bad address rejected, reachable API accepted, signed login round trip, no plaintext tokens, no renderer errors; packaged Linux build locally, Windows/macOS/Linux packaged builds in release-desktop.yml) | - | Device approval on Windows and macOS with a real employee (manual matrix 09 section 9) |
 | F3 Login, session, logout | Admin login with mandatory TOTP, enrol, verify, session cookie, logout | auth.service.spec | crm (2FA enrol, confirm, verify, single call) | login + 2FA boxes | - |
 | F4 Password reset and lockout | Lockout after 5 failures; forgot and reset with single-use 30 minute token revoking sessions | auth.service.spec (lockout) | auth-mail (forgot, reset, single use) | forgot and reset forms | Mailer (none shipped) |
 | FR-AUTH-04 Device signature | Login proves device key; desktop refresh bound to approved device | auth.service.spec | - | - | Desktop app |
@@ -81,7 +81,7 @@ Known inert jobs, visible on `/jobs/status`: `partition-maintenance` (segments t
 | Item | Needs |
 |---|---|
 | Windows agent, watchdog, extension end to end | Windows 10/11 machine with .NET 8, signing certificate |
-| Desktop app runtime (Electron launch, tray, pipe to agent) | Windows machine; `electron-vite build` and `tsc` pass here |
+| Desktop app runtime on Windows and macOS (tray, agent pipe, safeStorage backends) | Real machines; the packaged builds launch and pass smoke.mjs on the GitHub runners for all three platforms; the C# agent needs its first compile on Windows |
 | Real Gmail sync and send | Google Cloud project per 10 section 3 |
 | Password reset email delivery | A mailer (none shipped; dev link is returned outside production) |
 | Object storage uploads | S3-compatible bucket; endpoints return 503 until configured |

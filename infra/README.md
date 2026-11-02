@@ -11,6 +11,7 @@ Implements 02-architecture.md section 5 and 08-security-privacy.md section 4.
 | `caddy/Caddyfile` | Public TLS termination for `api.`, `admin.`, `updates.` with HSTS and security headers. |
 | `backup/pg-backup.sh` | Daily `pg_dump` with 30 day retention; WAL archived by Postgres into the same volume. |
 | `.env.prod.example` | Every variable the stack reads. Copy to `.env.prod`, never commit. |
+| `updates/` | Desktop installers and `latest.json`, served as `updates.<DOMAIN>` and `admin.<DOMAIN>/downloads/`. Filled by `release-desktop.yml` (19 section 9). |
 
 ## Environment variables
 
