@@ -329,3 +329,30 @@ export function usePeopleMutation<TArgs, TResult = unknown>(fn: (args: TArgs) =>
 }
 
 export const PEOPLE_ALL = [['people']] as const;
+
+// ---------------------------------------------------------------------------
+// Additions for the design pass (activity summary, employee update)
+// ---------------------------------------------------------------------------
+
+export interface ActivityDaySummary {
+  id: string;
+  employeeId: string;
+  date: string;
+  trackedS: number;
+  activeS: number;
+  idleS: number;
+  productiveS: number;
+  neutralS: number;
+  unproductiveS: number;
+  keyCount: number;
+  mouseCount: number;
+  lockedS?: number;
+  longIdleCount?: number;
+}
+
+export const useActivitySummary = (p: { employeeId: string | null; from: string; to: string }) =>
+  useQuery({
+    queryKey: ['people', 'activity-summary', p] as const,
+    queryFn: () => http.get<ActivityDaySummary[]>('/tracking/summary', { employeeId: p.employeeId, from: p.from, to: p.to }),
+    enabled: Boolean(p.employeeId),
+  });

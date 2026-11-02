@@ -1,15 +1,16 @@
 'use client';
 
 import { Suspense, useMemo, useState } from 'react';
-import { Plane, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plane, Plus, Pencil, Trash2, Check, X, Ban } from 'lucide-react';
 import { http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useLeaveRequests, useLeaveCalendar, useLeaveTypes, useBalances, usePeopleMutation, PEOPLE_ALL, type LeaveRequest, type LeaveType } from '@/lib/queries/people';
-import { Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Field, Input, Modal, PageHeader, Pagination, Segmented, Select, Skeleton, Table, TableSkeleton, Tabs, Td, Textarea, Th, useToast } from '@/components/ui';
-import { DecisionModal, DepartmentSelect, EmployeeSelect, MonthPicker, TeamSelect, requestTone, thisMonth } from '@/components/people/shared';
+import { useLeaveRequests, useLeaveCalendar, useLeaveTypes, useBalances, useDepartments, useTeams, useEmployeesList, usePeopleMutation, PEOPLE_ALL, type LeaveRequest, type LeaveType } from '@/lib/queries/people';
+import { Avatar, Badge, Button, Card, Checkbox, EmptyState, ErrorBanner, Field, Input, Modal, PageHeader, Pagination, Select, Skeleton, Textarea, useToast } from '@/components/ui';
+import { DataTable, FilterChip, KpiTile, Menu, Progress, Toggle, Tooltip, ViewTabs, type Column } from '@/components/ui/advanced';
+import { DecisionModal, EmployeeSelect, MonthPicker, OptionList, requestTone, thisMonth, daysOf, isWeekend, monthLabel } from '@/components/people/shared';
 import { dateOnly, fullName, relative, titleCase } from '@/lib/format';
 
-type Tab = 'requests' | 'calendar' | 'types' | 'balances';
+type Tab = 'requests' | 'calendar' | 'balances' | 'types';
 
 export default function LeavePage() {
   return <Suspense fallback={<Skeleton className="h-64" />}><Leave /></Suspense>;
@@ -19,14 +20,30 @@ function Leave() {
   const { can } = useAuth();
   const [tab, setTab] = useState<Tab>('requests');
   const [requesting, setRequesting] = useState(false);
+  const pending = useLeaveRequests({ status: 'pending', limit: 200 });
+  const month = thisMonth();
+  const cal = useLeaveCalendar({ month });
+  const outNow = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return (cal.data?.requests ?? []).filter((r) => r.status === 'approved' && r.dateFrom.slice(0, 10) <= today && r.dateTo.slice(0, 10) >= today).length;
+  }, [cal.data]);
+  const approvedDays = useMemo(() => (cal.data?.requests ?? []).filter((r) => r.status === 'approved').reduce((s, r) => s + Number(r.days), 0), [cal.data]);
   return (
     <div>
-      <PageHeader title="Leave" subtitle="Requests, calendar, types and balances (15 F25)" actions={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setRequesting(true)}>New request</Button>} />
-      <Tabs value={tab} onChange={setTab} className="mb-4" tabs={[{ value: 'requests', label: 'Requests' }, { value: 'calendar', label: 'Calendar' }, { value: 'balances', label: 'Balances' }, ...(can('hr.leave.manage') ? [{ value: 'types' as Tab, label: 'Leave types' }] : [])]} />
-      {tab === 'requests' && <Requests />}
-      {tab === 'calendar' && <Calendar />}
-      {tab === 'balances' && <Balances />}
-      {tab === 'types' && <Types />}
+      <PageHeader title="Leave" subtitle="Requests, calendar, balances and types (15 F25)" actions={<Button variant="primary" icon={<Plus size={14} />} onClick={() => setRequesting(true)}>New request</Button>} />
+      <div className="mb-4 grid grid-cols-4 gap-3">
+        <KpiTile label="Pending approval" value={pending.data?.items.length ?? '—'} tone={(pending.data?.items.length ?? 0) > 0 ? 'amber' : undefined} loading={pending.isLoading} onClick={() => setTab('requests')} />
+        <KpiTile label="Out today" value={outNow} tone="violet" loading={cal.isLoading} onClick={() => setTab('calendar')} />
+        <KpiTile label={`Approved days · ${monthLabel(month)}`} value={approvedDays} loading={cal.isLoading} />
+        <KpiTile label="Holidays this month" value={cal.data?.holidays.length ?? '—'} tone="blue" loading={cal.isLoading} />
+      </div>
+      <Card>
+        <ViewTabs value={tab} onChange={setTab} views={[{ value: 'requests', label: 'Requests', count: pending.data?.items.length }, { value: 'calendar', label: 'Calendar' }, { value: 'balances', label: 'Balances' }, ...(can('hr.leave.manage') ? [{ value: 'types' as Tab, label: 'Leave types' }] : [])]} />
+        {tab === 'requests' && <Requests />}
+        {tab === 'calendar' && <Calendar />}
+        {tab === 'balances' && <Balances />}
+        {tab === 'types' && <Types />}
+      </Card>
       {requesting && <RequestModal onClose={() => setRequesting(false)} />}
     </div>
   );
@@ -37,64 +54,79 @@ function Requests() {
   const toast = useToast();
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | 'cancelled' | 'all'>('pending');
   const [employeeId, setEmployeeId] = useState('');
+  const [typeId, setTypeId] = useState('');
   const [cursor, setCursor] = useState<string | undefined>();
   const [pages, setPages] = useState<LeaveRequest[][]>([]);
   const [decision, setDecision] = useState<{ r: LeaveRequest; action: 'approved' | 'rejected' | 'cancel' } | null>(null);
+  const employees = useEmployeesList();
+  const types = useLeaveTypes(true);
   const params = useMemo(() => ({ status: status === 'all' ? undefined : status, employeeId: employeeId || undefined, cursor, limit: 50 }), [status, employeeId, cursor]);
   const q = useLeaveRequests(params);
-  const rows = useMemo(() => { const seen = new Set<string>(); return [...pages.flat(), ...(q.data?.items ?? [])].filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true))); }, [pages, q.data]);
+  const rows = useMemo(() => { const seen = new Set<string>(); return [...pages.flat(), ...(q.data?.items ?? [])].filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true))).filter((r) => !typeId || r.leaveTypeId === typeId); }, [pages, q.data, typeId]);
   const reset = () => { setCursor(undefined); setPages([]); };
   const decide = usePeopleMutation(({ id, body }: { id: string; body: Record<string, unknown> }) => http.post(`/leave-requests/${id}/decide`, body), PEOPLE_ALL);
   const cancel = usePeopleMutation(({ id, comment }: { id: string; comment?: string }) => http.post(`/leave-requests/${id}/cancel`, { comment }), PEOPLE_ALL);
 
+  const cols: Column<LeaveRequest>[] = [
+    { key: 'employee', header: 'Employee', locked: true, cell: (r) => <div className="flex items-center gap-2.5">{r.employee && <Avatar name={fullName(r.employee)} size={26} />}<div className="min-w-0"><div className="font-semibold text-ink">{r.employee ? fullName(r.employee) : '—'}</div><div className="text-xs text-ink-3">{r.employee?.department?.name ?? ''}</div></div></div> },
+    { key: 'type', header: 'Type', cell: (r) => <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: r.leaveType?.colour ?? 'var(--gray)' }} />{r.leaveType?.name ?? titleCase(r.type)}</span> },
+    { key: 'dates', header: 'Dates', cell: (r) => <>{dateOnly(r.dateFrom)}{r.dateFrom !== r.dateTo && ` – ${dateOnly(r.dateTo)}`}{r.halfDay && <Badge tone="gray" className="ml-1">½</Badge>}</> },
+    { key: 'days', header: 'Days', right: true, mono: true, cell: (r) => Number(r.days) },
+    { key: 'reason', header: 'Reason', cell: (r) => <div className="max-w-xs text-ink-2">{r.reason}{r.comment && <div className="text-xs text-ink-3">Decision: {r.comment}</div>}</div> },
+    { key: 'status', header: 'Status', cell: (r) => <Badge tone={requestTone(r.status)}>{titleCase(r.status)}</Badge> },
+    { key: 'requested', header: 'Requested', right: true, cell: (r) => <span className="text-ink-3">{relative(r.createdAt)}</span> },
+  ];
+  const empName = employees.data?.find((e) => e.id === employeeId);
+  const typeName = types.data?.find((t) => t.id === typeId)?.name;
+
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Segmented value={status} onChange={(v) => { setStatus(v); reset(); }} options={[{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }, { value: 'cancelled', label: 'Cancelled' }, { value: 'all', label: 'All' }]} />
-        <div className="w-56"><EmployeeSelect value={employeeId} onChange={(v) => { setEmployeeId(v); reset(); }} /></div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line-2 px-3 py-2.5">
+        <FilterChip label="Status" value={status === 'all' ? undefined : titleCase(status)} onClear={() => { setStatus('all'); reset(); }}>
+          <OptionList value={status === 'all' ? '' : status} onChange={(v) => { setStatus((v || 'all') as typeof status); reset(); }} options={['pending', 'approved', 'rejected', 'cancelled'].map((s) => ({ value: s, label: titleCase(s) }))} />
+        </FilterChip>
+        <FilterChip label="Employee" value={empName ? fullName(empName) : undefined} onClear={() => { setEmployeeId(''); reset(); }}>
+          <OptionList value={employeeId} onChange={(v) => { setEmployeeId(v); reset(); }} options={(employees.data ?? []).map((e) => ({ value: e.id, label: fullName(e) }))} />
+        </FilterChip>
+        <FilterChip label="Type" value={typeName} onClear={() => setTypeId('')}>
+          <OptionList value={typeId} onChange={setTypeId} options={(types.data ?? []).map((t) => ({ value: t.id, label: t.name }))} />
+        </FilterChip>
       </div>
-      <Card>
-        {q.isLoading && pages.length === 0 && <TableSkeleton cols={7} />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data && rows.length === 0 && <EmptyState icon={<Plane size={20} />} title="No leave requests" body="Requests from the desktop app and this panel appear here." />}
-        {rows.length > 0 && (
-          <>
-            <Table>
-              <thead><tr><Th>Employee</Th><Th>Type</Th><Th>Dates</Th><Th right>Days</Th><Th>Reason</Th><Th>Status</Th><Th right>Requested</Th><Th /></tr></thead>
-              <tbody>
-                {rows.map((r) => {
-                  const mine = r.employeeId === me?.id;
-                  return (
-                    <tr key={r.id} className="hover:bg-surface-2">
-                      <Td className="font-semibold">{r.employee ? fullName(r.employee) : '—'}<div className="text-xs font-normal text-ink-3">{r.employee?.department?.name ?? ''}</div></Td>
-                      <Td><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: r.leaveType?.colour ?? '#5C666E' }} />{r.leaveType?.name ?? titleCase(r.type)}</span></Td>
-                      <Td>{dateOnly(r.dateFrom)}{r.dateFrom !== r.dateTo && ` – ${dateOnly(r.dateTo)}`}{r.halfDay && <Badge tone="gray" className="ml-1">½</Badge>}</Td>
-                      <Td right mono>{Number(r.days)}</Td>
-                      <Td className="max-w-xs text-ink-2">{r.reason}{r.comment && <div className="text-xs text-ink-3">Decision: {r.comment}</div>}</Td>
-                      <Td><Badge tone={requestTone(r.status)}>{titleCase(r.status)}</Badge></Td>
-                      <Td right className="text-ink-3">{relative(r.createdAt)}</Td>
-                      <Td right>
-                        <div className="flex justify-end gap-1">
-                          {r.status === 'pending' && can('attendance.approve') && <><Button size="sm" variant="primary" onClick={() => setDecision({ r, action: 'approved' })}>Approve</Button><Button size="sm" variant="danger-outline" onClick={() => setDecision({ r, action: 'rejected' })}>Reject</Button></>}
-                          {((r.status === 'pending' && mine) || (r.status === 'approved' && can('attendance.approve'))) && <Button size="sm" variant="ghost" onClick={() => setDecision({ r, action: 'cancel' })}>Cancel</Button>}
-                        </div>
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-            <Pagination count={rows.length} hasMore={Boolean(q.data?.nextCursor)} onMore={() => { if (q.data?.nextCursor) { setPages((p) => [...p, q.data!.items]); setCursor(q.data.nextCursor); } }} loading={q.isFetching} />
-          </>
-        )}
-      </Card>
+      <DataTable
+        rows={rows}
+        columns={cols}
+        loading={q.isLoading && pages.length === 0}
+        error={q.isError ? (q.error as Error).message : null}
+        onRetry={() => q.refetch()}
+        storageKey="people.leave.requests"
+        empty={<EmptyState icon={<Plane size={20} />} title="No leave requests" body="Requests from the desktop app and this panel appear here." />}
+        rowActions={(r) => {
+          const mine = r.employeeId === me?.id;
+          return (
+            <>
+              {r.status === 'pending' && can('attendance.approve') && <>
+                <Tooltip label="Approve"><button type="button" className="rounded p-1 text-green hover:bg-green-soft" onClick={() => setDecision({ r, action: 'approved' })} aria-label="Approve"><Check size={14} /></button></Tooltip>
+                <Tooltip label="Reject"><button type="button" className="rounded p-1 text-red hover:bg-red-soft" onClick={() => setDecision({ r, action: 'rejected' })} aria-label="Reject"><X size={14} /></button></Tooltip>
+              </>}
+              {((r.status === 'pending' && mine) || (r.status === 'approved' && can('attendance.approve'))) && <Tooltip label="Cancel request"><button type="button" className="rounded p-1 text-ink-3 hover:bg-surface-2 hover:text-ink" onClick={() => setDecision({ r, action: 'cancel' })} aria-label="Cancel"><Ban size={14} /></button></Tooltip>}
+            </>
+          );
+        }}
+        footer={rows.length > 0 ? <Pagination count={rows.length} hasMore={Boolean(q.data?.nextCursor)} onMore={() => { if (q.data?.nextCursor) { setPages((p) => [...p, q.data!.items]); setCursor(q.data.nextCursor); } }} loading={q.isFetching} /> : undefined}
+      />
       {decision && (
         <DecisionModal title={`${decision.action === 'cancel' ? 'Cancel' : decision.action === 'approved' ? 'Approve' : 'Reject'} leave · ${decision.r.employee ? fullName(decision.r.employee) : ''}`} confirmLabel={decision.action === 'cancel' ? 'Cancel request' : titleCase(decision.action)} danger={decision.action !== 'approved'} loading={decide.isPending || cancel.isPending} onClose={() => setDecision(null)}
           onConfirm={(comment) => {
             const done = { onSuccess: () => { toast.push('success', 'Updated'); setDecision(null); }, onError: (e: unknown) => toast.push('error', (e as Error).message) };
             if (decision.action === 'cancel') cancel.mutate({ id: decision.r.id, comment: comment || undefined }, done);
             else decide.mutate({ id: decision.r.id, body: { status: decision.action, comment: comment || undefined } }, done);
-          }} />
+          }}>
+          <div className="mb-3 rounded-card border border-line bg-surface-2 p-3 text-sm text-ink-2">
+            <div className="flex items-center gap-1.5 font-semibold text-ink"><span className="h-2 w-2 rounded-full" style={{ background: decision.r.leaveType?.colour ?? 'var(--gray)' }} />{decision.r.leaveType?.name ?? titleCase(decision.r.type)} · {Number(decision.r.days)} day{Number(decision.r.days) === 1 ? '' : 's'}</div>
+            <div className="font-mono text-xs">{dateOnly(decision.r.dateFrom)}{decision.r.dateFrom !== decision.r.dateTo && ` – ${dateOnly(decision.r.dateTo)}`}</div>
+            <div className="mt-1">{decision.r.reason}</div>
+          </div>
+        </DecisionModal>
       )}
     </>
   );
@@ -104,43 +136,71 @@ function Calendar() {
   const [month, setMonth] = useState(thisMonth());
   const [departmentId, setDepartmentId] = useState('');
   const [teamId, setTeamId] = useState('');
+  const departments = useDepartments();
+  const teams = useTeams();
   const q = useLeaveCalendar({ month, departmentId: departmentId || undefined, teamId: teamId || undefined });
-  const [y, m] = month.split('-').map(Number);
-  const daysInMonth = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
-  const dates = Array.from({ length: daysInMonth }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
+  const dates = daysOf(month);
+  const today = new Date().toISOString().slice(0, 10);
   const people = useMemo(() => {
     const map = new Map<string, { employee: NonNullable<LeaveRequest['employee']>; requests: LeaveRequest[] }>();
     for (const r of q.data?.requests ?? []) { if (!r.employee) continue; const e = map.get(r.employeeId) ?? { employee: r.employee, requests: [] }; e.requests.push(r); map.set(r.employeeId, e); }
     return Array.from(map.values()).sort((a, b) => a.employee.lastName.localeCompare(b.employee.lastName));
   }, [q.data]);
+  const perDay = useMemo(() => dates.map((d) => (q.data?.requests ?? []).filter((r) => r.status === 'approved' && r.dateFrom.slice(0, 10) <= d && r.dateTo.slice(0, 10) >= d).length), [dates, q.data]);
+  const deptName = departments.data?.find((d) => d.id === departmentId)?.name;
+  const teamName = teams.data?.find((t) => t.id === teamId)?.name;
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line-2 px-3 py-2.5">
         <MonthPicker value={month} onChange={setMonth} />
-        <div className="w-44"><DepartmentSelect value={departmentId} onChange={(v) => { setDepartmentId(v); setTeamId(''); }} /></div>
-        <div className="w-40"><TeamSelect value={teamId} onChange={setTeamId} departmentId={departmentId || undefined} /></div>
-        <div className="ml-auto flex gap-2 text-xs"><Badge tone="green">Approved</Badge><Badge tone="amber">Pending</Badge><Badge tone="blue">Holiday</Badge></div>
+        <FilterChip label="Department" value={deptName} onClear={() => { setDepartmentId(''); setTeamId(''); }}>
+          <OptionList value={departmentId} onChange={(v) => { setDepartmentId(v); setTeamId(''); }} options={(departments.data ?? []).map((d) => ({ value: d.id, label: d.name }))} />
+        </FilterChip>
+        <FilterChip label="Team" value={teamName} onClear={() => setTeamId('')}>
+          <OptionList value={teamId} onChange={setTeamId} options={(teams.data ?? []).filter((t) => !departmentId || t.departmentId === departmentId).map((t) => ({ value: t.id, label: t.name }))} />
+        </FilterChip>
+        <div className="ml-auto flex gap-3 text-xs text-ink-2"><span className="inline-flex items-center gap-1"><span className="h-2 w-4 rounded-sm bg-pri" />Approved</span><span className="inline-flex items-center gap-1"><span className="h-2 w-4 rounded-sm border border-dashed border-amber bg-amber-soft" />Pending</span><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue" />Holiday</span></div>
       </div>
-      <Card>
-        {q.isLoading && <Skeleton className="h-48" />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data && people.length === 0 && <EmptyState icon={<Plane size={20} />} title="Nobody is out this month" body="Approved and pending leave shows up on the calendar." />}
-        {q.data && people.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[11.5px]">
-              <thead><tr className="bg-surface-2 text-[10px] uppercase text-ink-3"><th className="sticky left-0 bg-surface-2 px-3 py-2 text-left">Employee</th>{dates.map((d) => { const hol = q.data!.holidays.find((h) => h.date.slice(0, 10) === d); return <th key={d} title={hol?.name} className={`px-1 py-2 text-center ${hol ? 'text-blue' : ''}`}>{d.slice(8)}</th>; })}</tr></thead>
-              <tbody>
-                {people.map((p) => (
-                  <tr key={p.employee.id} className="border-t border-line-2">
-                    <td className="sticky left-0 bg-surface px-3 py-1.5 font-semibold">{fullName(p.employee)}</td>
-                    {dates.map((d) => { const r = p.requests.find((x) => x.dateFrom.slice(0, 10) <= d && x.dateTo.slice(0, 10) >= d); return <td key={d} className="px-0.5 py-1 text-center" title={r ? `${r.leaveType?.name ?? r.type} · ${r.status}` : undefined}>{r ? <span className="inline-block h-4 w-6 rounded" style={{ background: r.status === 'approved' ? r.leaveType?.colour ?? '#1E8E5A' : '#E0921A', opacity: r.status === 'approved' ? 1 : 0.6 }} /> : <span className="text-ink-3">·</span>}</td>; })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {q.isLoading && <div className="p-4"><Skeleton className="h-48" /></div>}
+      {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
+      {q.data && people.length === 0 && <EmptyState icon={<Plane size={20} />} title="Nobody is out this month" body="Approved and pending leave shows up on the calendar." />}
+      {q.data && people.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-surface-2 text-2xs font-semibold uppercase text-ink-3">
+                <th className="sticky left-0 z-20 min-w-[200px] bg-surface-2 px-3 py-2 text-left">Employee</th>
+                {dates.map((d) => { const hol = q.data!.holidays.find((h) => h.date.slice(0, 10) === d); return <th key={d} className={`w-7 px-0 py-2 text-center font-semibold ${hol ? 'text-blue-text' : isWeekend(d) ? 'text-ink-3/60' : ''} ${d === today ? 'text-pri' : ''}`}>{hol ? <Tooltip label={hol.name}><span>{Number(d.slice(8))}</span></Tooltip> : Number(d.slice(8))}</th>; })}
+              </tr>
+              <tr className="bg-surface-2 text-2xs text-ink-3">
+                <th className="sticky left-0 z-20 bg-surface-2 px-3 py-1 text-left font-medium normal-case tracking-normal">Out per day</th>
+                {perDay.map((n, i) => <th key={dates[i]} className="px-0 py-1 text-center font-mono font-medium">{n > 0 ? n : ''}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((p) => (
+                <tr key={p.employee.id} className="group border-t border-line-2 hover:bg-surface-2">
+                  <td className="sticky left-0 z-10 bg-surface px-3 py-[var(--row-py)] group-hover:bg-surface-2"><div className="flex items-center gap-2"><Avatar name={fullName(p.employee)} size={24} /><div className="min-w-0"><div className="truncate font-semibold text-ink">{fullName(p.employee)}</div><div className="text-2xs normal-case tracking-normal text-ink-3">{p.employee.department?.name ?? ''}</div></div></div></td>
+                  {dates.map((d) => {
+                    const r = p.requests.find((x) => x.dateFrom.slice(0, 10) <= d && x.dateTo.slice(0, 10) >= d);
+                    const start = r && r.dateFrom.slice(0, 10) === d;
+                    const end = r && r.dateTo.slice(0, 10) === d;
+                    return (
+                      <td key={d} className={`px-0 py-[var(--row-py)] ${isWeekend(d) ? 'bg-surface-2/50' : ''}`}>
+                        {r ? (
+                          <Tooltip label={`${r.leaveType?.name ?? r.type} · ${titleCase(r.status)} · ${Number(r.days)} d`}>
+                            <span className={`block h-3.5 w-full ${start ? 'ml-0.5 rounded-l' : ''} ${end ? 'mr-0.5 rounded-r' : ''} ${r.status === 'pending' ? 'border border-dashed border-amber bg-amber-soft' : ''}`} style={r.status === 'approved' ? { background: r.leaveType?.colour ?? 'var(--pri)' } : undefined} />
+                          </Tooltip>
+                        ) : <span className="block h-3.5" />}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
@@ -153,39 +213,43 @@ function Balances() {
   const [adjusting, setAdjusting] = useState<{ employeeId: string; leaveTypeId: string; name: string } | null>(null);
   const [days, setDays] = useState('1');
   const [reason, setReason] = useState('');
+  const employees = useEmployeesList();
   const q = useBalances({ year, employeeId: employeeId || undefined });
   const adjust = usePeopleMutation((b: Record<string, unknown>) => http.post('/hr/leave-balances/adjust', b), PEOPLE_ALL);
   const types = useMemo(() => Array.from(new Map((q.data?.items ?? []).map((b) => [b.leaveTypeId, b.leaveType])).entries()), [q.data]);
+  const rows = (q.data?.employees ?? []).map((e) => ({ ...e, id: e.id }));
+  const empName = employees.data?.find((e) => e.id === employeeId);
+  const cols: Column<(typeof rows)[number]>[] = [
+    { key: 'employee', header: 'Employee', locked: true, cell: (e) => <div className="flex items-center gap-2.5"><Avatar name={fullName(e)} size={26} /><div className="min-w-0"><div className="font-semibold text-ink">{fullName(e)}</div><div className="text-xs text-ink-3">{e.department?.name ?? ''}</div></div></div> },
+    ...types.map(([tid, t]): Column<(typeof rows)[number]> => ({
+      key: tid,
+      header: <span className="inline-flex items-center gap-1.5 normal-case tracking-normal"><span className="h-2 w-2 rounded-full" style={{ background: t.colour }} />{t.name}</span>,
+      width: 180,
+      cell: (e) => {
+        const b = q.data!.items.find((x) => x.employeeId === e.id && x.leaveTypeId === tid);
+        if (!b) return <span className="text-ink-3">—</span>;
+        const total = Number(b.entitledDays) + Number(b.carriedOverDays) + Number(b.adjustmentsDays);
+        return (
+          <button type="button" className="w-full text-left disabled:cursor-default" disabled={!can('hr.leave.manage')} onClick={() => setAdjusting({ employeeId: e.id, leaveTypeId: tid, name: `${fullName(e)} · ${t.name}` })} title={`Entitled ${b.entitledDays} · Carried ${b.carriedOverDays} · Used ${b.usedDays} · Pending ${b.pendingDays} · Adjustments ${b.adjustmentsDays}`}>
+            <div className="flex items-baseline justify-between font-mono text-xs"><span className={Number(b.availableDays) <= 0 ? 'font-semibold text-red-text' : 'font-semibold text-ink'}>{Number(b.availableDays)}</span><span className="text-ink-3">/ {total}</span></div>
+            <Progress value={Number(b.usedDays) + Number(b.pendingDays)} max={total || 1} size={5} tone={Number(b.availableDays) <= 0 ? 'red' : 'violet'} />
+          </button>
+        );
+      },
+    })),
+  ];
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Select value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-28">{[year - 1, year, year + 1].map((y) => <option key={y} value={y}>{y}</option>)}</Select>
-        <div className="w-56"><EmployeeSelect value={employeeId} onChange={setEmployeeId} /></div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-line-2 px-3 py-2.5">
+        <FilterChip label="Year" value={String(year)} active>
+          <OptionList value={String(year)} onChange={(v) => v && setYear(Number(v))} options={[year - 1, year, year + 1].map((y) => ({ value: String(y), label: String(y) }))} emptyLabel="Current" />
+        </FilterChip>
+        <FilterChip label="Employee" value={empName ? fullName(empName) : undefined} onClear={() => setEmployeeId('')}>
+          <OptionList value={employeeId} onChange={setEmployeeId} options={(employees.data ?? []).map((e) => ({ value: e.id, label: fullName(e) }))} />
+        </FilterChip>
+        <span className="ml-auto text-xs text-ink-3">Available / total · bar = used + pending{can('hr.leave.manage') ? ' · click a cell to adjust' : ''}</span>
       </div>
-      <Card>
-        {q.isLoading && <TableSkeleton cols={5} />}
-        {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-        {q.data && q.data.employees.length === 0 && <EmptyState title="No balances" body="Balances are created when leave types exist and employees are active." />}
-        {q.data && q.data.employees.length > 0 && (
-          <Table>
-            <thead><tr><Th>Employee</Th>{types.map(([id, t]) => <Th key={id} right>{t.name}</Th>)}</tr></thead>
-            <tbody>
-              {q.data.employees.map((e) => (
-                <tr key={e.id} className="hover:bg-surface-2">
-                  <Td className="font-semibold">{fullName(e)}<div className="text-xs font-normal text-ink-3">{e.department?.name ?? ''}</div></Td>
-                  {types.map(([tid, t]) => { const b = q.data!.items.find((x) => x.employeeId === e.id && x.leaveTypeId === tid); return (
-                    <Td key={tid} right>
-                      {b ? <button type="button" className="font-mono hover:underline disabled:no-underline" disabled={!can('hr.leave.manage')} onClick={() => setAdjusting({ employeeId: e.id, leaveTypeId: tid, name: `${fullName(e)} · ${t.name}` })} title={`Entitled ${b.entitledDays} · Used ${b.usedDays} · Pending ${b.pendingDays} · Adjustments ${b.adjustmentsDays}`}>
-                        <span className={b.availableDays <= 0 ? 'text-red' : ''}>{b.availableDays}</span><span className="text-ink-3"> / {b.entitledDays + b.carriedOverDays + b.adjustmentsDays}</span>
-                      </button> : '—'}
-                    </Td>
-                  ); })}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
-      </Card>
+      <DataTable rows={rows} columns={cols} loading={q.isLoading} error={q.isError ? (q.error as Error).message : null} onRetry={() => q.refetch()} storageKey="people.leave.balances" empty={<EmptyState title="No balances" body="Balances are created when leave types exist and employees are active." />} />
       {adjusting && (
         <Modal open onClose={() => setAdjusting(null)} title={`Adjust balance · ${adjusting.name}`} width={440} footer={<><Button onClick={() => setAdjusting(null)}>Cancel</Button><Button variant="primary" disabled={!reason.trim() || !Number(days)} loading={adjust.isPending} onClick={() => adjust.mutate({ employeeId: adjusting.employeeId, leaveTypeId: adjusting.leaveTypeId, year, days: Number(days), reason }, { onSuccess: () => { toast.push('success', 'Balance adjusted'); setAdjusting(null); setReason(''); }, onError: (e) => toast.push('error', (e as Error).message) })}>Apply</Button></>}>
           <Field label="Days (negative removes)"><Input type="number" step="0.5" value={days} onChange={(e) => setDays(e.target.value)} /></Field>
@@ -201,31 +265,25 @@ function Types() {
   const q = useLeaveTypes(true);
   const [editing, setEditing] = useState<LeaveType | 'new' | null>(null);
   const del = usePeopleMutation((id: string) => http.del(`/hr/leave-types/${id}`), PEOPLE_ALL);
+  const toggleActive = usePeopleMutation(({ id, isActive }: { id: string; isActive: boolean }) => http.patch(`/hr/leave-types/${id}`, { isActive }), PEOPLE_ALL);
+  const cols: Column<LeaveType>[] = [
+    { key: 'name', header: 'Name', locked: true, cell: (t) => <span className="inline-flex items-center gap-2 font-semibold text-ink"><span className="h-2.5 w-2.5 rounded-full" style={{ background: t.colour }} />{t.name}</span> },
+    { key: 'code', header: 'Code', mono: true, cell: (t) => t.code },
+    { key: 'allowance', header: 'Allowance', right: true, mono: true, cell: (t) => `${Number(t.annualAllowanceDays)} d` },
+    { key: 'accrual', header: 'Accrual', cell: (t) => <>{titleCase(t.accrual)}{Number(t.carryOverMaxDays) > 0 && <div className="text-xs text-ink-3">carry over ≤ {Number(t.carryOverMaxDays)}</div>}</> },
+    { key: 'rules', header: 'Rules', cell: (t) => <div className="flex flex-wrap gap-1"><Badge tone={t.paid ? 'green' : 'gray'}>{t.paid ? 'Paid' : 'Unpaid'}</Badge><Badge tone={t.requiresApproval ? 'amber' : 'blue'}>{t.requiresApproval ? 'Approval' : 'Auto-approve'}</Badge>{t.allowHalfDay && <Badge tone="gray">Half days</Badge>}</div> },
+    { key: 'active', header: 'Active', cell: (t) => <Toggle checked={t.isActive} onChange={(v) => toggleActive.mutate({ id: t.id, isActive: v }, { onError: (e) => toast.push('error', (e as Error).message) })} /> },
+  ];
   return (
-    <Card title="Leave types" actions={<Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditing('new')}>New type</Button>}>
-      {q.isLoading && <TableSkeleton cols={6} />}
-      {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-      {q.data && q.data.length === 0 && <EmptyState title="No leave types" body="Create Annual, Sick and Unpaid to start." />}
-      {q.data && q.data.length > 0 && (
-        <Table>
-          <thead><tr><Th>Name</Th><Th>Code</Th><Th right>Allowance</Th><Th>Accrual</Th><Th>Rules</Th><Th>Status</Th><Th /></tr></thead>
-          <tbody>
-            {q.data.map((t) => (
-              <tr key={t.id} className="hover:bg-surface-2">
-                <Td><span className="inline-flex items-center gap-2 font-semibold"><span className="h-2.5 w-2.5 rounded-full" style={{ background: t.colour }} />{t.name}</span></Td>
-                <Td mono>{t.code}</Td>
-                <Td right mono>{Number(t.annualAllowanceDays)} d</Td>
-                <Td>{titleCase(t.accrual)}{Number(t.carryOverMaxDays) > 0 && <div className="text-xs text-ink-3">carry over ≤ {Number(t.carryOverMaxDays)}</div>}</Td>
-                <Td className="text-xs text-ink-2">{[t.paid ? 'Paid' : 'Unpaid', t.requiresApproval ? 'Approval' : 'Auto-approve', t.allowHalfDay ? 'Half days' : null].filter(Boolean).join(' · ')}</Td>
-                <Td><Badge tone={t.isActive ? 'green' : 'gray'}>{t.isActive ? 'Active' : 'Inactive'}</Badge></Td>
-                <Td right><div className="flex justify-end gap-1"><Button size="sm" variant="ghost" icon={<Pencil size={12} />} onClick={() => setEditing(t)} /><Button size="sm" variant="ghost" icon={<Trash2 size={12} />} onClick={() => window.confirm(`Remove ${t.name}? Types in use are deactivated.`) && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) })} /></div></Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
+    <>
+      <div className="flex items-center justify-between border-b border-line-2 px-3 py-2.5">
+        <span className="text-sm text-ink-2">Types in use are deactivated rather than deleted.</span>
+        <Button size="sm" variant="primary" icon={<Plus size={13} />} onClick={() => setEditing('new')}>New type</Button>
+      </div>
+      <DataTable rows={q.data ?? []} columns={cols} loading={q.isLoading} error={q.isError ? (q.error as Error).message : null} onRetry={() => q.refetch()} empty={<EmptyState title="No leave types" body="Create Annual, Sick and Unpaid to start." />}
+        rowActions={(t) => <Menu items={[{ label: 'Edit', icon: <Pencil size={13} />, onSelect: () => setEditing(t) }, { separator: true, label: '' }, { label: 'Remove', icon: <Trash2 size={13} />, danger: true, onSelect: () => window.confirm(`Remove ${t.name}? Types in use are deactivated.`) && del.mutate(t.id, { onError: (e) => toast.push('error', (e as Error).message) }) }]} />} />
       {editing && <TypeModal type={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
-    </Card>
+    </>
   );
 }
 
@@ -252,11 +310,11 @@ function TypeModal({ type, onClose }: { type: LeaveType | null; onClose: () => v
         <Field label="Accrual"><Select value={accrual} onChange={(e) => setAccrual(e.target.value as 'upfront' | 'monthly')}><option value="upfront">Upfront on 1 January</option><option value="monthly">Monthly (allowance / 12)</option></Select></Field>
         <Field label="Carry-over max (days)"><Input type="number" step="0.5" value={carry} onChange={(e) => setCarry(e.target.value)} /></Field>
       </div>
-      <div className="mt-3 flex flex-wrap gap-5">
-        <Checkbox checked={paid} onChange={(e) => setPaid(e.target.checked)} label="Paid (balance enforced)" />
-        <Checkbox checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} label="Requires approval" />
-        <Checkbox checked={allowHalfDay} onChange={(e) => setAllowHalfDay(e.target.checked)} label="Allow half day" />
-        <Checkbox checked={isActive} onChange={(e) => setIsActive(e.target.checked)} label="Active" />
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Toggle checked={paid} onChange={setPaid} label="Paid (balance enforced)" />
+        <Toggle checked={requiresApproval} onChange={setRequiresApproval} label="Requires approval" />
+        <Toggle checked={allowHalfDay} onChange={setAllowHalfDay} label="Allow half day" />
+        <Toggle checked={isActive} onChange={setIsActive} label="Active" />
       </div>
     </Modal>
   );
@@ -276,12 +334,23 @@ function RequestModal({ onClose }: { onClose: () => void }) {
   const selected = types.data?.find((t) => t.id === leaveTypeId);
   const balance = balances.data?.items.find((b) => b.leaveTypeId === leaveTypeId);
   const create = usePeopleMutation((b: Record<string, unknown>) => http.post('/leave-requests', b), PEOPLE_ALL);
+  const total = balance ? Number(balance.entitledDays) + Number(balance.carriedOverDays) + Number(balance.adjustmentsDays) : 0;
   return (
     <Modal open onClose={onClose} title="New leave request" width={520} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!leaveTypeId || !dateFrom || !dateTo || !reason.trim()} loading={create.isPending} onClick={() => create.mutate({ employeeId: employeeId || undefined, leaveTypeId, dateFrom, dateTo: halfDay ? dateFrom : dateTo, halfDay, reason }, { onSuccess: () => { toast.push('success', 'Leave requested'); onClose(); }, onError: (e) => toast.push('error', (e as Error).message) })}>Submit</Button></>}>
       <div className="space-y-3">
         {can('attendance.approve') && <Field label="Employee"><EmployeeSelect value={employeeId} onChange={setEmployeeId} emptyLabel="Myself" /></Field>}
-        <Field label="Leave type" required><Select value={leaveTypeId} onChange={(e) => setLeaveTypeId(e.target.value)}><option value="">Choose…</option>{(types.data ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.paid ? '' : ' (unpaid)'}</option>)}</Select></Field>
-        {balance && <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-ink-2">Available: <b className="font-mono">{balance.availableDays}</b> days · used {balance.usedDays} · pending {balance.pendingDays}</div>}
+        <Field label="Leave type" required>
+          <div className="flex flex-wrap gap-1.5">
+            {(types.data ?? []).map((t) => <button key={t.id} type="button" onClick={() => setLeaveTypeId(t.id)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition ${leaveTypeId === t.id ? 'border-pri bg-pri-soft text-pri-2' : 'border-line bg-surface text-ink-2 hover:text-ink'}`}><span className="h-2 w-2 rounded-full" style={{ background: t.colour }} />{t.name}{!t.paid && <span className="text-2xs normal-case tracking-normal text-ink-3">unpaid</span>}</button>)}
+          </div>
+        </Field>
+        {balance && (
+          <div className="rounded-card border border-line bg-surface-2 p-3">
+            <div className="flex items-baseline justify-between text-sm"><span className="text-ink-2">Available</span><span className="font-mono"><b className="text-ink">{Number(balance.availableDays)}</b> <span className="text-ink-3">/ {total} days</span></span></div>
+            <div className="mt-1.5"><Progress value={Number(balance.usedDays) + Number(balance.pendingDays)} max={total || 1} size={6} tone="violet" /></div>
+            <div className="mt-1 text-2xs normal-case tracking-normal text-ink-3">used {Number(balance.usedDays)} · pending {Number(balance.pendingDays)}</div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="From" required><Input type="date" value={dateFrom} onChange={(e) => { setFrom(e.target.value); if (!dateTo || halfDay) setTo(e.target.value); }} /></Field>
           <Field label="To" required><Input type="date" value={halfDay ? dateFrom : dateTo} min={dateFrom} disabled={halfDay} onChange={(e) => setTo(e.target.value)} /></Field>
