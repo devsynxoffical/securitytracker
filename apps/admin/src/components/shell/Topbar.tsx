@@ -26,7 +26,8 @@ interface Notification {
 function crumbsFor(pathname: string): Array<{ label: string; href?: string }> {
   for (const g of NAV) {
     for (const item of g.items) {
-      if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+      const match = item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(item.href + '/');
+      if (match) {
         return g.key === 'home' ? [{ label: 'Overview' }] : [{ label: g.label, href: g.items[0]?.href }, { label: item.label }];
       }
     }

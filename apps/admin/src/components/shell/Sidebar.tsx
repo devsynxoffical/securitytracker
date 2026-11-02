@@ -49,9 +49,11 @@ export function Sidebar() {
       </Link>
     );
     return sidebarCollapsed ? (
-      <Tooltip key={item.href} label={item.label} side="bottom">
-        {link}
-      </Tooltip>
+      <div key={item.href} className="flex w-full justify-center [&>span]:w-full [&>span>a]:w-full">
+        <Tooltip label={item.label} side="bottom">
+          {link}
+        </Tooltip>
+      </div>
     ) : (
       link
     );
@@ -120,7 +122,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className="absolute -right-3 top-[68px] flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-ink-3 shadow-card hover:text-ink"
+        className="absolute -right-3 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-ink-3 shadow-card hover:text-ink"
         aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
