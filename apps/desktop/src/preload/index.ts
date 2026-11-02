@@ -40,11 +40,20 @@ const bridge = {
     end: () => ipcRenderer.invoke('shift:end'),
     sync: () => ipcRenderer.invoke('shift:sync'),
     claimIdle: (claim: 'break' | 'away_work') => ipcRenderer.invoke('shift:claimIdle', claim),
+    startContext: () => ipcRenderer.invoke('shift:startContext'),
+    dismissClosure: () => ipcRenderer.invoke('shift:dismissClosure'),
+    snoozeEndReminder: () => ipcRenderer.invoke('shift:snoozeEndReminder'),
+    dismissReminder: (kind: 'start' | 'end' | 'break') => ipcRenderer.invoke('shift:dismissReminder', kind),
     onUpdate: on('shift:update'),
     onLongIdle: on('tracker:longIdle'),
+    onNotice: on('shift:notice'),
   },
   net: {
     onStatus: on('net:status'),
+  },
+  /** QA only: the main process registers 'dev:simulate' solely when COMPANYOS_DEV_SIM=1; otherwise this rejects. */
+  dev: {
+    simulate: (payload: unknown) => ipcRenderer.invoke('dev:simulate', payload),
   },
 };
 

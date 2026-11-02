@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Clock } from 'lucide-react';
+import { CalendarX, Clock, Info } from 'lucide-react';
 import { bridge, http } from './lib/bridge';
 import { useQuery } from './lib/useQuery';
 import { useTheme } from './lib/theme';
-import type { Me, NotificationItem, ShiftSnapshot } from './lib/types';
+import type { Me, NotificationItem, ShiftNotice, ShiftSnapshot, StartContext } from './lib/types';
 import { TitleBar, Sidebar, type Screen } from './shell/Shell';
 import { LoginScreen, ConsentScreen } from './screens/Auth';
 import { Dashboard } from './screens/Dashboard';
@@ -14,7 +14,7 @@ import { LeaveScreen } from './screens/Leave';
 import { ActivityScreen } from './screens/Activity';
 import { NotificationsPanel } from './screens/Notifications';
 import { Button, Modal, Skeleton } from './components/ui';
-import { hm } from './lib/format';
+import { hm, time } from './lib/format';
 
 type Phase = 'boot' | 'login' | 'consent' | 'app';
 
@@ -27,6 +27,29 @@ export default function App() {
   const [bell, setBell] = useState(false);
   const [longIdle, setLongIdle] = useState<{ seconds: number } | null>(null);
   const [online, setOnline] = useState(true);
+  const [startConfirm, setStartConfirm] = useState<StartContext | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  /** Behaviour 3: the main process decides whether now is outside the schedule; we only ask. */
+  const requestStartShift = useCallback(async () => {
+    let ctx: StartContext | null = null;
+    try {
+      ctx = (await bridge.shift.startContext()) as StartContext | null;
+    } catch {
+      ctx = null; // older main process without the schedule feature: start directly
+    }
+    if (ctx?.outsideSchedule) {
+      setStartConfirm(ctx);
+      return;
+    }
+    await bridge.shift.start();
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 8_000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const loadMe = useCallback(async () => {
     try {
@@ -51,6 +74,11 @@ export default function App() {
       bridge.shift.onUpdate((s) => setShift(s as ShiftSnapshot)),
       bridge.shift.onLongIdle((p) => setLongIdle(p as { seconds: number })),
       bridge.net.onStatus((s) => setOnline((s as { online: boolean }).online)),
+      bridge.shift.onNotice((n) => {
+        const notice = n as ShiftNotice;
+        if (notice.kind === 'autoStarted') setToast(`Shift started automatically at ${time(notice.at)} (company policy)`);
+        if (notice.kind === 'closedByServer') setScreen('dashboard');
+      }),
       bridge.auth.onExpired(() => {
         setMe(null);
         setPhase('login');
@@ -112,9 +140,9 @@ export default function App() {
     <div className="flex h-full flex-col bg-bg">
       <TitleBar theme={theme} onToggleTheme={toggle} online={online} unread={unread} onBell={() => setBell(true)} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar screen={screen} onNavigate={setScreen} shift={shiftWithNet} me={me} counts={{ tasks: todayCount }} onLogout={() => void logout()} />
+        <Sidebar screen={screen} onNavigate={setScreen} shift={shiftWithNet} me={me} counts={{ tasks: todayCount }} onLogout={() => void logout()} onStartShift={requestStartShift} />
         <main key={screen} className="fade-in min-h-0 min-w-0 flex-1 overflow-y-auto p-6">
-          {screen === 'dashboard' && <Dashboard me={me} shift={shiftWithNet} unread={unread} notifications={notifList} longIdle={longIdle} onClaimIdle={(claim) => void bridge.shift.claimIdle(claim).then(() => setLongIdle(null))} onOpen={setScreen} onBell={() => setBell(true)} />}
+          {screen === 'dashboard' && <Dashboard me={me} shift={shiftWithNet} unread={unread} notifications={notifList} longIdle={longIdle} onClaimIdle={(claim) => void bridge.shift.claimIdle(claim).then(() => setLongIdle(null))} onOpen={setScreen} onBell={() => setBell(true)} onStartShift={requestStartShift} />}
           {screen === 'tasks' && <TasksScreen online={online} />}
           {screen === 'crm' && <CrmScreen online={online} />}
           {screen === 'mail' && <MailScreen online={online} meId={me.id} />}
@@ -123,6 +151,58 @@ export default function App() {
         </main>
       </div>
       {bell && <NotificationsPanel query={notifications} onClose={() => setBell(false)} />}
+      {toast && (
+        <div role="status" className="pop-in fixed bottom-5 right-5 z-50 flex max-w-sm items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink shadow-modal">
+          <Info size={15} className="shrink-0 text-pri" />
+          <span className="min-w-0 flex-1">{toast}</span>
+          <button type="button" className="text-xs font-semibold text-ink-3 hover:text-ink" onClick={() => setToast(null)}>Close</button>
+        </div>
+      )}
+      <Modal
+        open={Boolean(startConfirm)}
+        onClose={() => setStartConfirm(null)}
+        title="Start a shift outside your schedule?"
+        width={440}
+        footer={
+          <>
+            <Button onClick={() => setStartConfirm(null)}>Cancel</Button>
+            <Button variant="primary" onClick={() => void bridge.shift.start().then(() => setStartConfirm(null))}>Start anyway</Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-3 rounded-lg border border-amber/30 bg-amber-soft/50 px-3 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-soft text-amber-text">
+            <CalendarX size={16} />
+          </span>
+          <div>
+            <div className="text-base font-semibold text-ink">{startReason(startConfirm)}</div>
+            <div className="mt-0.5 text-sm text-ink-2">Start a shift anyway? It will be flagged outside schedule for your manager.</div>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        open={Boolean(shift?.reminder?.endModal)}
+        onClose={() => void bridge.shift.snoozeEndReminder()}
+        title="Your scheduled shift has ended"
+        subtitle={shift?.reminder?.scheduledEndAt ? `Your shift was scheduled to end at ${time(shift.reminder.scheduledEndAt)}.` : undefined}
+        width={440}
+        footer={
+          <>
+            <Button onClick={() => void bridge.shift.snoozeEndReminder()}>Keep working{shift?.reminder?.endSnoozes ? ` (${3 - Math.min(3, shift.reminder.endSnoozes)} left)` : ''}</Button>
+            <Button variant="danger" onClick={() => void bridge.shift.end()}>End shift now</Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-3 rounded-lg border border-line bg-surface-2 px-3 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pri-soft text-pri-2">
+            <Clock size={16} />
+          </span>
+          <div>
+            <div className="text-base font-semibold text-ink">Worked {hm(shift?.durationSeconds ?? 0)} so far</div>
+            <div className="mt-0.5 text-sm text-ink-2">Keep working snoozes this reminder for 30 minutes. Your shift stays open until you end it.</div>
+          </div>
+        </div>
+      </Modal>
       <Modal
         open={Boolean(longIdle)}
         onClose={() => setLongIdle(null)}
@@ -148,4 +228,23 @@ export default function App() {
       </Modal>
     </div>
   );
+}
+
+function startReason(ctx: StartContext | null): string {
+  if (!ctx) return '';
+  const range = ctx.scheduledStartAt && ctx.scheduledEndAt ? `${time(ctx.scheduledStartAt)}–${time(ctx.scheduledEndAt)}` : null;
+  switch (ctx.reason) {
+    case 'not_workday':
+      return 'Today is your weekly day off.';
+    case 'holiday':
+      return 'Today is a public holiday.';
+    case 'on_leave':
+      return 'You are on leave today.';
+    case 'too_early':
+      return range ? `Your schedule today is ${range}. It is more than 2 hours before your start.` : 'It is more than 2 hours before your scheduled start.';
+    case 'after_end':
+      return range ? `Your schedule today is ${range}. Your scheduled shift has already ended.` : 'Your scheduled shift has already ended.';
+    default:
+      return range ? `Your schedule today is ${range}.` : 'This shift is outside your schedule.';
+  }
 }

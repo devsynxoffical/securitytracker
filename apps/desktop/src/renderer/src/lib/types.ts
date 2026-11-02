@@ -11,7 +11,74 @@ export interface Me {
   consentRequired?: boolean;
   policyVersion?: number;
   mustChangePassword?: boolean;
+  /** Optional: older servers do not send a schedule. null = no schedule assigned. */
+  schedule?: Schedule | null;
+  /** Optional: older servers do not send a policy; every policy-driven behaviour is then off. */
+  shiftPolicy?: ShiftPolicy;
 }
+
+export interface ScheduleToday {
+  date: string;
+  isWorkday: boolean;
+  isHoliday: boolean;
+  onLeave: boolean;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+}
+
+export interface Schedule {
+  scheduleId: string;
+  name: string;
+  timezone: string;
+  workdays: number[];
+  startTime: string;
+  endTime: string;
+  graceMinutes: number;
+  today: ScheduleToday;
+  next: { date: string; scheduledStartAt: string; scheduledEndAt: string } | null;
+}
+
+export interface ShiftPolicy {
+  autoStartShiftOnLogin: boolean;
+  autoStartWindowMinutesBefore: number;
+  autoEndShiftOnShutdown: boolean;
+  countEarlyStart: boolean;
+  endReminderMinutes: number;
+  startReminderEnabled: boolean;
+  breakReminderAtAllowance: boolean;
+  minShiftMinutes: number;
+  longIdlePrompt: boolean;
+  breakAllowanceMinutes: number;
+  idleThresholdSeconds: number;
+  longIdleThresholdSeconds: number;
+}
+
+export interface ShiftClosure {
+  startedAt: string | null;
+  endedAt: string;
+  reason: string;
+  date: string | null;
+}
+
+export interface ReminderView {
+  startBanner: boolean;
+  endBanner: boolean;
+  endModal: boolean;
+  endSnoozes: number;
+  breakBanner: boolean;
+  scheduledEndAt: string | null;
+  breakAllowanceMinutes: number;
+}
+
+/** Decided in the main process (AnchoredClock); the renderer only shows the confirm dialog. */
+export interface StartContext {
+  outsideSchedule: boolean;
+  reason: 'not_workday' | 'holiday' | 'on_leave' | 'too_early' | 'after_end' | null;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+}
+
+export type ShiftNotice = { kind: 'autoStarted'; at: string } | { kind: 'closedByServer'; closure: ShiftClosure } | { kind: 'reminder'; reminder: 'start' | 'end' | 'break' };
 
 export interface ShiftSnapshot {
   state: 'OFF_SHIFT' | 'WORKING' | 'ON_BREAK';
@@ -28,6 +95,12 @@ export interface ShiftSnapshot {
   lastSyncAt: string | null;
   online: boolean;
   anchored: boolean;
+  /** All optional below: a main process built before the schedule feature omits them. */
+  lastClosure?: ShiftClosure | null;
+  reminder?: ReminderView | null;
+  scheduleToday?: ScheduleToday | null;
+  schedule?: Schedule | null;
+  policy?: Pick<ShiftPolicy, 'autoStartShiftOnLogin' | 'autoStartWindowMinutesBefore' | 'autoEndShiftOnShutdown' | 'breakAllowanceMinutes'> | null;
   tracker: {
     source: 'agent' | 'dev' | 'none';
     connected: boolean;

@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test:smoke": "node test/smoke.mjs",
     "dist:linux": "electron-vite build && electron-builder --linux",
-    "pack": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir"
+    "pack": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
+    "test:policy": "tsc src/main/shift-policy.ts --outDir out/policy-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/policy.spec.mjs"
   },
   "dependencies": {
     "@company-os/contracts": "workspace:*",

@@ -68,7 +68,7 @@ export function TitleBar({ theme, onToggleTheme, online, unread, onBell }: { the
 }
 
 /** 232px sidebar: identity block, navigation with counts, persistent shift control card. */
-export function Sidebar({ screen, onNavigate, shift, me, counts, onLogout }: { screen: Screen; onNavigate: (s: Screen) => void; shift: ShiftSnapshot | null; me: Me; counts: Partial<Record<Screen, number>>; onLogout: () => void }) {
+export function Sidebar({ screen, onNavigate, shift, me, counts, onLogout, onStartShift }: { screen: Screen; onNavigate: (s: Screen) => void; shift: ShiftSnapshot | null; me: Me; counts: Partial<Record<Screen, number>>; onLogout: () => void; onStartShift?: () => Promise<unknown> }) {
   const name = fullName(me);
   return (
     <aside className="sidebar-surface flex w-[232px] shrink-0 flex-col border-r border-line">
@@ -98,15 +98,18 @@ export function Sidebar({ screen, onNavigate, shift, me, counts, onLogout }: { s
           );
         })}
       </nav>
-      <ShiftBox shift={shift} />
+      <ShiftBox shift={shift} onStart={onStartShift} />
     </aside>
   );
 }
 
 const BREAK_TYPES = ['Lunch', 'Short break', 'Prayer', 'Personal', 'Other'];
 
-/** Shift control card pinned at the bottom of the sidebar: state, live timer, Start / Break / Resume / End (F5). */
-export function ShiftBox({ shift }: { shift: ShiftSnapshot | null }) {
+/**
+ * Shift control card pinned at the bottom of the sidebar: state, live timer, Start / Break / Resume / End (F5).
+ * `onStart` (App) runs the schedule check first; without it Start goes straight to the bridge.
+ */
+export function ShiftBox({ shift, onStart }: { shift: ShiftSnapshot | null; onStart?: () => Promise<unknown> }) {
   const [breakOpen, setBreakOpen] = useState(false);
   const [breakType, setBreakType] = useState(BREAK_TYPES[0]!);
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -153,7 +156,7 @@ export function ShiftBox({ shift }: { shift: ShiftSnapshot | null }) {
         </div>
         <div className="mt-3 flex gap-1.5">
           {state === 'OFF_SHIFT' && (
-            <Button variant="primary" size="sm" className="h-8 flex-1" disabled={busy} loading={busy} icon={<Play size={13} />} onClick={() => run(() => bridge.shift.start())}>
+            <Button variant="primary" size="sm" className="h-8 flex-1" disabled={busy} loading={busy} icon={<Play size={13} />} onClick={() => run(() => (onStart ? onStart() : bridge.shift.start()))}>
               Start shift
             </Button>
           )}
@@ -210,7 +213,7 @@ export function ShiftBox({ shift }: { shift: ShiftSnapshot | null }) {
             <option key={b}>{b}</option>
           ))}
         </Select>
-        <p className="mt-2.5 text-xs text-ink-3">Break time above 60 minutes per shift is flagged to your manager.</p>
+        <p className="mt-2.5 text-xs text-ink-3">Break time above {shift?.reminder?.breakAllowanceMinutes ?? shift?.policy?.breakAllowanceMinutes ?? 60} minutes per shift is flagged to your manager.</p>
       </Modal>
 
       <Modal

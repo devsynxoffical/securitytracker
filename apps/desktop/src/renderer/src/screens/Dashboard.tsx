@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { clsx } from 'clsx';
-import { AlertTriangle, Bell, CalendarCheck, Cake, CheckSquare, Clock, Coffee, Inbox, Megaphone, Plane, Target, Timer, TrendingUp, WifiOff } from 'lucide-react';
-import { http } from '../lib/bridge';
+import { AlertTriangle, Bell, CalendarCheck, CalendarClock, Cake, CheckSquare, Clock, Coffee, Inbox, Megaphone, Plane, Play, PowerOff, Target, Timer, TrendingUp, WifiOff, Zap } from 'lucide-react';
+import { bridge, http } from '../lib/bridge';
 import { useQuery } from '../lib/useQuery';
 import { hm, hms, time, relative, dateTime, date, todayIso } from '../lib/format';
-import type { Activity, Announcement, LeaveBalance, Me, NotificationItem, Page, ShiftSnapshot, TargetProgress, Task, TrackingSummary } from '../lib/types';
+import type { Activity, Announcement, LeaveBalance, Me, NotificationItem, Page, Schedule, ScheduleToday, ShiftClosure, ShiftSnapshot, TargetProgress, Task, TrackingSummary } from '../lib/types';
 import type { Screen } from '../shell/Shell';
 import { Card, KpiTile, Progress, Skeleton, Empty, ErrorBanner, Badge, Button, PageHeader, StatusDot, Banner, priorityTone } from '../components/ui';
 
@@ -48,7 +48,7 @@ interface Celebration {
   years?: number;
 }
 
-export function Dashboard({ me, shift, unread, notifications, longIdle, onClaimIdle, onOpen, onBell }: { me: Me; shift: ShiftSnapshot | null; unread: number; notifications: NotificationItem[]; longIdle: { seconds: number } | null; onClaimIdle: (claim: 'break' | 'away_work') => void; onOpen: (s: Screen) => void; onBell: () => void }) {
+export function Dashboard({ me, shift, unread, notifications, longIdle, onClaimIdle, onOpen, onBell, onStartShift }: { me: Me; shift: ShiftSnapshot | null; unread: number; notifications: NotificationItem[]; longIdle: { seconds: number } | null; onClaimIdle: (claim: 'break' | 'away_work') => void; onOpen: (s: Screen) => void; onBell: () => void; onStartShift?: () => Promise<unknown> }) {
   const today = todayIso();
   const weekStart = weekStartIso();
   const dueToday = useQuery(() => http.get<Task[] | Page<Task>>('/tasks/my?range=today&limit=50'), [], { intervalMs: 120_000 });
@@ -77,6 +77,14 @@ export function Dashboard({ me, shift, unread, notifications, longIdle, onClaimI
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const state = shift?.state ?? 'OFF_SHIFT';
   const tracking = state === 'WORKING' && (shift?.tracker?.tracking ?? true);
+  // Schedule: the main process copy (anchored, refreshed with the policy) wins over the renderer's /me copy.
+  const schedule: Schedule | null = shift?.schedule ?? me.schedule ?? null;
+  const scheduleToday: ScheduleToday | null = shift?.scheduleToday ?? schedule?.today ?? null;
+  const policy = shift?.policy ?? me.shiftPolicy ?? null;
+  const reminder = shift?.reminder ?? null;
+  const closure = shift?.lastClosure ?? null;
+  const allowance = reminder?.breakAllowanceMinutes ?? policy?.breakAllowanceMinutes ?? 60;
+  const startShift = () => void (onStartShift ? onStartShift() : bridge.shift.start());
   const activePct = useMemo(() => {
     const total = (shift?.activeSeconds ?? 0) + (shift?.idleSeconds ?? 0);
     return total ? Math.round(((shift?.activeSeconds ?? 0) / total) * 100) : 0;
@@ -102,6 +110,64 @@ export function Dashboard({ me, shift, unread, notifications, longIdle, onClaimI
           ) : undefined
         }
       />
+
+      {closure && state === 'OFF_SHIFT' && (
+        <div className="flex items-center gap-3 rounded-card border border-red/30 bg-red-soft/50 px-4 py-3" data-testid="closure-banner">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-soft text-red-text">
+            <PowerOff size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-ink">Your shift was closed automatically at {time(closure.endedAt)}{closureReason(closure)}</div>
+            <div className="text-sm text-ink-2">
+              {closure.startedAt ? `It had started at ${time(closure.startedAt)}. ` : ''}Start a new shift if you are working.
+            </div>
+          </div>
+          <Button size="sm" onClick={() => void bridge.shift.dismissClosure()}>Dismiss</Button>
+          <Button size="sm" variant="primary" icon={<Play size={13} />} onClick={startShift}>Start shift</Button>
+        </div>
+      )}
+
+      {reminder?.startBanner && state === 'OFF_SHIFT' && (
+        <div className="flex items-center gap-3 rounded-card border border-amber/40 bg-amber-soft/60 px-4 py-3" data-testid="start-reminder">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-soft text-amber-text">
+            <CalendarClock size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-ink">You have not started your shift</div>
+            <div className="text-sm text-ink-2">{scheduleToday?.scheduledStartAt ? `Your schedule started at ${time(scheduleToday.scheduledStartAt)}.` : 'Your scheduled shift has begun.'} Start it to begin tracking.</div>
+          </div>
+          <Button size="sm" onClick={() => void bridge.shift.dismissReminder('start')}>Dismiss</Button>
+          <Button size="sm" variant="primary" icon={<Play size={13} />} onClick={startShift}>Start shift</Button>
+        </div>
+      )}
+
+      {reminder?.endBanner && state !== 'OFF_SHIFT' && (
+        <div className="flex items-center gap-3 rounded-card border border-amber/40 bg-amber-soft/60 px-4 py-3" data-testid="end-reminder">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-soft text-amber-text">
+            <Clock size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-ink">Your shift was scheduled to end at {time(reminder.scheduledEndAt)}</div>
+            <div className="text-sm text-ink-2">End it when you are done; it stays open and tracked until then.</div>
+          </div>
+          <Button size="sm" onClick={() => void bridge.shift.dismissReminder('end')}>Dismiss</Button>
+          <Button size="sm" variant="danger-outline" onClick={() => void bridge.shift.end()}>End shift now</Button>
+        </div>
+      )}
+
+      {reminder?.breakBanner && state === 'ON_BREAK' && (
+        <div className="flex items-center gap-3 rounded-card border border-amber/40 bg-amber-soft/60 px-4 py-3" data-testid="break-reminder">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-soft text-amber-text">
+            <Coffee size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-ink">Break allowance reached ({allowance} min)</div>
+            <div className="text-sm text-ink-2">Break time above the allowance is flagged on your attendance day.</div>
+          </div>
+          <Button size="sm" onClick={() => void bridge.shift.dismissReminder('break')}>Dismiss</Button>
+          <Button size="sm" variant="primary" icon={<Play size={13} />} onClick={() => void bridge.shift.resume()}>Resume</Button>
+        </div>
+      )}
 
       {longIdle && (
         <div className="flex items-center gap-3 rounded-card border border-amber/40 bg-amber-soft/60 px-4 py-3">
@@ -130,12 +196,33 @@ export function Dashboard({ me, shift, unread, notifications, longIdle, onClaimI
           <div>
             <div className={clsx('font-mono text-4xl font-semibold leading-none', state === 'OFF_SHIFT' ? 'text-ink' : 'text-white')}>{hms(shift?.durationSeconds ?? 0)}</div>
             <div className={clsx('mt-2 text-xs', state === 'OFF_SHIFT' ? 'text-ink-3' : 'text-white/75')}>{state === 'OFF_SHIFT' ? 'Shift timer' : `Started ${time(shift?.startedAt)} · break ${hm(shift?.breakSeconds ?? 0)}`}</div>
+            <div className={clsx('mt-1.5 flex items-center gap-1.5 text-xs', state === 'OFF_SHIFT' ? 'text-ink-2' : 'text-white/85')} data-testid="schedule-line">
+              <CalendarClock size={12} className="shrink-0" />
+              <span className="truncate">{scheduleLabel(me, scheduleToday, schedule)}</span>
+            </div>
+            {state === 'OFF_SHIFT' && schedule?.next && (
+              <div className="mt-1 text-xs text-ink-3">Next shift: {nextShiftLabel(schedule.next)}</div>
+            )}
+            {(policy?.autoStartShiftOnLogin || policy?.autoEndShiftOnShutdown) && (
+              <div className={clsx('mt-2 flex flex-wrap gap-1.5 text-2xs', state === 'OFF_SHIFT' ? 'text-ink-3' : 'text-white/70')}>
+                {policy.autoStartShiftOnLogin && (
+                  <span className={clsx('inline-flex items-center gap-1 rounded-full px-1.5 py-0.5', state === 'OFF_SHIFT' ? 'bg-gray-soft' : 'bg-white/10')} title="Company policy: the shift starts by itself when you log in close to your scheduled start">
+                    <Zap size={10} /> Auto start within {policy.autoStartWindowMinutesBefore} min of your schedule
+                  </span>
+                )}
+                {policy.autoEndShiftOnShutdown && (
+                  <span className={clsx('inline-flex items-center gap-1 rounded-full px-1.5 py-0.5', state === 'OFF_SHIFT' ? 'bg-gray-soft' : 'bg-white/10')} title="Company policy: shutting down the PC ends the shift">
+                    <PowerOff size={10} /> Ends on shutdown
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-3 divide-x divide-line-2">
           <HeroStat icon={<Clock size={14} />} label="Worked today" value={hm(shift?.durationSeconds ?? 0)} context={shift?.startedAt ? `since ${time(shift.startedAt)}` : 'no shift yet'} />
           <HeroStat icon={<TrendingUp size={14} />} label="Active" value={hm(shift?.activeSeconds ?? 0)} context={<Progress value={activePct} tone={activePct >= 50 ? 'green' : 'amber'} size={4} />} tone="green" />
-          <HeroStat icon={<Coffee size={14} />} label="Break" value={hm(shift?.breakSeconds ?? 0)} context={state === 'ON_BREAK' ? `on ${shift?.currentBreakType?.toLowerCase()}` : 'allowance 60 min'} tone={state === 'ON_BREAK' ? 'amber' : undefined} />
+          <HeroStat icon={<Coffee size={14} />} label="Break" value={hm(shift?.breakSeconds ?? 0)} context={state === 'ON_BREAK' ? `on ${shift?.currentBreakType?.toLowerCase()}` : `allowance ${allowance} min`} tone={state === 'ON_BREAK' ? 'amber' : undefined} />
         </div>
       </section>
 
@@ -322,4 +409,42 @@ function HeroStat({ icon, label, value, context, tone }: { icon: React.ReactNode
       <div className="mt-1.5 text-xs text-ink-2">{context}</div>
     </div>
   );
+}
+
+function closureReason(c: ShiftClosure): string {
+  switch (c.reason) {
+    case 'auto_closed_no_heartbeat':
+      return ' (no activity for 2 hours)';
+    case 'auto_closed_max_length':
+      return ' (maximum shift length reached)';
+    case 'ended_elsewhere':
+      return ' (ended on another device)';
+    case 'ended':
+      return '';
+    default:
+      return ' (closed by the server)';
+  }
+}
+
+/** "Scheduled 09:00–18:00 · grace 10 min", or why there is nothing to work towards today. */
+function scheduleLabel(me: Me, today: ScheduleToday | null, schedule: Schedule | null): string {
+  if (me.schedule === undefined && !schedule && !today) return 'Schedule not available';
+  if (!schedule && !today) return 'No schedule assigned';
+  if (today?.onLeave) return 'On leave today';
+  if (today?.isHoliday) return 'Holiday today';
+  if (today && !today.isWorkday) return 'Weekly off';
+  if (today?.scheduledStartAt && today.scheduledEndAt) {
+    const grace = schedule?.graceMinutes ? ` · grace ${schedule.graceMinutes} min` : '';
+    return `Scheduled ${time(today.scheduledStartAt)}–${time(today.scheduledEndAt)}${grace}`;
+  }
+  return schedule ? `Schedule: ${schedule.name}` : 'No schedule assigned';
+}
+
+function nextShiftLabel(next: { date: string; scheduledStartAt: string; scheduledEndAt: string }): string {
+  const start = new Date(next.scheduledStartAt);
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const day = start.toDateString() === now.toDateString() ? 'Today' : start.toDateString() === tomorrow.toDateString() ? 'Tomorrow' : start.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+  return `${day} ${time(next.scheduledStartAt)}–${time(next.scheduledEndAt)}`;
 }

@@ -1,4 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, Notification } from 'electron';
+/**
+ * Main process entry: window, tray, IPC surface for the renderer (AGENTS.md rule 7) and the OS
+ * hooks the shift policy needs (power events, shutdown).
+ *
+ * Dev-only IPC `dev:simulate` (registered only when COMPANYOS_DEV_SIM === '1'): lets a QA script or
+ * Playwright drive the ShiftManager's schedule/policy/closure/reminder state without a server that
+ * implements the schedule contract. Payload: { profile?, closure?, state?, reminder? } (see
+ * ShiftManager.devSimulate). Never registered in production builds.
+ */
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, Notification, powerMonitor } from 'electron';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
@@ -53,6 +62,7 @@ function createWindow(): void {
   });
 
   // Started at logon with --hidden (09 §1): stay in the tray until the user opens the window.
+  registerWindowSessionEnd(mainWindow);
   mainWindow.on('ready-to-show', () => {
     if (!process.argv.includes('--hidden')) mainWindow?.show();
   });
@@ -171,11 +181,25 @@ function registerIpc(): void {
   ipcMain.handle('shift:end', () => shifts.endShift());
   ipcMain.handle('shift:sync', () => shifts.sync());
   ipcMain.handle('shift:claimIdle', (_e, claim: 'break' | 'away_work') => shifts.claimLongIdle(claim));
+  ipcMain.handle('shift:startContext', () => shifts.startContext());
+  ipcMain.handle('shift:dismissClosure', () => shifts.dismissClosure());
+  ipcMain.handle('shift:snoozeEndReminder', () => shifts.snoozeEndReminder());
+  ipcMain.handle('shift:dismissReminder', (_e, kind: 'start' | 'end' | 'break') => shifts.dismissReminder(kind === 'end' || kind === 'break' ? kind : 'start'));
+  if (process.env.COMPANYOS_DEV_SIM === '1') {
+    ipcMain.handle('dev:simulate', (_e, payload: Parameters<ShiftManager['devSimulate']>[0]) => shifts.devSimulate(payload ?? {}));
+  }
 
   shifts.onChange((snap) => send('shift:update', snap));
   shifts.onLongIdle((p) => {
     mainWindow?.show();
     send('tracker:longIdle', p);
+  });
+  shifts.onNotify((title, body) => {
+    if (Notification.isSupported()) new Notification({ title, body }).show();
+  });
+  shifts.onNotice((notice) => {
+    if (notice.kind === 'reminder' && notice.reminder === 'end') mainWindow?.show();
+    send('shift:notice', notice);
   });
   api.onNetwork((online) => send('net:status', { online }));
   api.onUnauthorized(() => {
@@ -194,6 +218,7 @@ app.whenReady().then(() => {
   registerIpc();
   createWindow();
   createTray();
+  registerPowerHooks();
   if (api.hasSession()) void shifts.start();
 
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
@@ -202,6 +227,39 @@ app.whenReady().then(() => {
     else mainWindow?.show();
   });
 });
+
+/**
+ * Behaviour 5: auto end on shutdown (policy) and reconcile after sleep. `powerMonitor` 'shutdown'
+ * fires on macOS/Linux; on Windows the window gets 'query-session-end' (Electron >= 31). Both end the
+ * shift when the company policy says so, wait briefly for the upload, then let the OS continue.
+ * With the policy off nothing changes: the shift stays open and the server auto-closes it (F5 rule 4).
+ */
+function shutdownEndsShift(): boolean {
+  const s = shifts.snapshot();
+  return s.state !== 'OFF_SHIFT' && Boolean(s.policy?.autoEndShiftOnShutdown);
+}
+async function endForShutdown(): Promise<void> {
+  quitting = true;
+  await Promise.race([shifts.onShutdown(), new Promise((r) => setTimeout(r, 4_000))]);
+}
+function registerPowerHooks(): void {
+  // The typings declare no event argument, but Electron passes one on macOS/Linux so the shutdown can be delayed.
+  (powerMonitor as unknown as { on: (ev: 'shutdown', fn: (e?: Electron.Event) => void) => void }).on('shutdown', (e) => {
+    if (!shutdownEndsShift()) return;
+    e?.preventDefault();
+    void endForShutdown().finally(() => app.quit());
+  });
+  powerMonitor.on('resume', () => void shifts.onResume());
+  powerMonitor.on('unlock-screen', () => void shifts.onResume());
+}
+function registerWindowSessionEnd(win: BrowserWindow): void {
+  if (process.platform !== 'win32') return;
+  win.on('query-session-end', (e) => {
+    if (!shutdownEndsShift()) return;
+    e.preventDefault();
+    void endForShutdown().finally(() => app.quit());
+  });
+}
 
 app.on('before-quit', () => {
   quitting = true;
