@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WorkPulse — Enterprise Workforce Intelligence & Operations',
+  title: 'WorkPulse',
   description: 'Real-time telemetry, employee tracking, and unified CRM operations platform',
 };
 
