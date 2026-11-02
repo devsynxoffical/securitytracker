@@ -1,19 +1,83 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Activity } from 'lucide-react';
-import { useTeamActivity } from '@/lib/queries/tracking';
-import { Card, KpiCard, Table, Th, Td, TableSkeleton, EmptyState, ErrorBanner, PageHeader, Button } from '@/components/ui';
-import { ActivityPercent, StatusBadge, CategoryBadge, OrgFilters, duration, clock, isoToday, shiftDate } from '@/components/tracking/shared';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Activity, Clock, Users, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useTeamActivity, type TeamActivity } from '@/lib/queries/tracking';
+import { Card, PageHeader, Avatar, Badge, Button } from '@/components/ui';
+import { KpiTile, DataTable, type Column, type SortState, Tooltip } from '@/components/ui/advanced';
+import { ActivityPercent, StatusBadge, CategoryBadge, OrgFilters, DateNav, duration, clock, isoToday } from '@/components/tracking/shared';
 import { fullName } from '@/lib/format';
 
+type Row = TeamActivity['items'][number] & { id: string };
+
 export default function TeamActivityPage() {
+  const router = useRouter();
   const [date, setDate] = useState(isoToday());
   const [org, setOrg] = useState({ departmentId: '', teamId: '' });
+  const [sort, setSort] = useState<SortState>({ key: 'activity', direction: 'desc' });
   const q = useTeamActivity({ date, departmentId: org.departmentId || undefined, teamId: org.teamId || undefined });
   const d = q.data;
   const th = d?.summary.thresholds ?? { warn: 50, alert: 30 };
+
+  const rows = useMemo<Row[]>(() => {
+    const items = (d?.items ?? []).map((i) => ({ ...i, id: i.employee.id }));
+    const dir = sort.direction === 'asc' ? 1 : -1;
+    return items.sort((a, b) => {
+      switch (sort.key) {
+        case 'employee': return dir * fullName(a.employee).localeCompare(fullName(b.employee));
+        case 'tracked': return dir * (a.trackedS - b.trackedS);
+        case 'started': return dir * ((a.firstStart ?? '').localeCompare(b.firstStart ?? ''));
+        default: {
+          const av = a.level === 'none' ? -1 : a.activityPercent;
+          const bv = b.level === 'none' ? -1 : b.activityPercent;
+          return dir * (av - bv);
+        }
+      }
+    });
+  }, [d, sort]);
+
+  const below = rows.filter((r) => r.level === 'warn' || r.level === 'alert').length;
+  const open = (id: string) => router.push(`/admin/tracking/timeline?employeeId=${id}&date=${date}`);
+
+  const columns: Column<Row>[] = [
+    {
+      key: 'employee', header: 'Employee', sortable: true, locked: true,
+      cell: (r) => (
+        <div className="flex items-center gap-2.5">
+          <Avatar name={fullName(r.employee)} size={26} />
+          <div className="min-w-0 leading-tight">
+            <div className="truncate font-semibold text-ink">{fullName(r.employee)}</div>
+            <div className="truncate text-xs text-ink-3">{r.employee.department?.name ?? '—'}{r.employee.team ? ` · ${r.employee.team.name}` : ''}</div>
+          </div>
+        </div>
+      ),
+    },
+    { key: 'status', header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
+    { key: 'started', header: 'Started', sortable: true, mono: true, cell: (r) => clock(r.firstStart) },
+    { key: 'tracked', header: 'Tracked', sortable: true, right: true, mono: true, cell: (r) => (r.trackedS ? duration(r.trackedS) : <span className="text-ink-3">—</span>) },
+    { key: 'activity', header: 'Activity', sortable: true, cell: (r) => <ActivityPercent value={r.activityPercent} warn={th.warn} alert={th.alert} none={r.level === 'none'} /> },
+    {
+      key: 'topApp', header: 'Top app',
+      cell: (r) => r.topApp ? (
+        <span className="inline-flex max-w-[220px] items-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs">
+          <span className="truncate font-medium text-ink">{r.topApp.name}</span>
+          <CategoryBadge category={r.topApp.category} />
+          <span className="font-mono text-ink-3">{duration(r.topApp.activeS)}</span>
+        </span>
+      ) : <span className="text-ink-3">—</span>,
+    },
+    {
+      key: 'topDomain', header: 'Top site',
+      cell: (r) => r.topDomain ? (
+        <span className="inline-flex max-w-[220px] items-center gap-1.5 rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs">
+          <span className="truncate font-mono text-ink">{r.topDomain.domain}</span>
+          <CategoryBadge category={r.topDomain.category} />
+        </span>
+      ) : <span className="text-ink-3">—</span>,
+    },
+    { key: 'idle', header: 'Idle', right: true, mono: true, hidden: false, cell: (r) => (r.idleS ? duration(r.idleS) : <span className="text-ink-3">—</span>) },
+  ];
 
   return (
     <div>
@@ -23,47 +87,45 @@ export default function TeamActivityPage() {
         actions={
           <>
             <OrgFilters departmentId={org.departmentId} teamId={org.teamId} onChange={setOrg} />
-            <Button size="sm" variant="ghost" onClick={() => setDate(shiftDate(date, -1))}>‹</Button>
-            <input type="date" value={date} max={isoToday()} onChange={(e) => e.target.value && setDate(e.target.value)} className="h-8 rounded-lg border border-line bg-surface px-2 font-mono text-xs" />
-            <Button size="sm" variant="ghost" onClick={() => setDate(shiftDate(date, 1))} disabled={date >= isoToday()}>›</Button>
+            <DateNav date={date} onChange={setDate} />
           </>
         }
       />
 
-      {q.isError && <ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} />}
-
-      <div className="mb-4 grid grid-cols-2 gap-3.5 md:grid-cols-5">
-        <KpiCard label="Working" value={d ? d.summary.working : '—'} tone="green" context={d ? `${d.summary.onBreak} on break` : undefined} />
-        <KpiCard label="Offline" value={d ? d.summary.offline : '—'} tone="blue" context="heartbeat older than 2 min" />
-        <KpiCard label="Not started" value={d ? d.summary.notStarted : '—'} tone="red" context={d ? `of ${d.summary.employees}` : undefined} />
-        <KpiCard label="Tracked today" value={d ? duration(d.summary.trackedS) : '—'} />
-        <KpiCard label="Team activity" value={d ? `${d.summary.activityPercent}%` : '—'} context={`amber below ${th.warn}%, red below ${th.alert}%`} />
+      <div className="mb-4 grid grid-cols-2 gap-3.5 md:grid-cols-4">
+        <KpiTile label="Tracked today" value={d ? duration(d.summary.trackedS) : '—'} icon={<Clock size={15} />} loading={q.isLoading} />
+        <KpiTile label="Average activity" value={d ? `${d.summary.activityPercent}%` : '—'} tone={d ? (d.summary.activityPercent < th.alert ? 'red' : d.summary.activityPercent < th.warn ? 'amber' : 'green') : undefined} icon={<Activity size={15} />} loading={q.isLoading} />
+        <KpiTile label="Working now" value={d ? d.summary.working : '—'} tone="green" icon={<Users size={15} />} loading={q.isLoading} />
+        <KpiTile label="Below threshold" value={d ? below : '—'} tone={below > 0 ? 'amber' : undefined} icon={<AlertTriangle size={15} />} loading={q.isLoading} />
       </div>
+      {d && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-ink-2">
+          <Badge tone="green" dot>{d.summary.working} working</Badge>
+          <Badge tone="amber" dot>{d.summary.onBreak} on break</Badge>
+          <Badge tone="blue" dot>{d.summary.offline} offline</Badge>
+          <Badge tone="red" dot>{d.summary.notStarted} not started</Badge>
+          <span className="ml-auto">Amber below {th.warn}%, red below {th.alert}%</span>
+        </div>
+      )}
 
       <Card>
-        {q.isLoading && <TableSkeleton rows={8} cols={7} />}
-        {d && d.items.length === 0 && <EmptyState icon={<Activity size={28} strokeWidth={1.75} />} title="No employees in view" body="Adjust the department or team filter." />}
-        {d && d.items.length > 0 && (
-          <Table>
-            <thead><tr><Th>Employee</Th><Th>Status</Th><Th>Started</Th><Th right>Tracked</Th><Th>Activity</Th><Th>Top app</Th><Th>Top site</Th></tr></thead>
-            <tbody>
-              {d.items.map((i) => (
-                <tr key={i.employee.id} className="hover:bg-surface-2">
-                  <Td>
-                    <Link href={`/admin/tracking/timeline?employeeId=${i.employee.id}&date=${date}`} className="font-semibold text-ink hover:text-pri">{fullName(i.employee)}</Link>
-                    <div className="text-[11px] text-ink-3">{i.employee.department?.name ?? '—'}{i.employee.team ? ` · ${i.employee.team.name}` : ''}</div>
-                  </Td>
-                  <Td><StatusBadge status={i.status} /></Td>
-                  <Td mono>{clock(i.firstStart)}</Td>
-                  <Td right mono>{i.trackedS ? duration(i.trackedS) : '—'}</Td>
-                  <Td><ActivityPercent value={i.activityPercent} warn={th.warn} alert={th.alert} none={i.level === 'none'} /></Td>
-                  <Td>{i.topApp ? <span className="inline-flex items-center gap-1.5 text-xs"><span className="truncate max-w-[160px]">{i.topApp.name}</span><CategoryBadge category={i.topApp.category} /><span className="font-mono text-ink-3">{duration(i.topApp.activeS)}</span></span> : <span className="text-ink-3">—</span>}</Td>
-                  <Td>{i.topDomain ? <span className="inline-flex items-center gap-1.5 text-xs"><span className="truncate max-w-[160px]">{i.topDomain.domain}</span><CategoryBadge category={i.topDomain.category} /></span> : <span className="text-ink-3">—</span>}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+        <DataTable<Row>
+          rows={rows}
+          columns={columns}
+          loading={q.isLoading}
+          error={q.isError ? (q.error as Error).message : null}
+          onRetry={() => q.refetch()}
+          sort={sort}
+          onSort={setSort}
+          onRowClick={(r) => open(r.employee.id)}
+          storageKey="tracking.team"
+          empty={<div className="px-6 py-14 text-center"><Activity size={28} strokeWidth={1.75} className="mx-auto mb-3 text-ink-3" /><div className="text-base font-semibold text-ink">No employees in view</div><div className="mt-1 text-sm text-ink-2">Adjust the department or team filter.</div></div>}
+          rowActions={(r) => (
+            <Tooltip label="Open timeline">
+              <Button size="sm" variant="ghost" aria-label="Open timeline" onClick={() => open(r.employee.id)}><ExternalLink size={14} /></Button>
+            </Tooltip>
+          )}
+        />
       </Card>
     </div>
   );
