@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Phone, Plus, Search, StickyNote, CalendarPlus, Target } from 'lucide-react';
+import { Phone, Plus, Search, StickyNote, CalendarPlus, Target, Building2 } from 'lucide-react';
 import { http, errorMessage } from '../lib/bridge';
 import { useQuery } from '../lib/useQuery';
 import { money, dateTime, date, fullName } from '../lib/format';
 import type { Lead, Page, Pipeline } from '../lib/types';
-import { Badge, Button, Card, Empty, ErrorBanner, SkeletonRows, Input, Select, Textarea, Field, Modal, Row, Tabs, statusTone } from '../components/ui';
+import { Badge, Button, Card, Empty, ErrorBanner, SkeletonRows, Input, Select, Textarea, Field, Modal, Row, Tabs, statusTone, PageHeader, Table, Th, Td, Avatar } from '../components/ui';
 
 const OUTCOMES = ['Connected', 'No answer', 'Busy', 'Voicemail', 'Wrong number', 'Do not call'];
 
@@ -17,52 +17,68 @@ export function CrmScreen({ online }: { online: boolean }) {
   const leads = useQuery(() => http.get<Page<Lead>>(`/leads?limit=100${search ? `&search=${encodeURIComponent(search)}` : ''}`), [search], { intervalMs: 120_000 });
   const pipeline = pipelines.data?.find((p) => p.isDefault) ?? pipelines.data?.[0];
 
+  const leadCount = leads.data?.items.length ?? 0;
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative w-80">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" />
-          <Input className="pl-8" placeholder="Search my leads…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <Button variant="primary" disabled={!online || !pipeline} onClick={() => setCreating(true)}>
-          <Plus size={14} /> New lead
-        </Button>
-      </div>
-      <Card>
+    <div className="space-y-4">
+      <PageHeader
+        title="CRM"
+        subtitle="Leads assigned to you. Log calls, notes and appointments, and move them through the pipeline."
+        actions={
+          <>
+            <div className="relative w-72">
+              <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" />
+              <Input className="h-[34px] pl-8 text-xs" placeholder="Search my leads…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <Button variant="primary" disabled={!online || !pipeline} icon={<Plus size={14} />} onClick={() => setCreating(true)}>
+              New lead
+            </Button>
+          </>
+        }
+      />
+      <Card title="My leads" subtitle={leads.loading ? undefined : `${leadCount} lead${leadCount === 1 ? '' : 's'}${pipeline ? ` · ${pipeline.name}` : ''}`} padded={false}>
         {leads.loading ? (
-          <SkeletonRows rows={8} />
+          <div className="p-4"><SkeletonRows rows={8} /></div>
         ) : leads.error ? (
-          <ErrorBanner message={errorMessage(leads.error)} onRetry={leads.refetch} />
+          <div className="p-4"><ErrorBanner message={errorMessage(leads.error)} onRetry={leads.refetch} /></div>
         ) : !leads.data?.items.length ? (
-          <Empty icon={<Target size={28} />} title="No leads assigned to you" body="Leads your manager assigns appear here." />
+          <Empty icon={<Target size={22} />} title={search ? 'No leads match your search' : 'No leads assigned to you'} body={search ? 'Try a different name, company or phone number.' : 'Leads your manager assigns, or that you create, appear here.'} action={!search && online && pipeline ? <Button size="sm" icon={<Plus size={13} />} onClick={() => setCreating(true)}>New lead</Button> : undefined} />
         ) : (
-          <table className="w-full text-[12.5px]">
+          <Table>
             <thead>
-              <tr className="bg-surface-2 text-left text-[11px] font-semibold uppercase tracking-[0.05em] text-ink-3">
-                <th className="px-3 py-2">Lead</th>
-                <th className="px-3 py-2">Stage</th>
-                <th className="px-3 py-2">Phone</th>
-                <th className="px-3 py-2 text-right">Value</th>
-                <th className="px-3 py-2">Follow-up</th>
+              <tr>
+                <Th>Lead</Th>
+                <Th>Stage</Th>
+                <Th>Phone</Th>
+                <Th right>Value</Th>
+                <Th>Follow-up</Th>
               </tr>
             </thead>
             <tbody>
-              {leads.data.items.map((l) => (
-                <tr key={l.id} onClick={() => setSelectedId(l.id)} className="cursor-pointer border-b border-line-2 hover:bg-surface-2">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-ink">{l.name}</div>
-                    <div className="text-[11.5px] text-ink-3">{l.companyName ?? '—'}</div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge tone={l.stage.type === 'won' ? 'green' : l.stage.type === 'lost' ? 'red' : 'blue'}>{l.stage.name}</Badge>
-                  </td>
-                  <td className="px-3 py-2 font-mono">{l.phones[0]?.phoneE164 ?? '—'}</td>
-                  <td className="px-3 py-2 text-right font-mono">{money(l.value, l.currency)}</td>
-                  <td className={`px-3 py-2 font-mono ${l.followUpAt && new Date(l.followUpAt) < new Date() ? 'text-red' : 'text-ink-2'}`}>{l.followUpAt ? dateTime(l.followUpAt) : '—'}</td>
-                </tr>
-              ))}
+              {leads.data.items.map((l) => {
+                const late = Boolean(l.followUpAt && new Date(l.followUpAt) < new Date());
+                return (
+                  <tr key={l.id} onClick={() => setSelectedId(l.id)} className="group cursor-pointer transition hover:bg-surface-2">
+                    <Td>
+                      <span className="flex items-center gap-3">
+                        <Avatar name={l.name} size={30} />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-ink">{l.name}</span>
+                          <span className="flex items-center gap-1 truncate text-xs text-ink-3">{l.companyName ? <><Building2 size={11} /> {l.companyName}</> : '—'}</span>
+                        </span>
+                        {l.doNotCall && <Badge tone="red">DNC</Badge>}
+                      </span>
+                    </Td>
+                    <Td>
+                      <Badge tone={l.stage.type === 'won' ? 'green' : l.stage.type === 'lost' ? 'red' : 'blue'} dot>{l.stage.name}</Badge>
+                    </Td>
+                    <Td mono>{l.phones[0]?.phoneE164 ?? '—'}</Td>
+                    <Td right mono className="text-ink">{money(l.value, l.currency)}</Td>
+                    <Td mono className={late ? 'text-red-text' : 'text-ink-2'}>{l.followUpAt ? dateTime(l.followUpAt) : '—'}</Td>
+                  </tr>
+                );
+              })}
             </tbody>
-          </table>
+          </Table>
         )}
       </Card>
       {selectedId && <LeadDrawer id={selectedId} online={online} onClose={() => setSelectedId(null)} onChanged={() => void leads.refetch()} />}
@@ -106,30 +122,31 @@ function LeadDrawer({ id, online, onClose, onChanged }: { id: string; online: bo
   }, [l]);
 
   return (
-    <Modal open onClose={onClose} title={l?.name ?? 'Lead'} width={680}>
+    <Modal open onClose={onClose} title={l?.name ?? 'Lead'} subtitle={l?.companyName ?? undefined} width={700}>
       {lead.loading ? (
         <SkeletonRows rows={6} />
       ) : lead.error || !l ? (
         <ErrorBanner message={errorMessage(lead.error)} onRetry={lead.refetch} />
       ) : (
         <>
-          {error && <ErrorBanner message={error} />}
-          {l.doNotCall && <div className="mb-2 rounded-lg bg-red-soft px-3 py-2 text-[12.5px] text-red">Do not call: this lead asked not to be contacted by phone.</div>}
-          {l.convertedAt && <div className="mb-2 rounded-lg bg-green-soft px-3 py-2 text-[12.5px] text-green">Converted to a contact on {date(l.convertedAt)}. This lead is read-only.</div>}
+          {error && <ErrorBanner message={error} className="mb-3" />}
+          {l.doNotCall && <div className="mb-3 rounded-lg border border-red/30 bg-red-soft px-3 py-2 text-sm text-red-text">Do not call: this lead asked not to be contacted by phone.</div>}
+          {l.convertedAt && <div className="mb-3 rounded-lg border border-green/30 bg-green-soft px-3 py-2 text-sm text-green-text">Converted to a contact on {date(l.convertedAt)}. This lead is read-only.</div>}
           <div className="mb-3 flex flex-wrap gap-2">
-            <Button size="sm" disabled={!online || busy || l.doNotCall || Boolean(l.convertedAt)} onClick={() => setAction('call')}>
-              <Phone size={13} /> Log call
+            <Button size="sm" disabled={!online || busy || l.doNotCall || Boolean(l.convertedAt)} icon={<Phone size={13} />} onClick={() => setAction('call')}>
+              Log call
             </Button>
-            <Button size="sm" disabled={!online || busy || Boolean(l.convertedAt)} onClick={() => setAction('note')}>
-              <StickyNote size={13} /> Note
+            <Button size="sm" disabled={!online || busy || Boolean(l.convertedAt)} icon={<StickyNote size={13} />} onClick={() => setAction('note')}>
+              Note
             </Button>
-            <Button size="sm" disabled={!online || busy || Boolean(l.convertedAt)} onClick={() => setAction('appointment')}>
-              <CalendarPlus size={13} /> Appointment
+            <Button size="sm" disabled={!online || busy || Boolean(l.convertedAt)} icon={<CalendarPlus size={13} />} onClick={() => setAction('appointment')}>
+              Appointment
             </Button>
-            <div className="ml-auto flex items-center gap-2 text-[12px] text-ink-2">
+            <div className="ml-auto flex items-center gap-2 text-xs text-ink-2">
               Stage
               <Select
-                className="h-8 w-44 text-[12px]"
+                className="h-8 w-44 text-xs"
+                aria-label="Stage"
                 value={l.stage.id}
                 disabled={!online || busy || Boolean(l.convertedAt)}
                 onChange={(e) => {
@@ -162,16 +179,16 @@ function LeadDrawer({ id, online, onClose, onChanged }: { id: string; online: bo
               <div>
                 {l.phones.map((p) => (
                   <Row key={p.phoneE164} label={p.label}>
-                    <a href={`tel:${p.phoneE164}`} className="font-mono text-pri">{p.phoneE164}</a>
+                    <a href={`tel:${p.phoneE164}`} className="font-mono text-xs text-pri hover:underline">{p.phoneE164}</a>
                   </Row>
                 ))}
                 {l.emails.map((e) => (
-                  <Row key={e.emailLower} label={e.label}>{e.emailLower}</Row>
+                  <Row key={e.emailLower} label={e.label}><span className="font-mono text-xs">{e.emailLower}</span></Row>
                 ))}
                 <Row label="Follow-up">
                   <Input
                     type="datetime-local"
-                    className="h-8 w-48 text-[12px]"
+                    className="h-8 w-48 text-xs"
                     disabled={!online || busy || Boolean(l.convertedAt)}
                     defaultValue={l.followUpAt ? new Date(l.followUpAt).toISOString().slice(0, 16) : ''}
                     onBlur={(e) => e.target.value && void run(() => http.patch(`/leads/${id}`, { followUpAt: new Date(e.target.value).toISOString() }))}
@@ -180,16 +197,19 @@ function LeadDrawer({ id, online, onClose, onChanged }: { id: string; online: bo
               </div>
             </div>
           ) : timeline.length === 0 ? (
-            <Empty title="No activity yet" />
+            <Empty compact title="No activity yet" body="Calls, notes and appointments you log appear here." />
           ) : (
             <ul className="divide-y divide-line-2 pt-1">
               {timeline.map((t) => (
-                <li key={t.id} className="py-2 text-[12.5px]">
-                  <div className="flex justify-between text-[11px] text-ink-3">
-                    <span className="font-semibold uppercase tracking-[0.05em]">{t.label}</span>
-                    <span className="font-mono">{dateTime(t.at)}</span>
+                <li key={t.id} className="flex gap-3 py-2.5 text-sm">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-pri/60" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex justify-between text-2xs text-ink-3">
+                      <span className="font-semibold uppercase">{t.label}</span>
+                      <span className="font-mono normal-case tracking-normal">{dateTime(t.at)}</span>
+                    </div>
+                    <div className="text-ink">{t.text}</div>
                   </div>
-                  <div className="text-ink">{t.text}</div>
                 </li>
               ))}
             </ul>
@@ -206,7 +226,7 @@ function LeadDrawer({ id, online, onClose, onChanged }: { id: string; online: bo
 function NoteForm({ busy, onCancel, onSubmit }: { busy: boolean; onCancel: () => void; onSubmit: (body: string) => void }) {
   const [body, setBody] = useState('');
   return (
-    <div className="mt-3 rounded-lg border border-line bg-surface-2 p-3">
+    <div className="pop-in mt-3 rounded-card border border-line bg-surface-2 p-3.5">
       <Textarea autoFocus value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a note…" />
       <div className="mt-2 flex justify-end gap-2">
         <Button size="sm" onClick={onCancel}>Cancel</Button>
@@ -224,8 +244,8 @@ function CallForm({ busy, stages, onCancel, onSubmit }: { busy: boolean; stages:
   const [next, setNext] = useState('');
   const [stageId, setStageId] = useState('');
   return (
-    <div className="mt-3 space-y-2 rounded-lg border border-line bg-surface-2 p-3">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="pop-in mt-3 space-y-3 rounded-card border border-line bg-surface-2 p-3.5">
+      <div className="grid grid-cols-3 gap-3">
         <Field label="Direction">
           <Select value={direction} onChange={(e) => setDirection(e.target.value as 'outbound' | 'inbound')}>
             <option value="outbound">Outbound</option>
@@ -246,7 +266,7 @@ function CallForm({ busy, stages, onCancel, onSubmit }: { busy: boolean; stages:
       <Field label="Notes">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Next follow-up (optional)">
           <Input type="datetime-local" value={next} onChange={(e) => setNext(e.target.value)} />
         </Field>
@@ -275,9 +295,9 @@ function AppointmentForm({ busy, onCancel, onSubmit }: { busy: boolean; onCancel
   const [end, setEnd] = useState('');
   const [notes, setNotes] = useState('');
   return (
-    <div className="mt-3 space-y-2 rounded-lg border border-line bg-surface-2 p-3">
+    <div className="pop-in mt-3 space-y-3 rounded-card border border-line bg-surface-2 p-3.5">
       <Field label="Title"><Input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Starts"><Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
         <Field label="Ends"><Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} /></Field>
       </div>
@@ -330,11 +350,11 @@ function NewLeadModal({ pipeline, onClose, onCreated }: { pipeline: Pipeline; on
   };
 
   return (
-    <Modal open onClose={onClose} title="New lead" width={480} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={busy || !name} onClick={() => void submit(false)}>Create</Button></>}>
-      <div className="space-y-2">
+    <Modal open onClose={onClose} title="New lead" subtitle="Created in the default pipeline and assigned to you." width={480} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={busy || !name} loading={busy} onClick={() => void submit(false)}>Create lead</Button></>}>
+      <div className="space-y-3">
         {error && <ErrorBanner message={error} />}
         {duplicates && (
-          <div className="rounded-lg bg-amber-soft p-3 text-[12.5px] text-amber">
+          <div className="rounded-card border border-amber/30 bg-amber-soft p-3 text-sm text-amber-text">
             A lead with this phone or email exists: {duplicates.map((d) => d.name).join(', ') || 'see CRM'}.
             <div className="mt-2 flex gap-2">
               <Button size="sm" onClick={() => setDuplicates(null)}>Edit</Button>
@@ -344,12 +364,12 @@ function NewLeadModal({ pipeline, onClose, onCreated }: { pipeline: Pipeline; on
         )}
         <Field label="Name"><Input autoFocus value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <Field label="Company"><Input value={company} onChange={(e) => setCompany(e.target.value)} /></Field>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Phone"><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
           <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         </div>
         <Field label="Value (USD)"><Input type="number" min={0} value={value} onChange={(e) => setValue(e.target.value)} /></Field>
-        <div className="text-[11.5px] text-ink-3">Pipeline: {pipeline.name} · Stage: {firstStage?.name}</div>
+        <div className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-ink-3">Pipeline <span className="text-ink-2">{pipeline.name}</span> · Stage <span className="text-ink-2">{firstStage?.name}</span></div>
       </div>
     </Modal>
   );

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Clock } from 'lucide-react';
 import { bridge, http } from './lib/bridge';
 import { useQuery } from './lib/useQuery';
+import { useTheme } from './lib/theme';
 import type { Me, NotificationItem, ShiftSnapshot } from './lib/types';
-import { TitleBar, Sidebar, TopBar, type Screen } from './shell/Shell';
+import { TitleBar, Sidebar, type Screen } from './shell/Shell';
 import { LoginScreen, ConsentScreen } from './screens/Auth';
 import { Dashboard } from './screens/Dashboard';
 import { TasksScreen } from './screens/Tasks';
@@ -17,6 +19,7 @@ import { hm } from './lib/format';
 type Phase = 'boot' | 'login' | 'consent' | 'app';
 
 export default function App() {
+  const { theme, toggle } = useTheme();
   const [phase, setPhase] = useState<Phase>('boot');
   const [me, setMe] = useState<Me | null>(null);
   const [screen, setScreen] = useState<Screen>('dashboard');
@@ -72,61 +75,76 @@ export default function App() {
 
   if (phase === 'boot') {
     return (
-      <div className="flex h-full flex-col">
-        <TitleBar />
-        <div className="flex flex-1 items-center justify-center"><Skeleton className="h-10 w-64" /></div>
+      <div className="flex h-full flex-col bg-bg">
+        <TitleBar theme={theme} onToggleTheme={toggle} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-3 w-40" />
+        </div>
       </div>
     );
   }
   if (phase === 'login') {
     return (
-      <div className="flex h-full flex-col">
-        <TitleBar />
-        <div className="flex-1"><LoginScreen onLoggedIn={() => void loadMe()} /></div>
+      <div className="flex h-full flex-col bg-bg">
+        <TitleBar theme={theme} onToggleTheme={toggle} />
+        <div className="min-h-0 flex-1">
+          <LoginScreen onLoggedIn={() => void loadMe()} />
+        </div>
       </div>
     );
   }
   if (phase === 'consent' && me) {
     return (
-      <div className="flex h-full flex-col">
-        <TitleBar />
-        <div className="flex-1"><ConsentScreen policyVersion={me.policyVersion ?? 1} onAccepted={() => setPhase('app')} /></div>
+      <div className="flex h-full flex-col bg-bg">
+        <TitleBar theme={theme} onToggleTheme={toggle} />
+        <div className="min-h-0 flex-1">
+          <ConsentScreen policyVersion={me.policyVersion ?? 1} onAccepted={() => setPhase('app')} />
+        </div>
       </div>
     );
   }
   if (!me) return null;
 
+  const shiftWithNet = shift ? { ...shift, online } : null;
+
   return (
-    <div className="flex h-full flex-col">
-      <TitleBar />
+    <div className="flex h-full flex-col bg-bg">
+      <TitleBar theme={theme} onToggleTheme={toggle} online={online} unread={unread} onBell={() => setBell(true)} />
       <div className="flex min-h-0 flex-1">
-        <Sidebar screen={screen} onNavigate={setScreen} shift={shift} me={me} counts={{ tasks: todayCount }} onLogout={() => void logout()} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar screen={screen} shift={shift ? { ...shift, online } : null} unread={unread} onBell={() => setBell(true)} />
-          <main className="min-h-0 flex-1 overflow-y-auto px-[22px] py-5">
-            {screen === 'dashboard' && <Dashboard me={me} shift={shift} onOpen={setScreen} />}
-            {screen === 'tasks' && <TasksScreen online={online} />}
-            {screen === 'crm' && <CrmScreen online={online} />}
-            {screen === 'mail' && <MailScreen online={online} meId={me.id} />}
-            {screen === 'leave' && <LeaveScreen online={online} meId={me.id} />}
-            {screen === 'activity' && <ActivityScreen meId={me.id} shift={shift} />}
-          </main>
-        </div>
+        <Sidebar screen={screen} onNavigate={setScreen} shift={shiftWithNet} me={me} counts={{ tasks: todayCount }} onLogout={() => void logout()} />
+        <main key={screen} className="fade-in min-h-0 min-w-0 flex-1 overflow-y-auto p-6">
+          {screen === 'dashboard' && <Dashboard me={me} shift={shiftWithNet} unread={unread} notifications={notifList} longIdle={longIdle} onClaimIdle={(claim) => void bridge.shift.claimIdle(claim).then(() => setLongIdle(null))} onOpen={setScreen} onBell={() => setBell(true)} />}
+          {screen === 'tasks' && <TasksScreen online={online} />}
+          {screen === 'crm' && <CrmScreen online={online} />}
+          {screen === 'mail' && <MailScreen online={online} meId={me.id} />}
+          {screen === 'leave' && <LeaveScreen online={online} meId={me.id} />}
+          {screen === 'activity' && <ActivityScreen meId={me.id} shift={shiftWithNet} />}
+        </main>
       </div>
       {bell && <NotificationsPanel query={notifications} onClose={() => setBell(false)} />}
       <Modal
         open={Boolean(longIdle)}
         onClose={() => setLongIdle(null)}
         title="You were away"
-        width={420}
+        subtitle="Choose how this time is recorded on your shift."
+        width={440}
         footer={
           <>
-            <Button onClick={() => void bridge.shift.claimIdle('break').then(() => setLongIdle(null))}>Break</Button>
+            <Button onClick={() => void bridge.shift.claimIdle('break').then(() => setLongIdle(null))}>Record as break</Button>
             <Button variant="primary" onClick={() => void bridge.shift.claimIdle('away_work').then(() => setLongIdle(null))}>Working away from PC</Button>
           </>
         }
       >
-        <p className="text-[13px] text-ink-2">You were away for {hm(longIdle?.seconds ?? 0)}. How should this time be recorded?</p>
+        <div className="flex items-center gap-3 rounded-lg border border-amber/30 bg-amber-soft/50 px-3 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-soft text-amber-text">
+            <Clock size={16} />
+          </span>
+          <div>
+            <div className="text-base font-semibold text-ink">No input for {hm(longIdle?.seconds ?? 0)}</div>
+            <div className="mt-0.5 text-sm text-ink-2">Pick a break if you stepped away, or keep it as work if you were in a meeting or on a call.</div>
+          </div>
+        </div>
       </Modal>
     </div>
   );
