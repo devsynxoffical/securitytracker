@@ -96,6 +96,30 @@ jobs:
           path: apps/admin/out
           retention-days: 7
 
+  desktop-smoke:
+    name: Desktop smoke (Electron under Xvfb)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build contracts and desktop
+        run: |
+          pnpm --filter @company-os/contracts build
+          pnpm --filter @company-os/desktop build
+      - name: Smoke test (window, first-run flow, no renderer errors)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb >/dev/null
+          cd apps/desktop && xvfb-run -a node test/smoke.mjs
+
   secrets-scan:
     name: Secret scan
     runs-on: ubuntu-latest

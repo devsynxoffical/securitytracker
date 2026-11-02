@@ -40,7 +40,7 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - updates_data:/srv/updates:ro
+      - ./updates:/srv/updates:ro # desktop installers + latest.json, written by release-desktop.yml over SSH
     depends_on:
       api:
         condition: service_healthy
@@ -171,5 +171,4 @@ volumes:
   minio_data:
   caddy_data:
   caddy_config:
-  updates_data:
   backups:

@@ -1,0 +1,299 @@
+# Desktop release (docs/11 section 5, docs/09 section 7): builds WorkPulse installers on real Windows and macOS
+# runners, smoke-tests every packaged build, builds the Windows tracker agent, publishes a GitHub Release
+# with a machine-readable latest.json, and (when the server secrets exist) copies everything to the
+# updates host so https://admin.<DOMAIN>/downloads/ and https://updates.<DOMAIN>/ serve the files.
+#
+# Trigger: push a tag `desktop-v1.2.3` (the version must match apps/desktop/package.json) or run manually.
+name: Release desktop
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (must equal apps/desktop/package.json "version")
+        required: true
+      prerelease:
+        description: Mark the GitHub Release as a pre-release (pilot channel)
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  PNPM_VERSION: 9.15.0
+  NODE_VERSION: 22
+  # Server address baked into the app. Employees can still change it on first launch.
+  # Set repository variable API_PUBLIC_URL to e.g. https://api.yourcompany.com/api/v1
+  MAIN_VITE_API_URL: ${{ vars.API_PUBLIC_URL }}
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        shell: bash
+        run: |
+          pkg=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "${{ github.event_name }}" = "push" ]; then
+            tag="${GITHUB_REF_NAME#desktop-v}"
+            pre=false
+          else
+            tag="${{ inputs.version }}"
+            pre="${{ inputs.prerelease }}"
+          fi
+          if [ "$tag" != "$pkg" ]; then
+            echo "Tag/input version $tag does not match apps/desktop/package.json $pkg" >&2
+            exit 1
+          fi
+          echo "version=$pkg" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+
+  agent:
+    name: Tracker agent (Windows, .NET 8)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: version
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore and build
+        working-directory: agent
+        run: |
+          dotnet restore CompanyOS.sln
+          dotnet build CompanyOS.sln -c Release --no-restore
+      - name: Unit tests
+        working-directory: agent
+        run: dotnet test CompanyOS.Agent.Tests -c Release --no-build --logger "trx;LogFileName=agent-tests.trx"
+      - name: Publish self-contained single files
+        working-directory: agent
+        run: |
+          dotnet publish CompanyOS.Agent      -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:Version=${{ needs.version.outputs.version }} -o publish/agent
+          dotnet publish CompanyOS.NativeHost -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:Version=${{ needs.version.outputs.version }} -o publish/agent
+          dotnet publish CompanyOS.Watchdog   -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:Version=${{ needs.version.outputs.version }} -o publish/agent
+          Copy-Item ../extension/host/com.companyos.agent.json publish/agent/
+          Set-Content publish/agent/VERSION "${{ needs.version.outputs.version }}"
+      - name: Authenticode sign (when a certificate is configured)
+        if: ${{ env.WIN_CSC_LINK != '' }}
+        shell: pwsh
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:WIN_CSC_LINK))
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -Last 1
+          Get-ChildItem agent/publish/agent/*.exe | ForEach-Object {
+            & $signtool.FullName sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:WIN_CSC_KEY_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+          }
+      - name: Package agent zip (standalone download for IT)
+        shell: pwsh
+        run: Compress-Archive -Path agent/publish/agent/* -DestinationPath WorkPulse-Agent-${{ needs.version.outputs.version }}-win-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-publish
+          path: agent/publish/agent
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-zip
+          path: WorkPulse-Agent-*.zip
+          retention-days: 7
+
+  desktop:
+    name: Desktop ${{ matrix.label }}
+    needs: [version, agent]
+    # The desktop builds do not need the agent to succeed: the Windows installer bundles it when present.
+    if: ${{ always() && needs.version.result == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows
+            target: --win
+            unpacked: dist/win-unpacked/WorkPulse.exe
+            glob: |
+              apps/desktop/dist/WorkPulse-Setup-*.exe
+              apps/desktop/dist/WorkPulse-Portable-*.exe
+          - os: macos-latest
+            label: macOS
+            target: --mac
+            unpacked: dist/mac-universal/WorkPulse.app/Contents/MacOS/WorkPulse
+            glob: |
+              apps/desktop/dist/WorkPulse-*-mac-universal.dmg
+              apps/desktop/dist/WorkPulse-*-mac-universal.zip
+          - os: ubuntu-latest
+            label: Linux
+            target: --linux
+            unpacked: dist/linux-unpacked/WorkPulse
+            glob: |
+              apps/desktop/dist/WorkPulse-*-linux-x64.AppImage
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build contracts
+        run: pnpm --filter @company-os/contracts build
+      - name: Typecheck desktop
+        run: pnpm --filter @company-os/desktop typecheck
+
+      - name: Download tracker agent (Windows installer bundles it)
+        if: ${{ matrix.os == 'windows-latest' && needs.agent.result == 'success' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: agent-publish
+          path: agent/publish/agent
+
+      - name: Build and package
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          # Code signing: optional. Without these the installers are unsigned (SmartScreen / Gatekeeper warnings, see /install).
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
+        run: |
+          pnpm exec electron-vite build
+          pnpm exec electron-builder ${{ matrix.target }} --publish never
+
+      - name: Smoke test the packaged app
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          WORKPULSE_EXECUTABLE: ${{ matrix.unpacked }}
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq xvfb >/dev/null
+            xvfb-run -a node test/smoke.mjs
+          else
+            node test/smoke.mjs
+          fi
+
+      - name: Checksums
+        working-directory: apps/desktop/dist
+        shell: bash
+        run: |
+          for f in WorkPulse-*; do
+            [ -f "$f" ] || continue
+            case "$f" in *.blockmap|*.yml|*.yaml) continue;; esac
+            if command -v sha256sum >/dev/null; then sha256sum "$f" > "$f.sha256"; else shasum -a 256 "$f" > "$f.sha256"; fi
+          done
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.label }}
+          path: |
+            ${{ matrix.glob }}
+            apps/desktop/dist/*.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: GitHub Release and latest.json
+    needs: [version, agent, desktop]
+    if: ${{ always() && needs.version.result == 'success' && needs.desktop.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      configured: ${{ steps.guard.outputs.configured }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect files
+        shell: bash
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name 'WorkPulse-*' \) -exec cp {} release/ \;
+          ls -la release
+      - name: Write latest.json
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          REPO: ${{ github.repository }}
+          DOWNLOAD_BASE: ${{ vars.DOWNLOADS_PUBLIC_URL }}
+        run: node scripts/release-manifest.mjs release "$VERSION" "$REPO" "${DOWNLOAD_BASE:-}" > release/latest.json && cat release/latest.json
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ needs.version.outputs.version }}
+          name: WorkPulse ${{ needs.version.outputs.version }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          files: release/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: release
+          retention-days: 7
+      - id: guard
+        name: Updates host configured?
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.UPDATES_SSH_HOST }}" ]; then echo "configured=true" >> "$GITHUB_OUTPUT"; else echo "configured=false" >> "$GITHUB_OUTPUT"; echo "Updates host upload skipped: UPDATES_SSH_HOST not configured." >> "$GITHUB_STEP_SUMMARY"; fi
+
+  upload-to-server:
+    name: Copy to updates host
+    needs: [version, publish]
+    if: ${{ needs.publish.outputs.configured == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Required secrets: UPDATES_SSH_HOST, UPDATES_SSH_USER, UPDATES_SSH_KEY. The host serves /opt/companyos/infra/updates
+    # as https://updates.<DOMAIN>/ and https://admin.<DOMAIN>/downloads/ (infra/caddy/Caddyfile).
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release
+      - name: Upload
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.UPDATES_SSH_HOST }}
+          username: ${{ secrets.UPDATES_SSH_USER }}
+          key: ${{ secrets.UPDATES_SSH_KEY }}
+          source: release/*
+          target: /opt/companyos/infra/updates/incoming
+          strip_components: 1
+      - name: Activate release atomically
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.UPDATES_SSH_HOST }}
+          username: ${{ secrets.UPDATES_SSH_USER }}
+          key: ${{ secrets.UPDATES_SSH_KEY }}
+          script: |
+            set -eu
+            cd /opt/companyos/infra/updates
+            mkdir -p releases/${{ needs.version.outputs.version }}
+            mv incoming/* releases/${{ needs.version.outputs.version }}/
+            rmdir incoming
+            cp releases/${{ needs.version.outputs.version }}/latest.json latest.json.tmp && mv latest.json.tmp latest.json
+            ls -la releases/${{ needs.version.outputs.version }}

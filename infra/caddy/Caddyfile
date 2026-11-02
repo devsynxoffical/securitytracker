@@ -43,7 +43,15 @@ api.{$DOMAIN} {
 
 admin.{$DOMAIN} {
 	import security
-	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.{$DOMAIN}; frame-ancestors 'none'"
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.{$DOMAIN} https://updates.{$DOMAIN}; frame-ancestors 'none'"
+	# Desktop installers and latest.json published by release-desktop.yml into infra/updates (same-origin for the install page).
+	handle_path /downloads/* {
+		root * /srv/updates
+		file_server {
+			browse off
+		}
+		header Cache-Control "public, max-age=300"
+	}
 	reverse_proxy admin:8080
 }
 
@@ -54,4 +62,5 @@ updates.{$DOMAIN} {
 		browse off
 	}
 	header Cache-Control "public, max-age=300"
+	header Access-Control-Allow-Origin "https://admin.{$DOMAIN}"
 }

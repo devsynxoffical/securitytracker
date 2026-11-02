@@ -1,0 +1,4 @@
+# Desktop releases land here (release-desktop.yml -> releases/<version>/ and latest.json). Never commit binaries.
+*
+!.gitignore
+!README.md
