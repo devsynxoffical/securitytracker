@@ -3,8 +3,6 @@ import { LeadsService } from './leads.service';
 import { LeadsController } from './leads.controller';
 import { CallsService } from './calls.service';
 import { CallsController } from './calls.controller';
-import { TasksService } from './tasks.service';
-import { TasksController } from './tasks.controller';
 import { PipelinesService } from './pipelines.service';
 import { PipelinesController } from './pipelines.controller';
 import { AccountsService } from './accounts.service';
@@ -34,7 +32,6 @@ import { TargetsModule } from '../targets/targets.module';
   controllers: [
     LeadsController,
     CallsController,
-    TasksController,
     PipelinesController,
     AccountsController,
     ContactsController,
@@ -47,7 +44,6 @@ import { TargetsModule } from '../targets/targets.module';
   providers: [
     LeadsService,
     CallsService,
-    TasksService,
     PipelinesService,
     AccountsService,
     ContactsService,
@@ -62,6 +58,6 @@ import { TargetsModule } from '../targets/targets.module';
     CustomFieldsService,
     PermissionsService,
   ],
-  exports: [LeadsService, CallsService, TasksService, PipelinesService, AccountsService, ContactsService, DealsService],
+  exports: [LeadsService, CallsService, PipelinesService, AccountsService, ContactsService, DealsService],
 })
 export class CrmModule {}
