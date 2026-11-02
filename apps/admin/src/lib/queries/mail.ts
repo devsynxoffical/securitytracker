@@ -10,6 +10,15 @@ export interface Mailbox {
   tokenStatus: string;
   lastSyncAt: string | null;
   watchExpiresAt: string | null;
+  /** 'gmail' (Google Workspace OAuth) or 'imap' (IMAP/SMTP with stored credentials). */
+  provider?: 'gmail' | 'imap';
+  imapHost?: string | null;
+  imapPort?: number | null;
+  imapSecure?: boolean | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
+  smtpSecure?: boolean | null;
+  username?: string | null;
   permissions?: string[];
   assignments?: Array<{ id: string; employeeId: string; permissions: string[]; employee: { id: string; code: string; firstName: string; lastName: string; email: string | null } }>;
 }
@@ -93,6 +102,40 @@ export interface MailAuditRow {
   ip: string;
   occurredAt: string;
 }
+export interface MailAttachment {
+  partId: string;
+  fileName: string;
+  mime: string;
+  size: number;
+}
+export interface MessageBody {
+  html: string | null;
+  text: string | null;
+  attachments: MailAttachment[];
+}
+export interface PresenceViewer {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  since: string;
+}
+export interface ImapTestResult {
+  imap: boolean;
+  smtp: boolean;
+  error?: string;
+}
+export interface ImapMailboxSettings {
+  address: string;
+  displayName: string;
+  imapHost: string;
+  imapPort: number;
+  imapSecure: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  username: string;
+  password: string;
+}
 export type View = 'unassigned' | 'mine' | 'open' | 'snoozed' | 'closed';
 export interface Counts {
   unassigned: number;
@@ -113,6 +156,8 @@ export const mailKeys = {
   comments: (t: string | null) => ['mail', 'comments', t] as const,
   events: (t: string | null) => ['mail', 'events', t] as const,
   audit: (p: Record<string, unknown>) => ['mail', 'audit', p] as const,
+  body: (mb: string, m: string, remote: boolean) => ['mail', 'body', mb, m, remote] as const,
+  presence: (mb: string, t: string | null) => ['mail', 'presence', mb, t] as const,
 };
 
 export const useMailboxes = (admin = false) =>
@@ -137,6 +182,33 @@ export const useThreadEvents = (mailboxId: string | null, threadId: string | nul
   useQuery({ queryKey: mailKeys.events(threadId), queryFn: () => http.get<ThreadEvent[]>(`/mail/mailboxes/${mailboxId}/threads/${threadId}/events`), enabled: Boolean(mailboxId && threadId) });
 export const useMailAudit = (p: { mailboxId?: string; employeeId?: string; action?: string }) =>
   useQuery({ queryKey: mailKeys.audit(p), queryFn: () => http.get<MailAuditRow[]>('/mail/audit', p) });
+
+/** Message body (HTML sanitised server-side, plain text, attachment metadata), fetched on demand (10 §4.3). */
+export const useMessageBody = (mailboxId: string, messageId: string, opts: { enabled: boolean; allowRemote: boolean }) =>
+  useQuery({
+    queryKey: mailKeys.body(mailboxId, messageId, opts.allowRemote),
+    queryFn: () => http.get<MessageBody>(`/mail/mailboxes/${mailboxId}/messages/${messageId}/body`, opts.allowRemote ? { allowRemote: 'true' } : undefined),
+    enabled: opts.enabled,
+    staleTime: 5 * 60_000,
+  });
+/** Other viewers of a conversation in the last 60 s (FR-MAIL-19). Polled while the pane is open. */
+export const usePresence = (mailboxId: string, threadId: string | null, intervalMs = 20_000) =>
+  useQuery({
+    queryKey: mailKeys.presence(mailboxId, threadId),
+    queryFn: () => http.get<{ viewers: PresenceViewer[] }>(`/mail/mailboxes/${mailboxId}/threads/${threadId}/presence`),
+    enabled: Boolean(mailboxId && threadId),
+    refetchInterval: intervalMs,
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
+export const presenceHeartbeat = (mailboxId: string, threadId: string, action: 'viewing' | 'left') =>
+  http.post(`/mail/mailboxes/${mailboxId}/threads/${threadId}/presence`, { action });
+
+/** IMAP/SMTP mailbox lifecycle (10 §2 option D). Passwords travel once, are stored encrypted and never returned. */
+export const testImapMailbox = (b: ImapMailboxSettings) => http.post<ImapTestResult>('/mail/mailboxes/imap/test', b);
+export const useCreateImapMailbox = () => useMailMutation((b: ImapMailboxSettings) => http.post<Mailbox>('/mail/mailboxes/imap', b));
+export const useUpdateImapMailbox = (id: string | null) => useMailMutation((b: Partial<Omit<ImapMailboxSettings, 'address'>>) => http.patch<Mailbox>(`/mail/mailboxes/${id}/imap`, b));
+export const useDeleteMailbox = () => useMailMutation((id: string) => http.del(`/mail/mailboxes/${id}`));
 
 /** Mutation helper that invalidates mail query prefixes on success. */
 export function useMailMutation<TArgs, TResult = unknown>(fn: (args: TArgs) => Promise<TResult>, prefixes: ReadonlyArray<readonly unknown[]> = [['mail']]) {

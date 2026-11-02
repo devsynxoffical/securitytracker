@@ -184,3 +184,17 @@ export const useDepartments = (enabled = true) =>
   useQuery({ queryKey: pkeys.departments, queryFn: () => http.get<Array<{ id: string; name: string }>>('/departments'), enabled, staleTime: 60_000 });
 export const useTeams = (enabled = true) =>
   useQuery({ queryKey: pkeys.teams, queryFn: () => http.get<Array<{ id: string; name: string; departmentId: string }>>('/teams'), enabled, staleTime: 60_000 });
+
+/** Birthdays and work anniversaries in the next N days (FR-HR-16). */
+export interface Celebration {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  kind: 'birthday' | 'anniversary';
+  /** YYYY-MM-DD of the upcoming occurrence. */
+  date: string;
+  years?: number;
+  department?: string | null;
+}
+export const useCelebrations = (days = 14, enabled = true) =>
+  useQuery({ queryKey: ['hr', 'celebrations', days] as const, queryFn: () => http.get<{ items: Celebration[] }>('/hr/celebrations', { days }), enabled, staleTime: 5 * 60_000 });

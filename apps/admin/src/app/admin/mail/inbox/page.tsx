@@ -8,10 +8,12 @@ import { useAuth } from '@/lib/auth';
 import { useIdParam } from '@/lib/useIdParam';
 import { useMailboxes, useConversations, useCounts, useThread, useComments, useThreadEvents, useMailMutation, type Conversation, type View, type Mailbox } from '@/lib/queries/mail';
 import { useSearch } from '@/lib/queries/crm';
-import { Button, Card, Badge, Skeleton, EmptyState, ErrorBanner, Pagination, Textarea, SearchInput, Modal, useToast, PageHeader, Avatar, Banner, Tabs } from '@/components/ui';
+import { Button, Card, Badge, Skeleton, EmptyState, ErrorBanner, Pagination, Textarea, SearchInput, Modal, useToast, PageHeader, Avatar, Tabs } from '@/components/ui';
 import { Menu, Tooltip, TimelineItem } from '@/components/ui/advanced';
 import { AssigneeSelect, SnoozeModal, StatusBadge } from '@/components/mail/shared';
 import { InboxRail, ConversationRow, LabelStrip, ReplyComposer, nameFromAddress } from '@/components/mail/inbox';
+import { MessageBody } from '@/components/mail/message-body';
+import { PresenceBanner } from '@/components/mail/presence';
 import { fullName, relative, dateTime } from '@/lib/format';
 
 export default function InboxPage() {
@@ -135,6 +137,7 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
   const [snooze, setSnooze] = useState(false);
   const [link, setLink] = useState(false);
   const [comment, setComment] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const base = `/mail/mailboxes/${mailbox.id}/threads/${threadId}`;
   const assign = useMailMutation((assigneeId: string | null) => http.post(`${base}/assign`, { assigneeId }));
   const status = useMailMutation((b: { status: string; snoozedUntil?: string }) => http.post(`${base}/status`, b));
@@ -144,6 +147,11 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
   const onErr = (e: unknown) => toast.push('error', (e as Error).message);
   const t = thread.data;
   const meta = listRow;
+  const latestMessageId = useMemo(() => {
+    const ms = t?.messages ?? [];
+    return ms.length ? [...ms].sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0]!.id : null;
+  }, [t]);
+  const isExpanded = (id: string) => expanded.has(id) || id === latestMessageId;
   const linked = Boolean(t?.contactId || t?.dealId || t?.leadId);
 
   // Merge messages and internal comments into one chronological stream (Missive style).
@@ -231,7 +239,7 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {tab === 'conversation' && t && (
           <div className="mx-auto max-w-3xl space-y-3">
-            <Banner tone="blue">Message bodies are fetched from Gmail on demand and are not stored (10 §4.3). Snippets are shown here.</Banner>
+            <PresenceBanner mailboxId={mailbox.id} threadId={threadId} />
             {comments.isError && <ErrorBanner message={(comments.error as Error).message} onRetry={() => comments.refetch()} />}
             {stream.map((it) =>
               it.kind === 'message' ? (
@@ -246,8 +254,8 @@ function ConversationPane({ mailbox, threadId, listRow }: { mailbox: Mailbox; th
                       <div className="truncate text-xs text-ink-3">to {it.m.toAddrs.join(', ')}{it.m.ccAddrs.length ? ` · cc ${it.m.ccAddrs.join(', ')}` : ''}</div>
                     </div>
                   </div>
-                  <div className="mt-3 text-base leading-relaxed text-ink">{it.m.snippet ?? <span className="text-ink-3">(no preview)</span>}</div>
-                  {it.m.hasAttachments && <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-ink-2"><Paperclip size={12} /> Attachments</div>}
+                  <MessageBody mailboxId={mailbox.id} message={it.m} expanded={isExpanded(it.m.id)} onExpand={() => setExpanded((s) => new Set(s).add(it.m.id))} canDownload={can('download')} />
+                  {!isExpanded(it.m.id) && it.m.hasAttachments && <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-ink-2"><Paperclip size={12} /> Has attachments</div>}
                 </article>
               ) : (
                 <article key={it.c.id} className="rounded-card border-l-[3px] border-amber bg-amber-soft/50 p-3.5">

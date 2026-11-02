@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Briefcase, Target, Users, CheckSquare, Activity, Mail, Shield, MonitorSmartphone, Megaphone, Plane, Clock, Timer, Bell, CalendarCheck, Phone, Video, FileText } from 'lucide-react';
+import { ArrowRight, Briefcase, Target, Users, CheckSquare, Activity, Mail, Shield, MonitorSmartphone, Megaphone, Plane, Clock, Timer, Bell, CalendarCheck, Phone, Video, FileText, Cake, Award, PartyPopper } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api';
 import { useDashboard, type Activity as CrmActivity } from '@/lib/queries/crm';
-import { useDevices, useLiveAttendance, useSecurityAlerts } from '@/lib/queries/platform';
+import { useDevices, useLiveAttendance, useSecurityAlerts, useCelebrations, type Celebration } from '@/lib/queries/platform';
 import { useOutToday, useAnnouncements, useCorrections, useLeaveRequests } from '@/lib/queries/people';
 import { useManualTime } from '@/lib/queries/tracking';
 import { useAuth } from '@/lib/auth';
@@ -40,6 +40,8 @@ export default function AdminHome() {
   const corrections = useCorrections('pending');
   const leave = useLeaveRequests({ status: 'pending', limit: 20 });
   const manual = useManualTime({ status: 'pending' });
+  const canPeople = can('employees.view');
+  const celebrations = useCelebrations(14, canPeople);
 
   const liveRows = (live.data ?? []) as Array<{ liveStatus?: string }>;
   const working = liveRows.filter((r) => r.liveStatus === 'Working').length;
@@ -184,6 +186,7 @@ export default function AdminHome() {
               )}
             </Card>
           )}
+          {canPeople && <CelebrationsCard q={celebrations} />}
           {canDeals && crm.data && crm.data.leaderboard.length > 0 && (
             <Card title="Top closers this month">
               <ul className="divide-y divide-line-2">
@@ -216,6 +219,76 @@ export default function AdminHome() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Celebrations (FR-HR-16): birthdays and work anniversaries, next 14 days
+--------------------------------------------------------------------------- */
+
+function localDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function groupCelebrations(items: Celebration[]) {
+  const now = new Date();
+  const todayKey = localDayKey(now);
+  const weekEnd = new Date(now);
+  weekEnd.setDate(now.getDate() + 6);
+  const weekKey = localDayKey(weekEnd);
+  const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    today: sorted.filter((c) => c.date === todayKey),
+    week: sorted.filter((c) => c.date > todayKey && c.date <= weekKey),
+    later: sorted.filter((c) => c.date > weekKey),
+  };
+}
+
+function celebrationDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y!, (m ?? 1) - 1, d ?? 1).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function CelebrationsCard({ q }: { q: ReturnType<typeof useCelebrations> }) {
+  const groups = groupCelebrations(q.data?.items ?? []);
+  const total = q.data?.items.length ?? 0;
+  const Group = ({ title, items, highlight }: { title: string; items: Celebration[]; highlight?: boolean }) =>
+    items.length === 0 ? null : (
+      <li>
+        <div className={`px-4 pb-1 pt-2.5 text-2xs font-semibold uppercase ${highlight ? 'text-pri' : 'text-ink-3'}`}>{title}</div>
+        <ul>
+          {items.map((c) => (
+            <li key={`${c.employeeId}-${c.kind}-${c.date}`}>
+              <Link href={`/admin/people/directory?id=${c.employeeId}`} className="flex items-center gap-2.5 px-4 py-2 hover:bg-surface-2">
+                <Avatar name={fullName(c)} size={26} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base text-ink">{fullName(c)}</span>
+                  <span className="block truncate text-xs text-ink-3">{c.department ? `${c.department} · ` : ''}{highlight ? 'today' : celebrationDate(c.date)}</span>
+                </span>
+                {c.kind === 'birthday' ? (
+                  <Badge tone="violet"><Cake size={11} /> Birthday</Badge>
+                ) : (
+                  <Badge tone="green"><Award size={11} /> {c.years ? `${c.years} yr${c.years === 1 ? '' : 's'}` : 'Anniversary'}</Badge>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </li>
+    );
+  return (
+    <Card title="Celebrations" actions={<span className="inline-flex items-center gap-1 text-xs text-ink-3"><PartyPopper size={12} /> next 14 days</span>}>
+      {q.isLoading && <div className="space-y-2 p-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-8" />)}</div>}
+      {q.isError && <div className="p-3"><ErrorBanner message={(q.error as Error).message} onRetry={() => q.refetch()} /></div>}
+      {q.data && total === 0 && <EmptyState icon={<Cake size={22} />} title="No celebrations in the next two weeks" body="Birthdays come from the employee profile, anniversaries from the join date." />}
+      {q.data && total > 0 && (
+        <ul className="divide-y divide-line-2 pb-1">
+          <Group title="Today" items={groups.today} highlight />
+          <Group title="This week" items={groups.week} />
+          <Group title="Later" items={groups.later} />
+        </ul>
+      )}
+    </Card>
   );
 }
 
