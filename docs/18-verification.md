@@ -48,6 +48,7 @@ Re-run everything: `pnpm test` (unit), `pnpm --filter @company-os/api test:e2e` 
 | F25 Leave with balances: working days, overlap, balance check, approve/reject/cancel transitions | hr.service.spec (15) | modules (request, overlap, approve, used days) | leave tabs, request modal |
 | F26 Onboarding and offboarding checklists | hr.service.spec | modules (templates, start, item done) | onboarding page, profile tab |
 | Profiles, documents, announcements, org chart, schedules, holidays, directory export | hr.service.spec | modules | directory, profile record, announcements, org chart, schedules |
+| FR-HR-16 Celebrations: birthdays and work anniversaries, day-ahead and day-of notices, idempotent job | hr.celebrations.spec (4: today, roll-over, leap day, scope and sort) | modules (list, range check, job run, idempotent re-run) | home celebrations card |
 
 ## 5. Tracking (16)
 

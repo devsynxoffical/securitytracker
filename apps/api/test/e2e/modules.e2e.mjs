@@ -89,6 +89,11 @@ check('hr: start checklist (or reuse open one)', r.status === 201 && arr(r.body?
 r = await call('PATCH', `/hr/checklists/${chk?.id}/items/${firstItem?.id}`, { done: true }); check('hr: checklist item done', r.status === 200 && arr(r.body.items).some((i) => i.done === true), short(r.body));
 r = await call('POST', '/hr/announcements', { title: `Hello ${suffix}`, body: 'Welcome all', audienceType: 'company', pinned: true }); check('hr: announcement', r.status === 201, short(r.body)); const ann = r.body;
 r = await call('POST', `/hr/announcements/${ann.id}/read`); check('hr: announcement read', r.status === 201 || r.status === 200, short(r.body));
+// FR-HR-16 celebrations
+r = await call('GET', '/hr/celebrations?days=14'); check('hr: celebrations list', r.status === 200 && r.body.days === 14 && Array.isArray(r.body.items), short(r.body));
+r = await call('GET', '/hr/celebrations?days=500'); check('hr: celebrations days out of range rejected', r.status === 400, short(r.body));
+r = await call('POST', '/jobs/hr-celebrations/run', {}); check('hr: celebrations job runs', r.status < 300 && r.body?.lastOutcome === 'ok', short(r.body));
+r = await call('POST', '/jobs/hr-celebrations/run', {}); check('hr: celebrations job idempotent', r.status < 300 && r.body?.lastResult?.processed === 0, short(r.body));
 r = await call('GET', '/hr/org-chart'); check('hr: org chart', r.status === 200, short(r.body));
 r = await call('GET', '/employees/export'); check('hr: employees export csv', r.status === 200 && r.text.includes(','), r.text.slice(0, 60));
 r = await call('GET', `/employees/${other.id}/schedules`); check('hr: employee schedules', r.status === 200, short(r.body));
