@@ -45,3 +45,7 @@ WorkPulse-Mac-Universal.zip
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Production env files
+infra/.env.prod
+.env.prod

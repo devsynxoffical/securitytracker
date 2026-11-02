@@ -24,7 +24,7 @@ export class NotificationsController {
     @Query('limit') limit?: string,
   ) {
     return this.notificationsService.list(
-      req.user.sub,
+      req.user.id,
       unreadOnly === 'true',
       limit ? parseInt(limit, 10) : 50,
     );
@@ -35,7 +35,7 @@ export class NotificationsController {
     @Request() req: any,
     @Body() body: { ids?: string[]; all?: boolean },
   ) {
-    return this.notificationsService.markRead(req.user.sub, body.ids, body.all);
+    return this.notificationsService.markRead(req.user.id, body.ids, body.all);
   }
 
   @Post('announcement')

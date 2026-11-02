@@ -1,0 +1,110 @@
+# CI (02 section 5, 11 section 4): lint-equivalent typecheck, unit tests, builds, migration drift check.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: 9.15.0
+  NODE_VERSION: 22
+
+jobs:
+  verify:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: company_os
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d company_os"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/company_os
+      JWT_SECRET: ci-only-jwt-secret-not-for-production-use
+      ENCRYPTION_SECRET: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      NEXT_PUBLIC_API_URL: /api/v1
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build contracts
+        run: pnpm --filter @company-os/contracts build
+
+      - name: Prisma generate
+        run: pnpm --filter @company-os/api exec prisma generate
+
+      - name: Typecheck API
+        run: pnpm --filter @company-os/api typecheck
+
+      - name: Typecheck Admin
+        run: pnpm --filter @company-os/admin typecheck
+
+      - name: Typecheck Desktop
+        run: pnpm --filter @company-os/desktop typecheck
+
+      - name: Unit tests (API)
+        run: pnpm --filter @company-os/api test
+
+      - name: Apply migrations to a fresh database
+        run: pnpm --filter @company-os/api exec prisma migrate deploy
+
+      - name: Migration drift check (schema must equal migrations, rule 12)
+        run: |
+          pnpm --filter @company-os/api exec prisma migrate diff \
+            --from-url "$DATABASE_URL" \
+            --to-schema-datamodel apps/api/prisma/schema.prisma \
+            --exit-code
+        # exit code 2 = drift between schema.prisma and the applied migrations
+
+      - name: Seed smoke (seed must run on a fresh database)
+        run: pnpm --filter @company-os/api prisma:seed
+
+      - name: Build API
+        run: pnpm --filter @company-os/api exec nest build
+
+      - name: Build Admin (static export)
+        run: pnpm --filter @company-os/admin build
+
+      - name: Upload admin export
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-out
+          path: apps/admin/out
+          retention-days: 7
+
+  secrets-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

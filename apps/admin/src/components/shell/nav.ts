@@ -83,6 +83,7 @@ export const NAV: NavGroup[] = [
       { label: 'My Tasks', href: '/admin/tasks/my', icon: CheckSquare, permission: 'tasks.view' },
       { label: 'Spaces', href: '/admin/tasks/spaces', icon: FolderKanban, permission: 'tasks.view' },
       { label: 'Workload', href: '/admin/tasks/workload', icon: Gauge, permission: 'tasks.view' },
+      { label: 'Calendar', href: '/admin/tasks/calendar', icon: CalendarDays, permission: 'tasks.view' },
       { label: 'Settings', href: '/admin/tasks/settings', icon: Sliders, anyPermission: ['tasks.spaces.manage', 'tasks.manage'] },
     ],
   },

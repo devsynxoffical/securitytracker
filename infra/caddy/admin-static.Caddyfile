@@ -1,0 +1,16 @@
+# Internal static server for the admin export. TLS and public hostnames terminate at the proxy service.
+:8080 {
+	root * /srv/admin
+	encode zstd gzip
+	# Next static export: /admin/crm/leads -> /admin/crm/leads.html
+	try_files {path} {path}.html {path}/index.html /404.html
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Cache-Control "no-cache"
+	}
+	@static path /_next/static/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+}

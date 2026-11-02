@@ -1,0 +1,57 @@
+# Public reverse proxy (02-architecture.md section 5): TLS 1.2+, automatic certificates, HSTS, rate limits by the API.
+# Hostnames come from the environment: DOMAIN=example.com -> api.example.com, admin.example.com, updates.example.com.
+{
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2
+	}
+}
+
+(security) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	tls {
+		protocols tls1.2 tls1.3
+	}
+}
+
+api.{$DOMAIN} {
+	import security
+	encode zstd gzip
+	request_body {
+		max_size 30MB
+	}
+	reverse_proxy api:4000 {
+		health_uri /api/v1/health
+		health_interval 15s
+		header_up X-Request-Id {http.request.uuid}
+	}
+	log {
+		output file /data/logs/api-access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+		format json
+	}
+}
+
+admin.{$DOMAIN} {
+	import security
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.{$DOMAIN}; frame-ancestors 'none'"
+	reverse_proxy admin:8080
+}
+
+updates.{$DOMAIN} {
+	import security
+	root * /srv/updates
+	file_server {
+		browse off
+	}
+	header Cache-Control "public, max-age=300"
+}
