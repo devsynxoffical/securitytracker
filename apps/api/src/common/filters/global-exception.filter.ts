@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorCodes, ApiErrorResponse, ErrorCode } from '@company-os/contracts';
+import { Prisma } from '@prisma/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -38,6 +39,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (obj.issues) {
           details = { issues: obj.issues };
         }
+      }
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      // Malformed ids and missing rows are client errors, not server faults.
+      if (exception.code === 'P2023') {
+        status = HttpStatus.BAD_REQUEST;
+        code = ErrorCodes.VALIDATION_ERROR;
+        message = 'Malformed identifier';
+      } else if (exception.code === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        code = ErrorCodes.NOT_FOUND;
+        message = 'Record not found';
+      } else if (exception.code === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        code = ErrorCodes.CONFLICT;
+        message = 'A record with these values already exists';
+      } else {
+        this.logger.error(`Database error ${exception.code}: ${exception.message}`);
+        message = 'Database error';
       }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
