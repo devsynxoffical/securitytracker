@@ -363,7 +363,7 @@ export class MailService {
         ? await this.prisma.mailThread.findFirst({ where: { mailboxId, OR: [{ id: dto.replyToThreadId }, { gmailThreadId: dto.replyToThreadId }] }, select: { gmailThreadId: true } })
         : null;
       const raw = buildRawMessage({ from: mailbox.address, to: dto.to, cc: dto.cc, bcc: dto.bcc, subject: dto.subject, html: dto.html, inReplyTo: dto.replyToMessageId, references: dto.replyToMessageId });
-      const client = this.gmail.forRefreshToken(CryptoUtil.decryptField(mailbox.refreshTokenEnc, this.encryptionKey));
+      const client = this.gmail.forRefreshToken(CryptoUtil.decryptField(mailbox.refreshTokenEnc ?? '', this.encryptionKey));
       const sent = await client.send(raw, replyTo?.gmailThreadId);
       gmailMessageId = sent.id;
       gmailThreadId = sent.threadId;
