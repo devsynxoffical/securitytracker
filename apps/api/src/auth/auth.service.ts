@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
+import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import {
   DesktopLoginDto,
@@ -17,6 +18,8 @@ import {
   AcceptConsentDto,
   AuthTokensDto,
   ErrorCodes,
+  TwoFactorEnrollDto,
+  TwoFactorCodeDto,
 } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
@@ -294,8 +297,94 @@ export class AuthService {
         message: 'Invalid two-factor authentication code',
       });
     }
+    await this.logLoginEvent(employee.id, dto.email, null, ip, 'admin', 'success');
 
-    // Create Admin Session
+    return { tokens: await this.createAdminSession(employee, ip, userAgent) };
+  }
+
+  /**
+   * Admin 2FA enrolment step 1 (FR-AUTH-07): generates a secret, stores it encrypted with
+   * totpEnabled still false, and returns the otpauth URL for the authenticator app.
+   */
+  async startTwoFactorEnrollment(dto: TwoFactorEnrollDto) {
+    const employee = await this.employeeFromTempToken(dto.tempToken, '2fa_enroll');
+    const secret = CryptoUtil.generateTotpSecret();
+    await this.prisma.employee.update({
+      where: { id: employee.id },
+      data: { totpSecretEnc: CryptoUtil.encryptField(secret, this.encryptionKey()) },
+    });
+    return {
+      secret,
+      otpauthUrl: CryptoUtil.totpUri(secret, employee.email ?? employee.code, employee.company.name),
+      tempToken: dto.tempToken,
+    };
+  }
+
+  /** Enrolment step 2: first valid code enables 2FA and opens the admin session. */
+  async confirmTwoFactorEnrollment(dto: TwoFactorCodeDto, ip: string, userAgent?: string) {
+    const employee = await this.employeeFromTempToken(dto.tempToken, '2fa_enroll');
+    if (!employee.totpSecretEnc) {
+      throw new UnauthorizedException({ code: ErrorCodes.TWO_FACTOR_REQUIRED, message: 'Start enrolment first' });
+    }
+    this.assertTotp(employee, dto.totpCode);
+    await this.prisma.employee.update({ where: { id: employee.id }, data: { totpEnabled: true } });
+    await this.logLoginEvent(employee.id, employee.email ?? employee.code, null, ip, 'admin', 'success');
+    return { tokens: await this.createAdminSession(employee, ip, userAgent) };
+  }
+
+  /** Second step of a normal admin login when the first call carried no code. */
+  async verifyTwoFactor(dto: TwoFactorCodeDto, ip: string, userAgent?: string) {
+    const employee = await this.employeeFromTempToken(dto.tempToken, '2fa_verify');
+    if (!employee.totpEnabled || !employee.totpSecretEnc) {
+      throw new UnauthorizedException({ code: ErrorCodes.TWO_FACTOR_REQUIRED, message: '2FA is not enrolled' });
+    }
+    try {
+      this.assertTotp(employee, dto.totpCode);
+    } catch (e) {
+      await this.logLoginEvent(employee.id, employee.email ?? employee.code, null, ip, 'admin', '2fa_failed');
+      throw e;
+    }
+    await this.logLoginEvent(employee.id, employee.email ?? employee.code, null, ip, 'admin', 'success');
+    return { tokens: await this.createAdminSession(employee, ip, userAgent) };
+  }
+
+  private encryptionKey(): string {
+    return this.configService.get<string>('ENCRYPTION_SECRET') || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  }
+
+  private assertTotp(employee: { totpSecretEnc: string | null }, code: string): void {
+    const secret = CryptoUtil.decryptField(employee.totpSecretEnc!, this.encryptionKey());
+    if (!CryptoUtil.verifyTotp(secret, code)) {
+      throw new UnauthorizedException({
+        code: ErrorCodes.INVALID_TWO_FACTOR_CODE,
+        message: 'Invalid two-factor authentication code',
+      });
+    }
+  }
+
+  private async employeeFromTempToken(tempToken: string, purpose: '2fa_enroll' | '2fa_verify') {
+    let payload: { sub?: string; temp?: boolean; purpose?: string };
+    try {
+      payload = this.jwtService.verify(tempToken);
+    } catch {
+      throw new UnauthorizedException({ code: ErrorCodes.UNAUTHORIZED, message: 'Temporary token is invalid or expired' });
+    }
+    if (!payload.temp || payload.purpose !== purpose || !payload.sub) {
+      throw new UnauthorizedException({ code: ErrorCodes.UNAUTHORIZED, message: 'Temporary token is not valid for this step' });
+    }
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: payload.sub, status: { not: 'disabled' }, deletedAt: null },
+      include: { company: true, role: true },
+    });
+    if (!employee) throw new UnauthorizedException({ code: ErrorCodes.ACCOUNT_DISABLED, message: 'Account unavailable' });
+    return employee;
+  }
+
+  private async createAdminSession(
+    employee: Prisma.EmployeeGetPayload<{ include: { company: true; role: true } }>,
+    ip: string,
+    userAgent?: string,
+  ): Promise<AuthTokensDto> {
     const familyId = uuidv4();
     const rawRefreshToken = uuidv4() + uuidv4();
     const refreshTokenHash = CryptoUtil.sha256(rawRefreshToken);
@@ -319,17 +408,12 @@ export class AuthService {
       data: { lastLoginAt: this.clock.now() },
     });
 
-    await this.logLoginEvent(employee.id, dto.email, null, ip, 'admin', 'success');
-
     const accessToken = this.generateAccessToken(employee, session.id, null);
-
     return {
-      tokens: {
-        accessToken,
-        refreshToken: rawRefreshToken,
-        expiresIn: 900,
-        mustChangePassword: employee.mustChangePassword,
-      },
+      accessToken,
+      refreshToken: rawRefreshToken,
+      expiresIn: 900,
+      mustChangePassword: employee.mustChangePassword,
     };
   }
 

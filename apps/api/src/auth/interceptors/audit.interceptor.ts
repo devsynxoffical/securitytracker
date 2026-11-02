@@ -19,7 +19,7 @@ export class AuditInterceptor implements NestInterceptor {
 
     // Only audit mutating write operations (POST, PUT, PATCH, DELETE) or specific sensitive reads
     const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-    const isAuditRead = url.includes('/tracking/timeline') || url.includes('/mail/audit');
+    const isAuditRead = url.includes('/tracking/timeline') || url.includes('/mail/audit') || /\/export(\?|$)/.test(url);
 
     if (!isWrite && !isAuditRead) {
       return next.handle();

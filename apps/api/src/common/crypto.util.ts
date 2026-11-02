@@ -80,10 +80,20 @@ export class CryptoUtil {
     return false;
   }
 
+  /** Random 160-bit TOTP secret, base32 encoded (what authenticator apps expect). */
+  static generateTotpSecret(): string {
+    return this.base32Encode(crypto.randomBytes(20));
+  }
+
+  static totpUri(secret: string, account: string, issuer: string): string {
+    const label = encodeURIComponent(`${issuer}:${account}`);
+    return `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+  }
+
   static generateTotpCode(secret: string, timeStep: number): string {
     const buffer = Buffer.alloc(8);
     buffer.writeBigInt64BE(BigInt(timeStep));
-    const hmac = crypto.createHmac('sha1', Buffer.from(secret, 'utf-8'));
+    const hmac = crypto.createHmac('sha1', this.base32Decode(secret));
     hmac.update(buffer);
     const digest = hmac.digest();
     const offset = digest[digest.length - 1]! & 0xf;
@@ -94,5 +104,39 @@ export class CryptoUtil {
       (digest[offset + 3]! & 0xff);
     const code = binary % 1000000;
     return code.toString().padStart(6, '0');
+  }
+
+  private static readonly BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+  static base32Encode(buf: Buffer): string {
+    let bits = 0;
+    let value = 0;
+    let out = '';
+    for (const byte of buf) {
+      value = (value << 8) | byte;
+      bits += 8;
+      while (bits >= 5) {
+        out += this.BASE32[(value >>> (bits - 5)) & 31];
+        bits -= 5;
+      }
+    }
+    if (bits > 0) out += this.BASE32[(value << (5 - bits)) & 31];
+    return out;
+  }
+
+  static base32Decode(str: string): Buffer {
+    const clean = str.toUpperCase().replace(/=+$/, '').replace(/[^A-Z2-7]/g, '');
+    let bits = 0;
+    let value = 0;
+    const out: number[] = [];
+    for (const ch of clean) {
+      value = (value << 5) | this.BASE32.indexOf(ch);
+      bits += 5;
+      if (bits >= 8) {
+        out.push((value >>> (bits - 8)) & 0xff);
+        bits -= 8;
+      }
+    }
+    return Buffer.from(out);
   }
 }

@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ClockService } from './common/clock.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -7,7 +8,9 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 const cookieParser = require('cookie-parser');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Body limit raised for CSV imports sent as JSON text (13-crm-spec.md F23, max 20 MB file)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useBodyParser('json', { limit: '25mb' });
 
   app.enableCors({
     origin: true,
