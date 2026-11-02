@@ -71,7 +71,7 @@ Fill `infra/.env.prod`:
 | `GOOGLE_*` | leave empty until the Google project exists (10 section 3) |
 | `S3_*` | leave empty, or use the bundled MinIO profile for attachments and documents |
 
-Transactional mail (password resets) uses the API's `SMTP_*` variables. Add them to the `x-api-env` block in `infra/docker-compose.prod.yml` or to `.env.prod` and reference them the same way as `GOOGLE_*`. Any mailbox works, including the company's own IMAP/SMTP account.
+| `SMTP_*`, `MAIL_FROM` | Transactional mail (password resets). Any SMTP account works, including the company's own Hostinger or GoDaddy mailbox. Empty disables delivery |
 
 A private repository needs a read token for `git clone` and for `docker compose pull` from GHCR: `docker login ghcr.io -u <github user> -p <token with read:packages>`.
 
@@ -86,13 +86,9 @@ docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml ps
 curl -fsS https://api.company.com/api/v1/health/ready
 ```
 
-Seed the first company and Super Admin exactly once:
+Create the first company and Super Admin through the sign-up screen: open `https://admin.company.com/admin`. On an empty database the panel shows "Set up your company" (`POST /setup/bootstrap`, available only while no company exists). Enter the company name, timezone, your name, email and a strong password, then enrol 2FA with the QR code on the next screen. From then on `/admin` is the normal login.
 
-```bash
-docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml exec api sh -c "cd /app/apps/api && npx prisma db seed"
-```
-
-Then open `https://admin.company.com/admin`, sign in with the seeded Super Admin, enrol 2FA (the QR code appears on first login), and change the password immediately under Settings → Security.
+Demo data (staging only, never on the production database): `docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml run --rm -e RUN_SEED=true -e SEED_DEMO_MAILBOX=true api` seeds the DEVSYNX example company, four employees with known passwords and a synthetic mailbox.
 
 ## 6. First-hour checklist in the admin panel
 
@@ -142,7 +138,7 @@ Signing: unsigned builds work but Windows SmartScreen and macOS Gatekeeper show 
 | Check | Expected |
 |---|---|
 | `https://admin.company.com/` | public landing with download buttons (or "No release has been published yet") |
-| `https://admin.company.com/admin` | login, 2FA, home dashboard |
+| `https://admin.company.com/admin` | sign-up on the empty database, then login, 2FA, home dashboard |
 | `https://api.company.com/api/v1/health/ready` | `{"status":"ok", ...}` |
 | Desktop app first launch | server screen → `api.company.com` → "Connected" → login → "Device awaiting approval" |
 | Admin → Security → Devices | pending device appears; approve; the app signs in within 30 s |

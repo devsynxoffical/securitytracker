@@ -7,6 +7,13 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   ./node_modules/.bin/prisma migrate deploy --schema ./prisma/schema.prisma
 fi
 
+# Demo data for staging (19 section 5): RUN_SEED=true seeds the example company and exits. Production uses the sign-up screen.
+if [ "${RUN_SEED:-false}" = "true" ]; then
+  echo "[entrypoint] seeding"
+  node dist/prisma/seed.js
+  exit 0
+fi
+
 if [ "${WORKER_ENABLED:-false}" = "true" ]; then
   echo "[entrypoint] starting worker"
 else
