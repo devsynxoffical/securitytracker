@@ -7,8 +7,11 @@ import {
   Body,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { toCsv } from '../crm/import.service';
 import {
   CreateEmployeeSchema,
   UpdateEmployeeSchema,
@@ -28,6 +31,23 @@ export class EmployeesController {
   @RequirePermission('employees.view')
   async listEmployees(@Req() req: any, @Query('status') status?: string) {
     return this.employeesService.listEmployees(req.scopeFilter, status);
+  }
+
+  /** FR-HR-15: directory export. Declared before ':id'. Audited by the interceptor (export URL). */
+  @Get('export')
+  @RequirePermission('employees.view')
+  async exportEmployees(@Req() req: any, @Res() res: Response, @Query('status') status?: string) {
+    const rows = await this.employeesService.listEmployees(req.scopeFilter, status);
+    const csv = toCsv([
+      ['Code', 'First name', 'Last name', 'Email', 'Phone', 'Status', 'Role', 'Department', 'Team', 'Manager', 'Join date', 'Last login'],
+      ...rows.map((e) => [
+        e.code, e.firstName, e.lastName, e.email ?? '', e.phone ?? '', e.status, e.role?.name ?? '', e.department?.name ?? '', e.team?.name ?? '',
+        e.manager ? `${e.manager.firstName} ${e.manager.lastName}` : '', e.joinDate ? e.joinDate.toISOString().slice(0, 10) : '', e.lastLoginAt ? e.lastLoginAt.toISOString() : '',
+      ]),
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="employees.csv"');
+    res.send(csv);
   }
 
   @Get(':id')
