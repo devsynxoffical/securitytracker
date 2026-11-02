@@ -3,11 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Company OS - Employee Management + Security + CRM Platform",
-  "main": "server.js",
   "scripts": {
-    "build": "turbo run build && node scripts/postbuild.js",
-    "postbuild": "node scripts/postbuild.js",
-    "start": "node server.js",
+    "build": "pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build",
     "dev": "turbo run dev",
     "dist:desktop": "pnpm --filter @company-os/desktop run dist",
     "dist:mac": "pnpm --filter @company-os/desktop run dist:mac",
@@ -15,12 +12,12 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "build:web": "pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build",
+    "build:all": "turbo run build"
   },
   "devDependencies": {
-    "basic-ftp": "^6.2.2",
     "prettier": "^3.5.3",
-    "ssh2": "^1.17.0",
     "turbo": "^2.4.4",
     "typescript": "^5.8.2"
   },

@@ -13,7 +13,7 @@ x-api-env: &api-env
   REDIS_URL: redis://redis:6379
   JWT_SECRET: ${JWT_SECRET}
   ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
-  ADMIN_ORIGIN: https://admin.${DOMAIN}
+  ADMIN_ORIGIN: ${ADMIN_ORIGIN:-https://admin.${DOMAIN}} # where people open the admin panel; password reset links point here
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
   GOOGLE_REDIRECT_URI: https://api.${DOMAIN}/api/v1/mail/oauth/callback
@@ -42,6 +42,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
+      UPDATES_CORS_ORIGIN: ${UPDATES_CORS_ORIGIN:-https://admin.${DOMAIN}} # the site that reads latest.json (set to your web host when the admin lives elsewhere)
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
