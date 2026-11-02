@@ -9,6 +9,8 @@ import { ProfilesService } from './profiles.service';
 import { ChecklistsService } from './checklists.service';
 import { AnnouncementsService } from './announcements.service';
 import { HrController } from './hr.controller';
+import { CelebrationsService } from './celebrations.service';
+import { CelebrationsController } from './celebrations.controller';
 
 /**
  * HR module (15-hr-spec.md): leave types and balances, requests, profiles, documents,
@@ -16,8 +18,8 @@ import { HrController } from './hr.controller';
  */
 @Module({
   imports: [NotificationsModule, AttendanceModule],
-  controllers: [LeaveController, HrController],
-  providers: [LeaveService, ProfilesService, ChecklistsService, AnnouncementsService, PermissionsService, CustomFieldsService],
-  exports: [LeaveService, ChecklistsService],
+  controllers: [LeaveController, HrController, CelebrationsController],
+  providers: [LeaveService, ProfilesService, ChecklistsService, AnnouncementsService, CelebrationsService, PermissionsService, CustomFieldsService],
+  exports: [LeaveService, ChecklistsService, CelebrationsService],
 })
 export class HrModule {}

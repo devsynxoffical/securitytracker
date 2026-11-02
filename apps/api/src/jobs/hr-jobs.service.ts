@@ -5,6 +5,7 @@ import { LeaveStatus, NotificationType } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CelebrationsService } from '../hr/celebrations.service';
 import { JobRegistry, JobResult } from './job-registry';
 import { addDays, utcDayStart } from './jobs.util';
 
@@ -16,11 +17,13 @@ export class HrJobsService implements OnModuleInit {
     private clock: ClockService,
     private notifications: NotificationsService,
     private registry: JobRegistry,
+    private celebrations: CelebrationsService,
   ) {}
 
   onModuleInit() {
     this.registry.register('hr-leave-rebalance', '15 1 * * *', 'Recomputes used and pending leave days for the current year from requests', () => this.leaveRebalance());
     this.registry.register('hr-document-expiry', '0 7 * * *', 'Warns employees and HR about documents expiring within 30 days', () => this.documentExpiry());
+    this.registry.register('hr-celebrations', '30 7 * * *', 'Birthday and work anniversary notices: manager and HR a day ahead, everyone on the day (FR-HR-16)', () => this.celebrationsNotices());
   }
 
   @Cron('15 1 * * *', { timeZone: 'UTC' })
@@ -85,6 +88,52 @@ export class HrJobsService implements OnModuleInit {
     }
     return { documents: docs.length, sent };
   }
+
+  @Cron('30 7 * * *', { timeZone: 'UTC' })
+  runCelebrations() {
+    return this.registry.run('hr-celebrations');
+  }
+
+  /** FR-HR-16. Idempotent per (recipient, employee, date) through the notification data. */
+  async celebrationsNotices(): Promise<JobResult> {
+    let sent = 0;
+    const companies = await this.prisma.company.findMany({ select: { id: true } });
+    for (const c of companies) {
+      const items = await this.celebrations.forCompany(c.id, 1);
+      for (const it of items) {
+        const label = it.kind === 'birthday' ? `${it.firstName} ${it.lastName}'s birthday` : `${it.firstName} ${it.lastName}'s ${it.years}-year work anniversary`;
+        let recipients: string[] = [];
+        if (it.inDays === 1) {
+          const emp = await this.prisma.employee.findUnique({ where: { id: it.employeeId }, select: { managerId: true, companyId: true } });
+          const hr = await this.prisma.employee.findMany({
+            where: { companyId: c.id, status: 'active', deletedAt: null, role: { permissions: { some: { permissionKey: 'hr.profiles.edit', scope: 'all' } } } },
+            select: { id: true },
+          });
+          recipients = Array.from(new Set([...(emp?.managerId ? [emp.managerId] : []), ...hr.map((h) => h.id)])).filter((r) => r !== it.employeeId);
+        } else if (it.inDays === 0) {
+          const all = await this.prisma.employee.findMany({ where: { companyId: c.id, status: 'active', deletedAt: null }, select: { id: true } });
+          recipients = all.map((a) => a.id).filter((r) => r !== it.employeeId);
+        }
+        for (const r of recipients) {
+          const exists = await this.prisma.notification.findFirst({
+            where: { recipientId: r, type: NotificationType.ANNOUNCEMENT, data: { path: ['celebration'], equals: `${it.kind}:${it.employeeId}:${it.date}` } },
+            select: { id: true },
+          });
+          if (exists) continue;
+          await this.notifications.sendNotification(
+            r,
+            NotificationType.ANNOUNCEMENT,
+            it.inDays === 1 ? `Tomorrow: ${label}` : `Today: ${label}`,
+            it.inDays === 1 ? 'A day ahead, so the team can prepare.' : 'Wish them well.',
+            { celebration: `${it.kind}:${it.employeeId}:${it.date}`, employeeId: it.employeeId, kind: it.kind, date: it.date },
+          );
+          sent += 1;
+        }
+      }
+    }
+    return { processed: sent, detail: `${sent} celebration notices sent` };
+  }
+
 }
 
 /** Pure aggregation used by the rebalance job. */

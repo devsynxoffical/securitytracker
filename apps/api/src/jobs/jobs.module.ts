@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { HrModule } from '../hr/hr.module';
 import { MailModule } from '../mail/mail.module';
 import { JobRegistry } from './job-registry';
 import { ShiftJobsService } from './shift-jobs.service';
@@ -18,7 +19,7 @@ import { JobsController } from './jobs.controller';
  * codebase starts as API or worker (02 section 2).
  */
 @Module({
-  imports: [ScheduleModule.forRoot(), NotificationsModule, AttendanceModule, MailModule],
+  imports: [ScheduleModule.forRoot(), NotificationsModule, AttendanceModule, MailModule, HrModule],
   controllers: [JobsController],
   providers: [JobRegistry, ShiftJobsService, AttendanceJobsService, ReminderJobsService, HrJobsService, MailJobsService, MaintenanceJobsService],
   exports: [JobRegistry, MailJobsService],
