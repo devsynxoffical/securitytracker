@@ -35,6 +35,13 @@ interface AuthState {
   verifyTwoFactor: (tempToken: string, totpCode: string) => Promise<void>;
   logout: () => void;
   can: (key: string) => boolean;
+  /** F29: true while the deployment has no employee yet. null = unknown (not checked). */
+  needsSetup: boolean | null;
+  refreshSetupStatus: () => Promise<boolean>;
+  bootstrap: (input: { companyName: string; timezone: string; firstName: string; lastName: string; email: string; password: string }) => Promise<{ companyId: string }>;
+  /** F30 */
+  forgotPassword: (email: string) => Promise<{ ok: true; devResetUrl?: string }>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -42,6 +49,18 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [status, setStatus] = useState<AuthState['status']>('loading');
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+
+  const refreshSetupStatus = useCallback(async () => {
+    try {
+      const res = await http.get<{ needsSetup: boolean }>('/setup/status');
+      setNeedsSetup(res.needsSetup);
+      return res.needsSetup;
+    } catch {
+      setNeedsSetup(false);
+      return false;
+    }
+  }, []);
 
   const loadMe = useCallback(async () => {
     try {
@@ -61,9 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('anonymous');
     });
     if (getToken()) void loadMe();
-    else setStatus('anonymous');
+    else {
+      setStatus('anonymous');
+      void refreshSetupStatus();
+    }
     return () => setUnauthorizedHandler(null);
-  }, [loadMe]);
+  }, [loadMe, refreshSetupStatus]);
 
   const finish = useCallback(
     async (res: TokensResponse) => {
@@ -108,6 +130,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('anonymous');
   }, []);
 
+  const bootstrap = useCallback(
+    async (input: { companyName: string; timezone: string; firstName: string; lastName: string; email: string; password: string }) => {
+      const res = await http.post<{ companyId: string }>('/setup/bootstrap', input);
+      setNeedsSetup(false);
+      return res;
+    },
+    [],
+  );
+  const forgotPassword = useCallback((email: string) => http.post<{ ok: true; devResetUrl?: string }>('/auth/forgot-password', { email }), []);
+  const resetPassword = useCallback(async (token: string, newPassword: string) => {
+    await http.post('/auth/reset-password', { token, newPassword });
+  }, []);
+
   const can = useCallback(
     (key: string) => {
       if (!me) return false;
@@ -119,8 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can }),
-    [me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can],
+    () => ({ me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, refreshSetupStatus, bootstrap, forgotPassword, resetPassword }),
+    [me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, refreshSetupStatus, bootstrap, forgotPassword, resetPassword],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

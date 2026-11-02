@@ -4,6 +4,8 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
+  Logger,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -20,19 +22,99 @@ import {
   ErrorCodes,
   TwoFactorEnrollDto,
   TwoFactorCodeDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from '@company-os/contracts';
 import { PrismaService } from '../common/prisma.service';
 import { ClockService } from '../common/clock.service';
 import { CryptoUtil } from '../common/crypto.util';
+import { RedisService } from '../common/redis.service';
+
+const RESET_TTL_SECONDS = 30 * 60;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  /** Fallback single-use reset tokens when Redis is not configured (single-instance only). */
+  private readonly resetTokens = new Map<string, { employeeId: string; expiresAt: number }>();
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
     private clock: ClockService,
+    @Optional() private redis?: RedisService,
   ) {}
+
+  /**
+   * F30 - Password reset request. Always succeeds so email addresses cannot be enumerated.
+   * There is no mailer yet: outside production the reset URL is returned for the operator.
+   */
+  async forgotPassword(dto: ForgotPasswordDto, ip: string): Promise<{ ok: true; devResetUrl?: string }> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { email: dto.email.trim().toLowerCase(), status: { not: 'disabled' }, deletedAt: null },
+      select: { id: true, email: true },
+    });
+    if (!employee) return { ok: true };
+
+    const raw = uuidv4() + uuidv4().replace(/-/g, '');
+    const key = CryptoUtil.sha256(raw);
+    const expiresAt = this.clock.now().getTime() + RESET_TTL_SECONDS * 1000;
+    await this.storeResetToken(key, employee.id, expiresAt);
+    await this.logLoginEvent(employee.id, employee.email ?? '', null, ip, 'admin', 'password_reset_requested');
+    this.logger.log(`Password reset requested for employee ${employee.id}`);
+
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    const adminOrigin = this.configService.get<string>('ADMIN_ORIGIN') || 'http://localhost:3000';
+    return isProd ? { ok: true } : { ok: true, devResetUrl: `${adminOrigin}/admin/reset?token=${raw}` };
+  }
+
+  /** F30 - Consumes a single-use token and sets the new password; all sessions of the account are revoked. */
+  async resetPassword(dto: ResetPasswordDto, ip: string): Promise<{ ok: true }> {
+    const key = CryptoUtil.sha256(dto.token);
+    const employeeId = await this.consumeResetToken(key);
+    if (!employeeId) {
+      throw new UnauthorizedException({ code: ErrorCodes.UNAUTHORIZED, message: 'This reset link is invalid or has expired.' });
+    }
+    const passwordHash = await argon2.hash(dto.newPassword, { type: argon2.argon2id, memoryCost: 65536, timeCost: 3, parallelism: 1 });
+    const now = this.clock.now();
+    await this.prisma.$transaction([
+      this.prisma.employee.update({ where: { id: employeeId }, data: { passwordHash, mustChangePassword: false, failedLogins: 0, lockedUntil: null } }),
+      this.prisma.session.updateMany({ where: { employeeId, revokedAt: null }, data: { revokedAt: now, revokedReason: 'password_reset' } }),
+    ]);
+    await this.logLoginEvent(employeeId, '', null, ip, 'admin', 'password_reset');
+    return { ok: true };
+  }
+
+  private async storeResetToken(key: string, employeeId: string, expiresAt: number): Promise<void> {
+    const client = this.redisClient();
+    if (client) {
+      await client.set(`pwreset:${key}`, employeeId, 'EX', RESET_TTL_SECONDS);
+      return;
+    }
+    this.resetTokens.set(key, { employeeId, expiresAt });
+  }
+
+  private async consumeResetToken(key: string): Promise<string | null> {
+    const client = this.redisClient();
+    if (client) {
+      const id = await client.getdel(`pwreset:${key}`);
+      return id || null;
+    }
+    const entry = this.resetTokens.get(key);
+    this.resetTokens.delete(key);
+    if (!entry || entry.expiresAt < this.clock.now().getTime()) return null;
+    return entry.employeeId;
+  }
+
+  private redisClient() {
+    if (!this.redis || !this.configService.get<string>('REDIS_URL')) return null;
+    try {
+      return this.redis.getClient();
+    } catch {
+      return null;
+    }
+  }
 
   /**
    * Desktop employee login with hardware device registration & signature verification (F2, F3).

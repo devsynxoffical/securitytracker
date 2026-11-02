@@ -453,3 +453,30 @@ Employee: open app -> auto login -> Start Shift -> dashboard
 Manager: Admin Panel dashboard -> who is working / late / absent
    -> team targets -> overdue follow-ups -> approvals -> reports
 ```
+
+## F29 - First-run workspace setup
+
+```text
+Fresh deployment, no employee exists
+  -> Admin Panel calls GET /setup/status -> {needsSetup: true}
+  -> "Create your workspace" (3 steps: Company, Your account, Done)
+  -> POST /setup/bootstrap {companyName, timezone, firstName, lastName, email, password}
+       -> company, the five system roles with the default matrix (05), the Super Admin
+          (code EMP-0001, 2FA enrolment on first sign-in), default pipelines, lookups,
+          tags, task space, leave types, checklist templates, mail labels, audit entry
+  -> every later call to /setup/bootstrap answers 409. Sign-up never exists for
+     employees: they are created by an admin (F1).
+```
+
+## F30 - Admin password reset
+
+```text
+Sign in -> "Forgot password?" -> POST /auth/forgot-password {email}
+  -> always 200 (no enumeration). Active account: single-use token (sha256 stored,
+     30 minutes, Redis when configured, otherwise process memory) and a login event
+     password_reset_requested. No mailer yet: outside production the response carries
+     devResetUrl for the operator; in production the link must be delivered by email.
+  -> /admin/reset?token=... -> POST /auth/reset-password {token, newPassword}
+  -> password replaced (Argon2id), lockout cleared, every session revoked, login event
+     password_reset. 2FA is untouched; a 2FA reset stays with the Super Admin (08).
+```

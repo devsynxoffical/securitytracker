@@ -19,6 +19,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { HrModule } from './hr/hr.module';
 import { JobsModule } from './jobs/jobs.module';
 import { FilesModule } from './files/files.module';
+import { SetupModule } from './setup/setup.module';
 import { SettingsModule } from './settings/settings.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RbacGuard } from './auth/guards/rbac.guard';
@@ -46,6 +47,7 @@ import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
     HrModule,
     JobsModule,
     FilesModule,
+    SetupModule,
     SettingsModule,
   ],
   controllers: [HealthController],

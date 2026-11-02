@@ -18,6 +18,8 @@ import {
   AcceptConsentSchema,
   TwoFactorEnrollSchema,
   TwoFactorCodeSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
 } from '@company-os/contracts';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard, Public } from './guards/jwt-auth.guard';
@@ -88,6 +90,22 @@ export class AuthController {
   async twoFactorVerify(@Body() body: unknown, @Req() req: Request) {
     const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
     return this.authService.verifyTwoFactor(TwoFactorCodeSchema.parse(body), ip, req.headers['user-agent']);
+  }
+
+  @Public()
+  @Post('auth/forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.forgotPassword(ForgotPasswordSchema.parse(body), ip);
+  }
+
+  @Public()
+  @Post('auth/reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: unknown, @Req() req: Request) {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    return this.authService.resetPassword(ResetPasswordSchema.parse(body), ip);
   }
 
   @Public()
