@@ -23,16 +23,20 @@ import {
   MailboxAssignmentDto,
 } from '@company-os/contracts';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
+import { PermissionsService } from '../auth/permissions.service.js';
 
 @Controller('mail')
 export class MailController {
-  constructor(private readonly mailService: MailService) {}
+  constructor(
+    private readonly mailService: MailService,
+    private readonly permissions: PermissionsService,
+  ) {}
 
   @Get('oauth/url')
   @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermission('mail.accounts.manage')
   getConnectUrl(@Request() req: any) {
-    return this.mailService.getConnectUrl(req.user.companyId, req.user.sub);
+    return this.mailService.getConnectUrl(req.user.companyId, req.user.id);
   }
 
   @Get('oauth/callback')
@@ -52,8 +56,8 @@ export class MailController {
   @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermission('mail.use')
   async listMailboxes(@Request() req: any, @Query('admin') adminView?: string) {
-    const isAdmin = adminView === 'true' && req.user.permissions?.includes('mail.accounts.manage');
-    return this.mailService.listMailboxes(req.user.companyId, req.user.sub, isAdmin);
+    const isAdmin = adminView === 'true' && (await this.permissions.has(req.user, 'mail.accounts.manage'));
+    return this.mailService.listMailboxes(req.user.companyId, req.user.id, isAdmin);
   }
 
   @Post('mailboxes/:id/assign')
@@ -64,7 +68,7 @@ export class MailController {
     @Param('id') mailboxId: string,
     @Body(new ZodValidationPipe(MailboxAssignmentSchema)) dto: MailboxAssignmentDto,
   ) {
-    return this.mailService.assignMailbox(req.user.companyId, req.user.sub, mailboxId, dto);
+    return this.mailService.assignMailbox(req.user.companyId, req.user.id, mailboxId, dto);
   }
 
   @Get('mailboxes/:id/threads')
@@ -78,7 +82,7 @@ export class MailController {
   ) {
     return this.mailService.listThreads(
       mailboxId,
-      req.user.sub,
+      req.user.id,
       search,
       limit ? parseInt(limit, 10) : 50,
     );
@@ -96,7 +100,7 @@ export class MailController {
   ) {
     return this.mailService.getThreadDetail(
       mailboxId,
-      req.user.sub,
+      req.user.id,
       threadId,
       ip,
       deviceId,
@@ -115,7 +119,7 @@ export class MailController {
   ) {
     return this.mailService.sendMail(
       mailboxId,
-      req.user.sub,
+      req.user.id,
       req.user.companyId,
       dto,
       ip,
@@ -131,7 +135,7 @@ export class MailController {
     @Param('id') mailboxId: string,
     @Body(new ZodValidationPipe(SaveDraftSchema)) dto: SaveDraftDto,
   ) {
-    return this.mailService.saveDraft(mailboxId, req.user.sub, dto);
+    return this.mailService.saveDraft(mailboxId, req.user.id, dto);
   }
 
   @Post('mailboxes/:id/threads/:threadId/archive')
@@ -142,7 +146,7 @@ export class MailController {
     @Param('id') mailboxId: string,
     @Param('threadId') threadId: string,
   ) {
-    return this.mailService.archiveThread(mailboxId, req.user.sub, threadId);
+    return this.mailService.archiveThread(mailboxId, req.user.id, threadId);
   }
 
   @Post('mailboxes/:id/threads/:threadId/read')
@@ -154,7 +158,7 @@ export class MailController {
     @Param('threadId') threadId: string,
     @Body('unread') unread: boolean,
   ) {
-    return this.mailService.markRead(mailboxId, req.user.sub, threadId, unread);
+    return this.mailService.markRead(mailboxId, req.user.id, threadId, unread);
   }
 
   @Get('audit')
