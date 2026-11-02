@@ -320,8 +320,7 @@ function Troubleshooting() {
       q: 'Reinstalling or updating',
       a: (
         <>
-          Install the new version over the old one. Your sign-in, device identity and any queued offline entries live in your per-user data folder (<Code>%APPDATA%\WorkPulse
-          Workstation</Code> on Windows, <Code>~/Library/Application Support/WorkPulse</Code> on macOS) and are kept, so the device does not need to be approved again.
+          Install the new version over the old one. Your sign-in, device identity and any queued offline entries live in your per-user data folder (<Code>%APPDATA%\WorkPulse</Code> on Windows, <Code>~/Library/Application Support/WorkPulse</Code> on macOS) and are kept, so the device does not need to be approved again.
         </>
       ),
     },
