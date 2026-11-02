@@ -107,6 +107,7 @@ Functional requirements per module. Priority: M = MUST (1.0), S = SHOULD (1.0 if
 | FR-CRM-14 | Export CSV, permission-gated and audited | M |
 | FR-CRM-15 | Custom fields (text, number, date, select) defined by admin | S |
 | FR-CRM-16 | Emails exchanged with a lead address appear in its timeline | S |
+| FR-CRM-17 to 34 | Contacts, accounts, deals, conversion, unified activities, custom fields, tags, saved views, deal board, import, export, bulk actions, search, dashboard. See 13-crm-spec.md | M / S per 13 |
 
 ## 8. Tasks (TASK)
 

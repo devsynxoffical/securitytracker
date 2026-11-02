@@ -31,6 +31,7 @@ One platform with which a company controls identity, CRM, company email access, 
 | 10-google-workspace-email.md | Gmail integration design and setup | Email module |
 | 11-build-plan.md | Phases, deliverables, acceptance criteria, testing, risks | Planning |
 | 12-ai-build-guide.md | How to drive AI coding models with these documents, rules file, prompt templates | Every AI session |
+| 13-crm-spec.md | CRM objects (leads, contacts, accounts, deals), activities, custom fields, import, conversion | CRM work |
 
 ## 3. Conventions
 

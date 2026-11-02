@@ -53,7 +53,7 @@ Error body:
 | POST | /auth/consent | Accept policy version |
 | GET | /me | Profile, permissions with scopes, settings relevant to the client, open shift |
 | POST | /admin/auth/login, /admin/auth/2fa, /admin/auth/logout | Admin Panel login |
-| POST | /admin/auth/2fa/enroll, /admin/auth/2fa/verify | TOTP enrolment |
+| POST | /admin/auth/2fa/enroll (temp token -> secret + otpauth URL), /admin/auth/2fa/confirm (first code enables 2FA and opens the session), /admin/auth/2fa/verify (second step of a normal login) | TOTP enrolment and verification |
 | GET | /devices | List (scope) |
 | POST | /devices/:id/approve, /reject, /revoke | Device actions |
 | GET | /sessions, DELETE /sessions/:id | Session management |
@@ -141,6 +141,8 @@ Rejected items carry a reason (`OUTSIDE_SHIFT`, `OVERLAP`, `TOO_OLD`, `INVALID`)
 | GET, POST | /tasks, GET, PATCH /tasks/:id, POST /tasks/:id/comments |
 | GET | /follow-ups (today, overdue, upcoming) |
 | POST | /files/presign (upload URL), GET /files/:id (download redirect, permission checked) |
+
+Contacts, accounts, deals, activities, conversion, CRM config, search and dashboard endpoints: see 13-crm-spec.md section 6.
 
 ## 7. Targets
 

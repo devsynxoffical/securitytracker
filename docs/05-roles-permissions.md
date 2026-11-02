@@ -30,8 +30,11 @@ Access channels: the Desktop App is for every employee. The Admin Panel needs th
 | Sessions | `sessions.view`, `sessions.revoke` |
 | Attendance | `attendance.view`, `attendance.manage` (schedules, holidays), `attendance.approve` (corrections, leave) |
 | Tracking | `tracking.view_summary` (totals), `tracking.view_detail` (apps, domains, time ranges), `tracking.manage_rules` |
-| CRM leads | `crm.leads.view`, `crm.leads.create`, `crm.leads.edit`, `crm.leads.assign`, `crm.leads.reopen`, `crm.leads.delete`, `crm.leads.import`, `crm.leads.export`, `crm.leads.create_duplicate` |
-| CRM config | `crm.pipelines.manage` |
+| CRM leads | `crm.leads.view`, `crm.leads.create`, `crm.leads.edit`, `crm.leads.assign`, `crm.leads.reopen`, `crm.leads.delete`, `crm.leads.import`, `crm.leads.export`, `crm.leads.create_duplicate`, `crm.leads.convert` |
+| CRM contacts | `crm.contacts.view`, `crm.contacts.create`, `crm.contacts.edit`, `crm.contacts.assign`, `crm.contacts.delete`, `crm.contacts.import`, `crm.contacts.export` |
+| CRM accounts | `crm.accounts.view`, `crm.accounts.create`, `crm.accounts.edit`, `crm.accounts.assign`, `crm.accounts.delete`, `crm.accounts.import`, `crm.accounts.export` |
+| CRM deals | `crm.deals.view`, `crm.deals.create`, `crm.deals.edit`, `crm.deals.assign`, `crm.deals.reopen`, `crm.deals.delete`, `crm.deals.export` |
+| CRM config | `crm.pipelines.manage`, `crm.config.manage` (custom fields, tags, sources, lost reasons). Default scopes for the new keys: 13-crm-spec.md section 4 |
 | Calls | `crm.calls.log`, `crm.calls.manage` |
 | Tasks | `tasks.view`, `tasks.create`, `tasks.assign`, `tasks.manage` |
 | Targets | `targets.view`, `targets.manage` |

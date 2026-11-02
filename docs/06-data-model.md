@@ -79,6 +79,8 @@ Constraint: partial unique index on `shifts (employee_id) WHERE state <> 'ended'
 | custom_field_defs | entity (lead), key, label, type, options jsonb, position |
 | import_jobs | uploader_id, file_key, mapping jsonb, status, totals jsonb, report_key |
 
+CRM contacts, accounts, deals, activities, tags, custom fields, saved views and import jobs: see 13-crm-spec.md section 5.
+
 ## 5. Targets
 
 | Table | Key columns |
