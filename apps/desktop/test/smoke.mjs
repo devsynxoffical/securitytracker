@@ -45,7 +45,14 @@ try {
   const info = await app.evaluate(({ app }) => ({ version: app.getVersion(), name: app.getName(), packaged: app.isPackaged }));
   check('app version present', /^\d+\.\d+\.\d+/.test(info.version), JSON.stringify(info));
 
-  // First run: no server configured -> server screen.
+  // First run: the server screen, or (release builds with the address baked in) the sign-in screen,
+  // from which Connection settings -> Change leads to the same server screen.
+  await win.getByText(/Connect to your company|Employee code or company email/).first().waitFor({ timeout: 20_000 });
+  if (!(await win.getByText('Connect to your company').count())) {
+    check('baked-in server address goes straight to sign-in', true);
+    await win.getByText('Connection settings').click();
+    await win.getByRole('button', { name: 'Change' }).click();
+  }
   await win.getByText('Connect to your company').waitFor({ timeout: 20_000 });
   check('first-run server screen shown', true);
   const input = win.getByPlaceholder('api.yourcompany.com');

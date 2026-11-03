@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import type { NextFunction, Request, Response } from 'express';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { releaseManifestHandler } from './release-manifest';
 
 /**
  * Serves the admin panel and public site (Next.js static export) from the API's own origin, so one
@@ -22,6 +23,9 @@ export function serveWebRoot(app: NestExpressApplication): string | null {
     }
     next();
   });
+
+  // Desktop release manifest for the install page, read from GitHub Releases.
+  app.use(releaseManifestHandler());
 
   // Next.js writes clean routes as <route>.html next to a folder of the same name (admin.html + admin/).
   // Resolve /admin and /admin/ to admin.html before the folder lookup would redirect or miss.

@@ -39,3 +39,17 @@ describe('clean URL pages', () => {
   });
 });
 
+
+import { pickDesktopRelease } from '../src/common/release-manifest';
+describe('desktop release selection', () => {
+  it('takes the newest published desktop-v release and skips drafts and other tags', () => {
+    const list = [
+      { tag_name: 'desktop-v1.2.0', draft: true },
+      { tag_name: 'v1.0.0', draft: false },
+      { tag_name: 'desktop-v1.1.0', draft: false },
+      { tag_name: 'desktop-v1.0.0', draft: false },
+    ];
+    expect(pickDesktopRelease(list)?.tag_name).toBe('desktop-v1.1.0');
+    expect(pickDesktopRelease([{ tag_name: 'v1.0.0', draft: false }])).toBeNull();
+  });
+});

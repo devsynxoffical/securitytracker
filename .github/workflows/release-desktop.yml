@@ -31,7 +31,7 @@ env:
   NODE_VERSION: 22
   # Server address baked into the app. Employees can still change it on first launch.
   # Set repository variable API_PUBLIC_URL to e.g. https://api.yourcompany.com/api/v1
-  MAIN_VITE_API_URL: ${{ vars.API_PUBLIC_URL }}
+  MAIN_VITE_API_URL: ${{ vars.API_PUBLIC_URL || 'https://securitytracker-production.up.railway.app/api/v1' }}
 
 jobs:
   version:
