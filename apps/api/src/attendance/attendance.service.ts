@@ -337,7 +337,8 @@ export class AttendanceService {
 
         if (timeSinceHeartbeatSeconds > 300) {
           // More than 5 minutes without heartbeat
-          liveStatus = `Offline (last seen ${activeShift.lastHeartbeatAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+          // The viewer formats lastSeenAt in their own time zone; the server only knows UTC.
+          liveStatus = 'Offline';
         } else if (activeShift.state === 'ON_BREAK') {
           liveStatus = 'On break';
         } else {
@@ -353,6 +354,7 @@ export class AttendanceService {
         team: emp.team?.name || 'Unassigned',
         liveStatus,
         checkInAt: activeShift ? activeShift.startedAt : null,
+        lastSeenAt: activeShift ? activeShift.lastHeartbeatAt : null,
         activeSeconds: activeShift ? activeShift.activeSeconds : 0,
         breakSeconds: activeShift ? activeShift.breakSeconds : 0,
       };

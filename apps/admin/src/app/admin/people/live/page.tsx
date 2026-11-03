@@ -53,7 +53,7 @@ function Live() {
   const cols: Column<LiveRow & { id: string }>[] = [
     { key: 'name', header: 'Employee', sortable: true, locked: true, cell: (r) => <div className="flex items-center gap-2.5"><Avatar name={r.name} size={28} /><div className="min-w-0"><div className="truncate font-semibold text-ink">{r.name}</div><div className="font-mono text-xs text-ink-3">{r.code}</div></div></div> },
     { key: 'department', header: 'Department', sortable: true, cell: (r) => <>{r.department || <span className="text-ink-3">—</span>}{r.team && <div className="text-xs text-ink-3">{r.team}</div>}</> },
-    { key: 'status', header: 'Status', sortable: true, cell: (r) => <Badge tone={liveTone(r.liveStatus)} dot>{r.liveStatus}</Badge> },
+    { key: 'status', header: 'Status', sortable: true, cell: (r) => <Badge tone={liveTone(r.liveStatus)} dot>{r.liveStatus === 'Offline' && r.lastSeenAt ? `Offline (last seen ${new Date(r.lastSeenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : r.liveStatus}</Badge> },
     { key: 'checkin', header: 'Check-in', sortable: true, mono: true, cell: (r) => (r.checkInAt ? dateTime(r.checkInAt) : <span className="text-ink-3">—</span>) },
     { key: 'active', header: 'Active', sortable: true, right: true, mono: true, cell: (r) => (r.checkInAt ? hours(r.activeSeconds) : <span className="text-ink-3">—</span>) },
     { key: 'break', header: 'Break', right: true, mono: true, cell: (r) => (r.checkInAt ? hours(r.breakSeconds) : <span className="text-ink-3">—</span>) },
