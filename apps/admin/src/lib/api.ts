@@ -50,7 +50,7 @@ export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     try {
       const override = window.sessionStorage.getItem(API_URL_KEY);
-      if (override) return override;
+      if (override) return normalizeApiBaseUrl(override);
     } catch {
       /* ignore */
     }
@@ -61,7 +61,8 @@ export function getApiBaseUrl(): string {
 export function setApiBaseUrl(url: string | null) {
   if (typeof window === 'undefined') return;
   try {
-    if (url) window.sessionStorage.setItem(API_URL_KEY, url.replace(/\/$/, ''));
+    const normalized = url ? normalizeApiBaseUrl(url) : '';
+    if (normalized) window.sessionStorage.setItem(API_URL_KEY, normalized);
     else window.sessionStorage.removeItem(API_URL_KEY);
   } catch {
     /* ignore */
@@ -116,3 +117,18 @@ export interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+/**
+ * Accepts what people actually type in "API server": `api.company.com`, `https://x.up.railway.app/`
+ * or a full `.../api/v1`, and returns the API base. A relative value (`/api/v1`) is kept as is.
+ * Without this, `https://host/` produced requests to `//admin/auth/login`.
+ */
+export function normalizeApiBaseUrl(input: string): string {
+  let u = input.trim().replace(/\/+$/, '');
+  if (!u) return '';
+  if (u.startsWith('/')) return u;
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  if (!/\/api\/v1$/i.test(u)) u = `${u}/api/v1`;
+  return u;
+}
+
