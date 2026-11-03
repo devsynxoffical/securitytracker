@@ -114,7 +114,7 @@ public sealed class SqliteQueueStore : IQueueStore, IDisposable
 
     public int AckSegments(IEnumerable<Guid> ids) => DeleteByIds("segments", ids);
 
-    public int CountSegments() => Scalar<long>("SELECT COUNT(*) FROM segments");
+    public int CountSegments() => (int)Scalar<long>("SELECT COUNT(*) FROM segments");
 
     public void InsertTamper(TamperEvent evt)
     {
@@ -154,7 +154,7 @@ public sealed class SqliteQueueStore : IQueueStore, IDisposable
 
     public int AckTamper(IEnumerable<Guid> ids) => DeleteByIds("tamper", ids);
 
-    public int CountTamper() => Scalar<long>("SELECT COUNT(*) FROM tamper");
+    public int CountTamper() => (int)Scalar<long>("SELECT COUNT(*) FROM tamper");
 
     public string? GetState(string key)
     {
