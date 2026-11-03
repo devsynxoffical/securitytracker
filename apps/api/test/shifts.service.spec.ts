@@ -55,6 +55,8 @@ describe('ShiftsService (Unit)', () => {
     };
     prismaMock.shift.create.mockResolvedValue(createdShift);
     prismaMock.shiftEvent.create.mockResolvedValue({});
+    // No open shift before the start; afterwards the current shift is the created one.
+    prismaMock.shift.findFirst.mockResolvedValueOnce(null).mockResolvedValue(createdShift);
 
     const result = await shiftsService.processEvents(
       'emp-1',
@@ -74,6 +76,8 @@ describe('ShiftsService (Unit)', () => {
     expect(result.success).toBe(true);
     expect(result.processedEventsCount).toBe(1);
     expect(prismaMock.shift.create).toHaveBeenCalled();
+    // The desktop swaps its provisional id for this one; without it every heartbeat looked like a closed shift.
+    expect((result as { shiftId?: string | null }).shiftId).toBe(createdShift.id);
   });
 
   it('should throw ConflictException if shift is open on another device', async () => {

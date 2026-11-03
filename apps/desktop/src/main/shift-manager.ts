@@ -40,7 +40,7 @@ interface QueuedEvent {
   type: 'start' | 'break_start' | 'break_end' | 'end';
   breakType?: string;
   occurredAt: string;
-  monotonicOffsetMs: number;
+  monotonicOffsetMs?: number;
   offline: boolean;
 }
 
@@ -467,7 +467,7 @@ export class ShiftManager {
   private async flushEvents(): Promise<boolean> {
     if (!this.events.length) return true;
     const batch = this.events.slice(0, 50);
-    const res = await this.api.request<{ shiftId?: string; shift?: { id: string }; accepted?: string[]; closedShift?: { id: string; endedAt: string; reason: string } }>('POST', '/shifts/events', {
+    const res = await this.api.request<{ shiftId?: string | null; currentShift?: { id: string } | null; shift?: { id: string }; accepted?: string[]; closedShift?: { id: string; endedAt: string; reason: string } }>('POST', '/shifts/events', {
       events: batch.map(({ offline: _offline, ...e }) => e),
     });
     if (!res.ok) {
@@ -492,7 +492,7 @@ export class ShiftManager {
       await this.adoptClosure(closed);
       return this.events.length === 0 ? true : this.flushEvents();
     }
-    const serverShiftId = res.data?.shiftId ?? res.data?.shift?.id;
+    const serverShiftId = res.data?.shiftId ?? res.data?.currentShift?.id ?? res.data?.shift?.id;
     if (serverShiftId && this.state !== 'OFF_SHIFT' && this.shiftId !== serverShiftId) {
       this.shiftId = serverShiftId;
       await this.safe(() => this.tracker.startTracking(serverShiftId));
@@ -699,7 +699,8 @@ export class ShiftManager {
       type,
       breakType,
       occurredAt: this.clock.nowIso(),
-      monotonicOffsetMs: this.clock.monotonicMs(),
+      // Only offline events carry the monotonic offset; the server reconstructs and flags those (03 F7).
+      monotonicOffsetMs: this.api.isOnline() ? undefined : this.clock.monotonicMs(),
       offline: !this.api.isOnline(),
     });
     this.persist();

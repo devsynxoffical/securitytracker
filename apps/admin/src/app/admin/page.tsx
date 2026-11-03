@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Briefcase, Target, Users, CheckSquare, Activity, Mail, Shield, MonitorSmartphone, Megaphone, Plane, Clock, Timer, Bell, CalendarCheck, Phone, Video, FileText, Cake, Award, PartyPopper } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api';
@@ -19,6 +20,8 @@ const TONE_CLASS = { amber: 'bg-amber-soft text-amber-text', red: 'bg-red-soft t
 
 export default function AdminHome() {
   const { me, can } = useAuth();
+  const router = useRouter();
+  const go = (href: string) => () => router.push(href);
   const canDeals = can('crm.deals.view');
   const canAtt = can('attendance.view');
   const canSec = can('security.view');
@@ -46,6 +49,11 @@ export default function AdminHome() {
   const liveRows = (live.data ?? []) as Array<{ liveStatus?: string }>;
   const working = liveRows.filter((r) => r.liveStatus === 'Working').length;
   const onBreak = liveRows.filter((r) => r.liveStatus === 'On break').length;
+  const offline = liveRows.filter((r) => r.liveStatus?.startsWith('Offline')).length;
+  const notStarted = liveRows.filter((r) => r.liveStatus === 'Not started').length;
+  const stageTotals = crm.data?.byStage.map((s) => s.total) ?? [];
+  const hasPipeline = stageTotals.some((t) => t > 0);
+  const closedThisMonth = crm.data ? crm.data.kpis.wonThisMonth > 0 || crm.data.kpis.winRate > 0 : false;
   const pendingDevices = (devices.data ?? []).filter((d) => d.status === 'pending').length;
   const openAlerts = (alerts.data ?? []).filter((a) => !a.acknowledgedAt).length;
   const pendingCorrections = arr<{ id: string }>(corrections.data).length;
@@ -80,23 +88,32 @@ export default function AdminHome() {
         {anyLoading && [1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-[108px]" />)}
         {!anyLoading && (
           <>
-            {canAtt && <KpiTile label="Working now" value={live.isError ? '—' : working} tone="green" icon={<Users size={14} />} />}
-            {canDeals && crm.data && <KpiTile label="Open pipeline" value={compactMoney(crm.data.kpis.pipelineValue)} icon={<Briefcase size={14} />} trend={crm.data.byStage.length > 1 ? crm.data.byStage.map((s) => s.total) : undefined} series={0} />}
-            {canDeals && crm.data && <KpiTile label="Won this month" value={compactMoney(crm.data.kpis.revenueThisMonth)} tone="green" icon={<Target size={14} />} delta={crm.data.kpis.winRate} deltaLabel="win rate" />}
-            {canDeals && crm.data && <KpiTile label="Activities today" value={crm.data.kpis.activitiesToday} tone={crm.data.kpis.overdueActivities ? 'amber' : undefined} icon={<CalendarCheck size={14} />} />}
-            {canDev && <KpiTile label="Devices pending" value={devices.isError ? '—' : pendingDevices} tone={pendingDevices ? 'amber' : undefined} icon={<MonitorSmartphone size={14} />} />}
-            {canSec && <KpiTile label="Open alerts" value={alerts.isError ? '—' : openAlerts} tone={openAlerts ? 'red' : undefined} icon={<Shield size={14} />} />}
+            {canAtt && <KpiTile label="Working now" value={live.isError ? '—' : working} tone="green" icon={<Users size={14} />} onClick={go('/admin/people/live')} />}
+            {canDeals && crm.data && <KpiTile label="Open pipeline" value={compactMoney(crm.data.kpis.pipelineValue)} hint={`${crm.data.kpis.openDeals} open deal${crm.data.kpis.openDeals === 1 ? '' : 's'}`} icon={<Briefcase size={14} />} trend={hasPipeline && stageTotals.length > 1 ? stageTotals : undefined} series={0} onClick={go('/admin/crm/deals')} />}
+            {canDeals && crm.data && <KpiTile label="Won this month" value={compactMoney(crm.data.kpis.revenueThisMonth)} tone="green" icon={<Target size={14} />} hint={closedThisMonth ? `${crm.data.kpis.wonThisMonth} won · ${crm.data.kpis.winRate}% win rate` : 'No deals closed yet'} onClick={go('/admin/crm/deals')} />}
+            {canDeals && crm.data && <KpiTile label="Activities today" value={crm.data.kpis.activitiesToday} hint={crm.data.kpis.overdueActivities ? `${crm.data.kpis.overdueActivities} overdue` : 'due today'} tone={crm.data.kpis.overdueActivities ? 'amber' : undefined} icon={<CalendarCheck size={14} />} onClick={go('/admin/crm/activities')} />}
+            {canDev && <KpiTile label="Devices pending" value={devices.isError ? '—' : pendingDevices} tone={pendingDevices ? 'amber' : undefined} icon={<MonitorSmartphone size={14} />} onClick={go('/admin/security/devices')} />}
+            {canSec && <KpiTile label="Open alerts" value={alerts.isError ? '—' : openAlerts} tone={openAlerts ? 'red' : undefined} icon={<Shield size={14} />} onClick={go('/admin/security/alerts')} />}
           </>
         )}
       </div>
-      {canAtt && !live.isError && liveRows.length > 0 && <p className="-mt-3 text-xs text-ink-3">{onBreak} on break · {liveRows.length} employees on the live board</p>}
+      {canAtt && !live.isError && liveRows.length > 0 && (
+        <p className="-mt-3 text-xs text-ink-3">
+          {working} working · {onBreak} on break · {offline} offline · {notStarted} not started ·{' '}
+          <Link href="/admin/people/live" className="font-semibold text-pri hover:underline">{liveRows.length} employee{liveRows.length === 1 ? '' : 's'} on the live board</Link>
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-3.5">
         <div className="col-span-2 space-y-3.5">
           {canDeals && crm.data && crm.data.byStage.length > 0 && (
             <Card title="Open pipeline by stage" actions={<Link href="/admin/crm/deals" className="inline-flex items-center gap-1 text-xs font-semibold text-pri hover:underline">Deal board <ArrowRight size={12} /></Link>}>
               <div className="p-4">
-                <ColumnChart categories={crm.data.byStage.map((s) => s.name)} series={[{ name: 'Amount', values: crm.data.byStage.map((s) => s.total) }]} format={(n) => compactMoney(n)} height={170} />
+                {hasPipeline ? (
+                  <ColumnChart categories={crm.data.byStage.map((s) => s.name)} series={[{ name: 'Amount', values: stageTotals }]} format={(n) => compactMoney(n)} height={170} />
+                ) : (
+                  <EmptyState icon={<Briefcase size={22} />} title="No open deals yet" body="Deals with an amount appear here by stage." action={<Link href="/admin/crm/deals" className="text-sm font-semibold text-pri hover:underline">Open the deal board</Link>} />
+                )}
               </div>
             </Card>
           )}
@@ -138,13 +155,13 @@ export default function AdminHome() {
                 {announcements.data && announcements.data.length === 0 && <div className="text-sm text-ink-3">No announcements yet.</div>}
                 <ul className="space-y-2">
                   {(announcements.data ?? []).slice(0, 3).map((a) => (
-                    <li key={a.id} className="flex items-start gap-2.5 rounded-card border border-line bg-surface-2/60 p-3">
+                    <li key={a.id}><Link href="/admin/people/announcements" className="flex items-start gap-2.5 rounded-card border border-line bg-surface-2/60 p-3 hover:border-pri">
                       <span className="mt-0.5 text-ink-3"><Megaphone size={14} /></span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2"><span className="truncate text-base font-semibold text-ink">{a.title}</span><span className="shrink-0 text-xs text-ink-3">{relative(a.publishedAt)}</span></div>
                         <div className="line-clamp-2 text-sm text-ink-2">{a.body}</div>
                       </div>
-                    </li>
+                    </Link></li>
                   ))}
                 </ul>
               </Section>
@@ -176,11 +193,11 @@ export default function AdminHome() {
               {alerts.data && openAlerts > 0 && (
                 <ul className="divide-y divide-line-2">
                   {alerts.data.filter((a) => !a.acknowledgedAt).slice(0, 5).map((a) => (
-                    <li key={a.id} className="flex items-center gap-2 px-4 py-2.5 text-sm">
+                    <li key={a.id}><Link href="/admin/security/alerts" className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-surface-2">
                       <Badge tone={a.severity === 'critical' || a.severity === 'high' ? 'red' : a.severity === 'warning' ? 'amber' : 'blue'}>{a.severity}</Badge>
                       <span className="flex-1 truncate text-ink">{titleCase(a.type)}</span>
                       <span className="text-xs text-ink-3">{relative(a.createdAt)}</span>
-                    </li>
+                    </Link></li>
                   ))}
                 </ul>
               )}

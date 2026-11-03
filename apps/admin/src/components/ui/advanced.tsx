@@ -97,7 +97,7 @@ export function Menu({ trigger, items, align = 'right', width = 200 }: { trigger
    KPI tile with trend and sparkline (DESIGN-SYSTEM v2 section 9)
 --------------------------------------------------------------------------- */
 
-export function KpiTile({ label, value, delta, deltaLabel = 'vs previous period', trend, tone, series = 0, icon, onClick, loading }: { label: string; value: ReactNode; delta?: number | null; deltaLabel?: string; trend?: number[]; tone?: Tone; series?: number; icon?: ReactNode; onClick?: () => void; loading?: boolean }) {
+export function KpiTile({ label, value, delta, deltaLabel = 'vs previous period', trend, tone, series = 0, icon, onClick, loading, hint }: { label: string; value: ReactNode; hint?: ReactNode; delta?: number | null; deltaLabel?: string; trend?: number[]; tone?: Tone; series?: number; icon?: ReactNode; onClick?: () => void; loading?: boolean }) {
   const up = (delta ?? 0) > 0;
   const flat = !delta;
   const Wrapper = onClick ? 'button' : 'div';
@@ -111,6 +111,7 @@ export function KpiTile({ label, value, delta, deltaLabel = 'vs previous period'
         {loading ? <Skeleton className="h-7 w-24" /> : <div className={clsx('num text-2xl font-semibold', tone ? toneText(tone) : 'text-ink')}>{value}</div>}
         {trend && trend.length > 1 && <Sparkline values={trend} series={series} />}
       </div>
+      {hint !== undefined && <div className="mt-1.5 text-xs text-ink-3">{hint}</div>}
       {delta !== undefined && delta !== null && (
         <div className={clsx('mt-1.5 inline-flex items-center gap-1 text-xs', flat ? 'text-ink-3' : up ? 'text-green-text' : 'text-red-text')}>
           {flat ? <Minus size={12} /> : up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}

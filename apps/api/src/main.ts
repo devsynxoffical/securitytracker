@@ -3,6 +3,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ClockService } from './common/clock.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { serveWebRoot } from './common/web-root';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const cookieParser = require('cookie-parser');
@@ -30,9 +31,11 @@ async function bootstrap() {
     next();
   });
 
+  const webRoot = serveWebRoot(app);
+
   const port = process.env.PORT || 4000;
   await app.listen(port);
-  console.log(`Company OS Central Backend running on port ${port} (Prefix: /api/v1)`);
+  console.log(`Company OS Central Backend running on port ${port} (Prefix: /api/v1)${webRoot ? `; web from ${webRoot}` : ''}`);
 }
 
 bootstrap();

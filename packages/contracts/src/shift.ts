@@ -86,6 +86,8 @@ export const ShiftEventsResponseSchema = z.object({
   processedEventsCount: z.number().int().nonnegative(),
   /** Every client event id the server has seen (created, duplicate or dropped): the client deletes them. */
   acknowledgedEventIds: z.array(z.string().guid()),
+  /** Id of the employee's open shift after the batch; the desktop replaces its provisional id with it. */
+  shiftId: z.string().guid().nullable(),
   currentShift: z.unknown().nullable(),
   /** Set when a break, end or claim event referred to a shift that is no longer open. */
   closedShift: ClosedShiftSchema.nullable(),

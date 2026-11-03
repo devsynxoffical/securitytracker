@@ -24,6 +24,8 @@ The agent has no network code. It works identically with or without internet. Al
 | Sleep, resume, shutdown | `PowerModeChanged`, `SessionEnding` events | Close segment, flush queue |
 | Microphone in use | Core Audio API, active capture sessions | Activity exception `mic` |
 | Website domain | Browser extension through native messaging | Section 5 |
+
+macOS (desktop app without the agent): foreground app from System Events (displayed name, pid and bundle id; WorkPulse's own window is reported as WorkPulse, a generic "Electron" name falls back to the bundle id), idle from `powerMonitor.getSystemIdleTime`, keyboard and mouse counts from the system HID event counters `CGEventSourceCounterForEventType` (running totals per event type; no event tap, no key codes, no Input Monitoring permission).
 | Window title | `GetWindowText`, only if `capture_window_titles` is on | Off by default |
 | Clock | `Stopwatch` (monotonic) anchored to server time given by the app | Wall clock changes detected and reported |
 

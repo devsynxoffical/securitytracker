@@ -1,8 +1,6 @@
 # Company OS - Tracker Agent, Watchdog and Native Host (.NET 8)
 
-> **NOT YET COMPILED.** This code was written without a .NET SDK or a Windows machine available. Before any
-> rollout: build on Windows, fix whatever the compiler reports, run the unit tests, then run the manual test
-> matrix in `docs/09-tracker-agent-spec.md` section 9 on Windows 10 and Windows 11 with a standard user account.
+> Compiled and unit-tested on Windows by the Release desktop workflow (agent job). Run the manual test matrix in `docs/09-tracker-agent-spec.md` section 9 before a rollout.
 
 Implements `docs/09-tracker-agent-spec.md`, `docs/02-architecture.md` section 3 and `docs/03-flows.md` F6/F7.
 

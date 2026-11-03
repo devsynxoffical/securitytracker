@@ -139,6 +139,7 @@ export interface LiveRow {
   team: string;
   liveStatus: string;
   checkInAt: string | null;
+  lastSeenAt?: string | null;
   activeSeconds: number;
   breakSeconds: number;
 }

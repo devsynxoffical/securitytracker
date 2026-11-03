@@ -172,3 +172,45 @@ On the VPS set `UPDATES_CORS_ORIGIN=https://roofingclients.us` (your web host or
 
 The desktop app talks to `api.company.com` directly; it never needs the web host.
 
+## 12. Railway for the API (instead of a VPS)
+
+Railway runs the same Docker image as the VPS stack (`railway.toml` at the repository root points it at `infra/docker/api.Dockerfile`). Website and admin panel stay on Hostinger (section 11).
+
+1. In the Railway project add **PostgreSQL** and **Redis** (New → Database). Supabase also works for the database: use its *Session pooler* connection string, because the direct `db.<ref>.supabase.co` host is IPv6 only.
+2. The `securitytracker` service deploys from GitHub `main`. Settings → Networking → Generate domain (or add `api.company.com` as a custom domain and create the CNAME Railway shows).
+3. Variables on the service:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (or the Supabase session pooler string) |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` |
+| `JWT_SECRET` | `openssl rand -base64 48` |
+| `ENCRYPTION_SECRET` | `openssl rand -hex 32`, keep a copy offline |
+| `RUN_MIGRATIONS` | `true` |
+| `JOBS_ENABLED` | `true` (scheduled jobs; set on exactly one service) |
+| `WORKER_ENABLED` | `true` (mail sync queue; fine in the same service while it runs one replica) |
+| `ADMIN_ORIGIN` | `https://roofingclients.us` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | any SMTP mailbox, for password resets |
+
+Railway sets `PORT`; the image listens on it. The API refuses to start in production without `JWT_SECRET` and `ENCRYPTION_SECRET`.
+
+4. Deploy. The logs show `All migrations have been successfully applied` and `Company OS Central Backend running`. Check `https://<railway domain>/api/v1/health/ready`.
+5. The same image serves the admin panel and public site from the same address: `https://<railway domain>/admin` (sign-up on the first visit, then login), `/` and `/install`. They call the API at the relative `/api/v1`, so no CORS or extra variable is needed. Optionally also keep the Hostinger copy (section 11) with `NEXT_PUBLIC_API_URL=https://<railway domain>/api/v1`.
+
+Desktop downloads: without a VPS there is no `updates.` host. Leave `NEXT_PUBLIC_DOWNLOADS_URL` pointing at a `latest.json` you upload to the website's `downloads/` folder, or make the GitHub repository's releases public and use the manifest from the release (section 9).
+
+### Locked out of the admin panel (break-glass)
+
+If nobody knows the Super Admin password, or the authenticator phone is lost:
+
+1. Railway → service → Variables: add `ADMIN_RECOVERY_EMAIL` (the Super Admin's email) and `ADMIN_RECOVERY_PASSWORD` (a new password, at least 10 characters). Deploy.
+2. The deploy log shows `Admin recovery applied for i***@domain` (or, when the email matches no Super Admin, the masked emails of those that exist).
+3. Sign in with the new password; the panel asks to set up 2FA again. All earlier sessions were signed out.
+4. Delete both variables and deploy again. The action is recorded in the audit log as `admin_recovery`.
+
+Only someone with access to the server's settings can use this. On a database without any account the panel shows "Create your workspace" instead of the sign-in.
+
+### Turning off the authenticator requirement
+
+Railway → service → Variables: `ADMIN_2FA_REQUIRED` = `false`, then deploy. Admins sign in with email and password only (docs/08 section 10). Delete the variable to require the authenticator again.
+

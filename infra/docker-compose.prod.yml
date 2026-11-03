@@ -88,6 +88,7 @@ services:
     environment:
       <<: *api-env
       WORKER_ENABLED: 'true'
+      JOBS_ENABLED: 'true' # scheduled jobs (auto-close, reminders, attendance) run on exactly one process: the worker
       PORT: '4001'
     depends_on:
       api:

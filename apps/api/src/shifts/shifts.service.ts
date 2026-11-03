@@ -31,6 +31,9 @@ interface ShiftContext {
   schedule: ScheduleLike | null;
 }
 
+
+/** Events that arrive later than this after they happened were recorded offline (03 F7). */
+const OFFLINE_EVENT_DELAY_MS = 2 * 60_000;
 @Injectable()
 export class ShiftsService {
   constructor(
@@ -67,6 +70,9 @@ export class ShiftsService {
       }
 
       const eventTime = new Date(event.occurredAt);
+      // An event counts as recorded offline only when it reaches the server late; older desktop builds attach
+      // monotonicOffsetMs to every event, which alone flagged every shift as an offline start.
+      const offlineEvent = !!event.monotonicOffsetMs && this.clock.now().getTime() - eventTime.getTime() > OFFLINE_EVENT_DELAY_MS;
 
       if (event.type === ShiftEventType.START) {
         // Check for existing open shift
@@ -95,7 +101,7 @@ export class ShiftsService {
         const ctx = await this.shiftContext(employeeId, companyId, eventTime);
         const resolved = resolveAttendanceDate(eventTime, ctx.schedule, ctx.timezone);
         const flags = startFlags(eventTime, resolved, ctx);
-        if (event.monotonicOffsetMs) flags.push(ShiftFlag.OFFLINE_START);
+        if (offlineEvent) flags.push(ShiftFlag.OFFLINE_START);
 
         const newShift = await this.prisma.shift.create({
           data: {
@@ -116,7 +122,7 @@ export class ShiftsService {
             type: event.type,
             occurredAt: eventTime,
             receivedAt: this.clock.now(),
-            reconstructed: !!event.monotonicOffsetMs,
+            reconstructed: offlineEvent,
           },
         });
 
@@ -164,7 +170,7 @@ export class ShiftsService {
                 breakType: event.breakType,
                 occurredAt: eventTime,
                 receivedAt: this.clock.now(),
-                reconstructed: !!event.monotonicOffsetMs,
+                reconstructed: offlineEvent,
               },
             }),
           ]);
@@ -194,7 +200,7 @@ export class ShiftsService {
                 type: event.type,
                 occurredAt: eventTime,
                 receivedAt: this.clock.now(),
-                reconstructed: !!event.monotonicOffsetMs,
+                reconstructed: offlineEvent,
               },
             }),
           ]);
@@ -251,7 +257,7 @@ export class ShiftsService {
                 type: event.type,
                 occurredAt: eventTime,
                 receivedAt: this.clock.now(),
-                reconstructed: !!event.monotonicOffsetMs,
+                reconstructed: offlineEvent,
               },
             }),
           ]);
@@ -261,11 +267,14 @@ export class ShiftsService {
       }
     }
 
+    const currentShift = await this.getCurrentShift(employeeId);
     return {
       success: true,
       processedEventsCount: sortedEvents.length,
       acknowledgedEventIds,
-      currentShift: await this.getCurrentShift(employeeId),
+      // The desktop replaces its provisional shift id with this one (it sends it back in heartbeats).
+      shiftId: currentShift?.id ?? null,
+      currentShift,
       closedShift,
     };
   }

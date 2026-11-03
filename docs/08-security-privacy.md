@@ -118,3 +118,7 @@ Goal: company data (CRM, mail, attendance, chat, documents) is used inside the s
 
 Suspension differs from disable (offboarding, F16): a suspended employee keeps assignments, targets and mailboxes and reappears unchanged on restore; disable reassigns and closes.
 
+## 10. Admin 2FA opt-out (operator decision, 2026-11-03)
+
+Admin Panel sign-in requires TOTP by default (section 2). The operator can switch this off for the whole deployment with the server variable `ADMIN_2FA_REQUIRED=false`: admins then sign in with email and password only, the password check, lockout and suspension rules stay unchanged, and every such sign-in is recorded as login event `success_no_2fa`. Removing the variable restores mandatory 2FA at the next sign-in. Recommended only while setting up; a stolen admin password is then enough to open the panel.
+

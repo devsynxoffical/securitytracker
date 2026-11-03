@@ -4,7 +4,7 @@
 
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+RUN npm install -g pnpm@9.15.0 \
  && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 
@@ -14,7 +14,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json turbo.js
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/config/package.json packages/config/
 COPY apps/api/package.json apps/api/
-RUN pnpm install --frozen-lockfile --filter @company-os/api... --filter @company-os/contracts...
+COPY apps/admin/package.json apps/admin/
+RUN pnpm install --frozen-lockfile --filter @company-os/api... --filter @company-os/contracts... --filter @company-os/admin...
 
 # ---- build
 FROM deps AS build
@@ -23,7 +24,18 @@ COPY apps/api apps/api
 RUN pnpm --filter @company-os/contracts build \
  && pnpm --filter @company-os/api exec prisma generate \
  && pnpm --filter @company-os/api exec nest build \
- && pnpm --filter @company-os/api --prod deploy /out
+ && pnpm --filter @company-os/api --prod deploy /out \
+ && cd /out && ./node_modules/.bin/prisma generate --schema ./prisma/schema.prisma
+# The generated client lives next to @prisma/client; generate it again inside the production bundle so /out is self-contained.
+
+# ---- admin panel and public site (static export served by the API from /app/public, same origin)
+FROM deps AS web
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL=/api/v1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+COPY packages/contracts packages/contracts
+COPY apps/admin apps/admin
+RUN pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build
 
 # ---- runtime
 FROM node:22-bookworm-slim AS runtime
@@ -35,9 +47,10 @@ COPY --from=build --chown=app:app /out/node_modules ./node_modules
 COPY --from=build --chown=app:app /out/package.json ./package.json
 COPY --from=build --chown=app:app /repo/apps/api/dist ./dist
 COPY --from=build --chown=app:app /repo/apps/api/prisma ./prisma
+COPY --from=web --chown=app:app /repo/apps/admin/out ./public
 COPY --chown=app:app infra/docker/api-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 USER app
 EXPOSE 4000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD curl -fsS http://localhost:4000/api/v1/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD curl -fsS "http://localhost:${PORT:-4000}/api/v1/health" || exit 1
 ENTRYPOINT ["/app/entrypoint.sh"]

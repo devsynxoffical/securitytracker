@@ -31,7 +31,7 @@ env:
   NODE_VERSION: 22
   # Server address baked into the app. Employees can still change it on first launch.
   # Set repository variable API_PUBLIC_URL to e.g. https://api.yourcompany.com/api/v1
-  MAIN_VITE_API_URL: ${{ vars.API_PUBLIC_URL }}
+  MAIN_VITE_API_URL: ${{ vars.API_PUBLIC_URL || 'https://securitytracker-production.up.railway.app/api/v1' }}
 
 jobs:
   version:
@@ -140,7 +140,7 @@ jobs:
             target: --linux
             unpacked: dist/linux-unpacked/WorkPulse
             glob: |
-              apps/desktop/dist/WorkPulse-*-linux-x64.AppImage
+              apps/desktop/dist/WorkPulse-*-linux-*.AppImage
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -180,6 +180,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
         run: |
+          # Secrets that are not configured arrive as empty strings; electron-builder would read an empty
+          # CSC_LINK as a file path ("... not a file"). Drop every empty signing variable.
+          for v in CSC_LINK CSC_KEY_PASSWORD WIN_CSC_LINK WIN_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v}" ]; then unset "$v"; fi
+          done
           pnpm exec electron-vite build
           pnpm exec electron-builder ${{ matrix.target }} --publish never
 

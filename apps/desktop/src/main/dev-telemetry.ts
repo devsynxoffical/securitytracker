@@ -2,6 +2,8 @@ import { powerMonitor } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
+import { MacInputCounter } from './mac-input-counter';
+import { macForeground } from './mac-foreground';
 import type { TrackerConfig, TrackerEvent, TrackerSegment, TrackerSource, TrackerStatus, TamperEvent } from './tracker-source';
 
 const execAsync = promisify(exec);
@@ -9,8 +11,9 @@ const execAsync = promisify(exec);
 /**
  * DEV MODE FALLBACK ONLY. Used when the C# agent pipe is not available (macOS/Linux development).
  * Production tracking is the agent (09). This source observes the foreground application name and
- * system idle time (powerMonitor.getSystemIdleTime, no hooks) and emits segments with
- * keyCount = mouseCount = 0. It never reads key values, clipboard or screen content (AGENTS.md rule 8).
+ * system idle time (powerMonitor.getSystemIdleTime, no hooks). On macOS keyCount and mouseCount come from the
+ * system HID event counters (MacInputCounter, no hook); elsewhere they are 0. It never reads key values,
+ * clipboard or screen content (AGENTS.md rule 8).
  */
 export class DevTelemetrySource implements TrackerSource {
   private listeners: Array<(e: TrackerEvent) => void> = [];
@@ -20,7 +23,8 @@ export class DevTelemetrySource implements TrackerSource {
   private shiftId: string | null = null;
   private paused = false;
   private config: TrackerConfig = { idleThresholdSeconds: 300, longIdleThresholdSeconds: 900, captureWindowTitles: false, exceptionApps: [], exclusions: [] };
-  private current: { start: Date; kind: TrackerSegment['kind']; processName: string; appName: string } | null = null;
+  private current: { start: Date; kind: TrackerSegment['kind']; processName: string; appName: string; keyCount: number; mouseCount: number } | null = null;
+  private readonly input = new MacInputCounter();
   private idleSince: Date | null = null;
   private currentApp: TrackerStatus['currentApp'] = null;
   private anchorOffsetMs = 0;
@@ -38,6 +42,7 @@ export class DevTelemetrySource implements TrackerSource {
   async startTracking(shiftId: string): Promise<void> {
     this.shiftId = shiftId;
     this.paused = false;
+    this.input.start();
     if (!this.timer) this.timer = setInterval(() => void this.tick(), 1000);
     this.emit({ type: 'stateChanged' });
   }
@@ -53,6 +58,7 @@ export class DevTelemetrySource implements TrackerSource {
   async stopTracking(): Promise<void> {
     this.closeSegment();
     this.shiftId = null;
+    this.input.stop();
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.emit({ type: 'stateChanged' });
@@ -95,6 +101,7 @@ export class DevTelemetrySource implements TrackerSource {
     };
   }
   dispose(): void {
+    this.input.stop();
     if (this.timer) clearInterval(this.timer);
   }
 
@@ -103,6 +110,8 @@ export class DevTelemetrySource implements TrackerSource {
   }
 
   private async tick(): Promise<void> {
+    // Drain every tick so input made while paused never lands in the next segment.
+    const counts = this.input.drain();
     if (!this.shiftId || this.paused) return;
     const idleSeconds = powerMonitor.getSystemIdleTime();
     const idle = idleSeconds >= this.config.idleThresholdSeconds;
@@ -124,16 +133,21 @@ export class DevTelemetrySource implements TrackerSource {
       this.idleSince = null;
     }
 
+    let start = this.idleSince ?? this.now();
+    if (this.current) {
+      const changed = this.current.kind !== kind || this.current.processName !== app.processName;
+      const tooLong = this.now().getTime() - this.current.start.getTime() >= 5 * 60_000;
+      if (changed || tooLong) {
+        this.closeSegment();
+        start = this.now();
+      }
+    }
     if (!this.current) {
-      this.current = { start: this.idleSince ?? this.now(), kind, processName: app.processName, appName: app.appName };
-      return;
+      this.current = { start, kind, processName: app.processName, appName: app.appName, keyCount: 0, mouseCount: 0 };
     }
-    const changed = this.current.kind !== kind || this.current.processName !== app.processName;
-    const tooLong = this.now().getTime() - this.current.start.getTime() >= 5 * 60_000;
-    if (changed || tooLong) {
-      this.closeSegment();
-      this.current = { start: this.now(), kind, processName: app.processName, appName: app.appName };
-    }
+    // Counts of this tick belong to the segment that is current after a switch (as in the agent, 09 section 3).
+    this.current.keyCount += counts.keys;
+    this.current.mouseCount += counts.mouse;
   }
 
   private closeSegment(endAt: Date = this.now()): void {
@@ -152,8 +166,8 @@ export class DevTelemetrySource implements TrackerSource {
         appName: this.current.appName,
         domain: null,
         windowTitle: null,
-        keyCount: 0,
-        mouseCount: 0,
+        keyCount: this.current.keyCount,
+        mouseCount: this.current.mouseCount,
         exception: 'none',
         claim: 'none',
         clockSource: this.anchorOffsetMs === 0 ? 'unanchored' : 'anchored',
@@ -165,9 +179,12 @@ export class DevTelemetrySource implements TrackerSource {
   private async foregroundApp(): Promise<{ processName: string; appName: string }> {
     try {
       if (process.platform === 'darwin') {
-        const { stdout } = await execAsync(`osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true'`);
-        const name = stdout.trim() || 'Unknown';
-        return { processName: `${name}.app`, appName: name };
+        // Ask for the name shown in the Dock plus the bundle id and pid: Electron-based apps (Slack, VS Code,
+        // Notion, ...) often report the process name "Electron", which says nothing about the app in front.
+        const { stdout } = await execAsync(
+          `osascript -e 'tell application "System Events" to set p to first application process whose frontmost is true' -e 'return (displayed name of p) & "|" & (unix id of p) & "|" & (bundle identifier of p)'`,
+        );
+        return macForeground(stdout, process.pid);
       }
       if (process.platform === 'win32') {
         const { stdout } = await execAsync(
