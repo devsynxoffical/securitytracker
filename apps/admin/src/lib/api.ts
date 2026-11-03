@@ -55,7 +55,8 @@ export function getApiBaseUrl(): string {
       /* ignore */
     }
   }
-  return process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+  // The build-time value is normalised too: `https://host/` given as a hosting variable must still reach /api/v1.
+  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL || '') || '/api/v1';
 }
 
 export function setApiBaseUrl(url: string | null) {
