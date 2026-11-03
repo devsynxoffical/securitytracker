@@ -22,7 +22,7 @@ export const CreateTargetSchema = z.object({
     TargetAssigneeType.TEAM,
     TargetAssigneeType.ROLE,
   ]),
-  assigneeId: z.string().uuid(),
+  assigneeId: z.string().guid(),
   metricKey: z.enum([
     MetricKey.CALLS_TOTAL,
     MetricKey.CALLS_CONNECTED,
@@ -55,12 +55,12 @@ export const UpdateTargetSchema = z.object({
 export type UpdateTargetDto = z.infer<typeof UpdateTargetSchema>;
 
 export const RecordMetricEventSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().guid(),
   metricKey: z.string(),
   amount: z.number().default(1),
   occurredAt: z.string().datetime().optional(),
   periodDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   refType: z.string(),
-  refId: z.string().uuid(),
+  refId: z.string().guid(),
 });
 export type RecordMetricEventDto = z.infer<typeof RecordMetricEventSchema>;

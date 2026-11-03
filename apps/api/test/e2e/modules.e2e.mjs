@@ -64,9 +64,10 @@ r = await call('GET', '/tasks?status=todo'); check('tasks: legacy list route sti
 // ---------------- HR ----------------
 r = await call('GET', '/hr/leave-types'); check('hr: leave types seeded', r.status === 200 && arr(r.body).length >= 4, short(r.body)); const annual = arr(r.body).find((t) => t.code === 'ANNUAL');
 r = await call('GET', `/hr/leave-balances?employeeId=${other.id}`); check('hr: balances', r.status === 200, short(r.body));
-r = await call('POST', '/hr/leave-balances/adjust', { employeeId: other.id, leaveTypeId: annual.id, year: new Date().getFullYear(), days: 2, reason: 'smoke' });
-check('hr: adjust balance', r.status === 201, short(r.body));
 const nextMon = new Date(); nextMon.setDate(nextMon.getDate() + ((8 - nextMon.getDay()) % 7 || 7) + 7 * (Math.floor(suffix / 1000) % 40)); const d1 = nextMon.toISOString().slice(0, 10); const d2 = new Date(nextMon.getTime() + 86400e3).toISOString().slice(0, 10);
+// Top up the balance of the year the request falls in (runs spread over 40 weeks and may cross into next year).
+r = await call('POST', '/hr/leave-balances/adjust', { employeeId: other.id, leaveTypeId: annual.id, year: Number(d1.slice(0, 4)), days: 3, reason: 'smoke' });
+check('hr: adjust balance', r.status === 201, short(r.body));
 r = await call('POST', '/leave-requests', { employeeId: other.id, leaveTypeId: annual.id, dateFrom: d1, dateTo: d2, reason: 'smoke leave' });
 check('hr: leave request pending with days counted', r.status === 201 && Number(r.body.days) > 0, short(r.body)); const leave = r.body;
 r = await call('POST', '/leave-requests', { employeeId: other.id, leaveTypeId: annual.id, dateFrom: d1, dateTo: d1, reason: 'dup' });

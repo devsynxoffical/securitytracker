@@ -9,7 +9,7 @@ export const SendMailSchema = z.object({
   html: z.string().min(1),
   replyToThreadId: z.string().optional(),
   replyToMessageId: z.string().optional(),
-  attachmentFileIds: z.array(z.string().uuid()).optional(),
+  attachmentFileIds: z.array(z.string().guid()).optional(),
 });
 export type SendMailDto = z.infer<typeof SendMailSchema>;
 
@@ -25,7 +25,7 @@ export const SaveDraftSchema = z.object({
 export type SaveDraftDto = z.infer<typeof SaveDraftSchema>;
 
 export const MailboxAssignmentSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().guid(),
   permissions: z
     .array(
       z.enum([

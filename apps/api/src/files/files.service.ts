@@ -34,7 +34,7 @@ export type OwnerType = (typeof OWNER_TYPES)[number];
 
 export const PresignSchema = z.object({
   ownerType: z.enum(OWNER_TYPES),
-  ownerId: z.string().uuid(),
+  ownerId: z.string().guid(),
   fileName: z.string().min(1).max(255),
   mime: z.enum(ALLOWED_MIME),
   size: z.number().int().positive().max(MAX_FILE_BYTES),

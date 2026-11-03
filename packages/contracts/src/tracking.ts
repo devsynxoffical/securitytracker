@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ActivityException, SegmentClaim, SegmentKind, ProductivityCategory } from './enums.js';
 
 export const TrackingSegmentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   kind: z.enum([SegmentKind.ACTIVE, SegmentKind.IDLE, SegmentKind.LOCKED]),
@@ -28,16 +28,16 @@ export const TrackingSegmentSchema = z.object({
 export type TrackingSegmentDto = z.infer<typeof TrackingSegmentSchema>;
 
 export const BatchIngestSegmentsSchema = z.object({
-  shiftId: z.string().uuid(),
+  shiftId: z.string().guid(),
   segments: z.array(TrackingSegmentSchema).min(1).max(500),
 });
 export type BatchIngestSegmentsDto = z.infer<typeof BatchIngestSegmentsSchema>;
 
 export const BatchIngestResponseSchema = z.object({
-  accepted: z.array(z.string().uuid()),
+  accepted: z.array(z.string().guid()),
   rejected: z.array(
     z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       reason: z.enum(['OUTSIDE_SHIFT', 'OVERLAP', 'TOO_OLD', 'INVALID']),
     }),
   ),
@@ -51,7 +51,7 @@ export const TamperEventSchema = z.object({
     'clock_changed',
     'binary_mismatch',
   ]),
-  detail: z.record(z.unknown()).optional(),
+  detail: z.record(z.string(), z.unknown()).optional(),
   occurredAt: z.string().datetime(),
 });
 export type TamperEventDto = z.infer<typeof TamperEventSchema>;
@@ -64,7 +64,7 @@ export const CreateProductivityRuleSchema = z.object({
     ProductivityCategory.NEUTRAL,
     ProductivityCategory.UNPRODUCTIVE,
   ]),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().guid().nullable().optional(),
 });
 export type CreateProductivityRuleDto = z.infer<typeof CreateProductivityRuleSchema>;
 

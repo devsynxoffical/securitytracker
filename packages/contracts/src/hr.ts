@@ -22,8 +22,8 @@ export const UpdateLeaveTypeSchema = CreateLeaveTypeSchema.partial();
 export type UpdateLeaveTypeDto = z.infer<typeof UpdateLeaveTypeSchema>;
 
 export const AdjustLeaveBalanceSchema = z.object({
-  employeeId: z.string().uuid(),
-  leaveTypeId: z.string().uuid(),
+  employeeId: z.string().guid(),
+  leaveTypeId: z.string().guid(),
   year: z.number().int().min(2000).max(2100),
   days: z.number(), // positive adds, negative removes
   reason: z.string().min(1).max(500),
@@ -31,15 +31,15 @@ export const AdjustLeaveBalanceSchema = z.object({
 export type AdjustLeaveBalanceDto = z.infer<typeof AdjustLeaveBalanceSchema>;
 
 export const LeaveBalanceQuerySchema = z.object({
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   year: z.coerce.number().int().min(2000).max(2100).optional(),
 });
 export type LeaveBalanceQueryDto = z.infer<typeof LeaveBalanceQuerySchema>;
 
 // ---- Leave requests (FR-HR-03), replaces RequestLeaveSchema for new clients
 export const CreateLeaveRequestSchema = z.object({
-  employeeId: z.string().uuid().optional(), // managers may file for staff in scope
-  leaveTypeId: z.string().uuid(),
+  employeeId: z.string().guid().optional(), // managers may file for staff in scope
+  leaveTypeId: z.string().guid(),
   dateFrom: z.string().date(),
   dateTo: z.string().date(),
   halfDay: z.boolean().default(false),
@@ -49,18 +49,18 @@ export type CreateLeaveRequestDto = z.infer<typeof CreateLeaveRequestSchema>;
 
 export const LeaveRequestQuerySchema = z.object({
   status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).optional(),
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   from: z.string().date().optional(),
   to: z.string().date().optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type LeaveRequestQueryDto = z.infer<typeof LeaveRequestQuerySchema>;
 
 export const LeaveCalendarQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
-  departmentId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
+  departmentId: z.string().guid().optional(),
+  teamId: z.string().guid().optional(),
 });
 export type LeaveCalendarQueryDto = z.infer<typeof LeaveCalendarQuerySchema>;
 
@@ -78,7 +78,7 @@ export type ImportHolidaysDto = z.infer<typeof ImportHolidaysSchema>;
 
 // ---- Schedule assignment (FR-HR-06)
 export const UpdateScheduleAssignmentSchema = z.object({
-  scheduleId: z.string().uuid().optional(),
+  scheduleId: z.string().guid().optional(),
   effectiveFrom: z.string().date().optional(),
   effectiveTo: z.string().date().nullable().optional(),
 });
@@ -86,9 +86,9 @@ export type UpdateScheduleAssignmentDto = z.infer<typeof UpdateScheduleAssignmen
 
 export const AttendanceSheetQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
-  departmentId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
+  departmentId: z.string().guid().optional(),
+  teamId: z.string().guid().optional(),
+  employeeId: z.string().guid().optional(),
   format: z.enum(['json', 'csv']).default('json'),
 });
 export type AttendanceSheetQueryDto = z.infer<typeof AttendanceSheetQuerySchema>;
@@ -107,7 +107,7 @@ export const UpdateProfileSchema = z.object({
   employmentType: z.enum([EmploymentType.FULL_TIME, EmploymentType.PART_TIME, EmploymentType.CONTRACT, EmploymentType.INTERN]).nullable().optional(),
   workLocation: z.string().max(100).nullable().optional(),
   probationEnd: z.string().date().nullable().optional(),
-  customFields: z.record(z.unknown()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
 });
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
 
@@ -140,8 +140,8 @@ export const UpdateChecklistTemplateSchema = CreateChecklistTemplateSchema.parti
 export type UpdateChecklistTemplateDto = z.infer<typeof UpdateChecklistTemplateSchema>;
 
 export const StartChecklistSchema = z.object({
-  employeeId: z.string().uuid(),
-  templateId: z.string().uuid().optional(), // default template of the kind when omitted
+  employeeId: z.string().guid(),
+  templateId: z.string().guid().optional(), // default template of the kind when omitted
   kind: z.enum([ChecklistKind.ONBOARDING, ChecklistKind.OFFBOARDING]),
   anchorDate: z.string().date().optional(), // join date or last day; defaults to today
 });
@@ -155,7 +155,7 @@ export const CreateAnnouncementSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(20000),
   audienceType: z.enum([AnnouncementAudience.COMPANY, AnnouncementAudience.DEPARTMENT, AnnouncementAudience.TEAM, AnnouncementAudience.ROLE]).default(AnnouncementAudience.COMPANY),
-  audienceId: z.string().uuid().optional(),
+  audienceId: z.string().guid().optional(),
   pinned: z.boolean().default(false),
   publishedAt: z.string().datetime().optional(), // omit = now
 });

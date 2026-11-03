@@ -4,7 +4,7 @@ export const DesktopLoginSchema = z.object({
   identifier: z.string().min(1),
   password: z.string().min(1),
   device: z.object({
-    id: z.string().uuid().optional(),
+    id: z.string().guid().optional(),
     publicKey: z.string().min(1),
     name: z.string().min(1),
     os: z.string().min(1),
@@ -19,7 +19,7 @@ export type DesktopLoginDto = z.infer<typeof DesktopLoginSchema>;
 
 export const RefreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
-  deviceId: z.string().uuid(),
+  deviceId: z.string().guid(),
   timestamp: z.string().datetime(),
   signature: z.string().min(1),
 });

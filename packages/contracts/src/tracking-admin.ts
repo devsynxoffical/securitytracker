@@ -4,7 +4,7 @@ import { ProductivityCategory } from './enums.js';
 // 16-tracking-admin-spec.md
 
 export const TimesheetQuerySchema = z.object({
-  employeeId: z.string().uuid().optional(), // defaults to caller
+  employeeId: z.string().guid().optional(), // defaults to caller
   from: z.string().date(),
   to: z.string().date(),
   format: z.enum(['json', 'csv']).default('json'),
@@ -14,16 +14,16 @@ export type TimesheetQueryDto = z.infer<typeof TimesheetQuerySchema>;
 export const TeamTimesheetQuerySchema = z.object({
   from: z.string().date(),
   to: z.string().date(),
-  departmentId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
+  departmentId: z.string().guid().optional(),
+  teamId: z.string().guid().optional(),
   format: z.enum(['json', 'csv']).default('json'),
 });
 export type TeamTimesheetQueryDto = z.infer<typeof TeamTimesheetQuerySchema>;
 
 export const TeamActivityQuerySchema = z.object({
   date: z.string().date(),
-  departmentId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
+  departmentId: z.string().guid().optional(),
+  teamId: z.string().guid().optional(),
 });
 export type TeamActivityQueryDto = z.infer<typeof TeamActivityQuerySchema>;
 
@@ -31,8 +31,8 @@ export const UsageReportQuerySchema = z.object({
   from: z.string().date(),
   to: z.string().date(),
   employeeIds: z.string().optional(), // comma separated uuids
-  departmentId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
+  departmentId: z.string().guid().optional(),
+  teamId: z.string().guid().optional(),
   category: z.enum([ProductivityCategory.PRODUCTIVE, ProductivityCategory.NEUTRAL, ProductivityCategory.UNPRODUCTIVE]).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
@@ -53,7 +53,7 @@ export const CategoriseSchema = z.object({
         type: z.enum(['app', 'domain']),
         pattern: z.string().min(1).max(200),
         category: z.enum([ProductivityCategory.PRODUCTIVE, ProductivityCategory.NEUTRAL, ProductivityCategory.UNPRODUCTIVE]),
-        departmentId: z.string().uuid().optional(),
+        departmentId: z.string().guid().optional(),
       }),
     )
     .min(1)
@@ -64,14 +64,14 @@ export type CategoriseDto = z.infer<typeof CategoriseSchema>;
 export const UpdateProductivityRuleSchema = z.object({
   pattern: z.string().min(1).max(200).optional(),
   category: z.enum([ProductivityCategory.PRODUCTIVE, ProductivityCategory.NEUTRAL, ProductivityCategory.UNPRODUCTIVE]).optional(),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().guid().nullable().optional(),
 });
 export type UpdateProductivityRuleDto = z.infer<typeof UpdateProductivityRuleSchema>;
 
 export const IdleReportQuerySchema = z.object({
   from: z.string().date(),
   to: z.string().date(),
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   minIdleSeconds: z.coerce.number().int().min(60).default(900),
 });
 export type IdleReportQueryDto = z.infer<typeof IdleReportQuerySchema>;
@@ -79,15 +79,15 @@ export type IdleReportQueryDto = z.infer<typeof IdleReportQuerySchema>;
 export const TamperQuerySchema = z.object({
   from: z.string().date().optional(),
   to: z.string().date().optional(),
-  employeeId: z.string().uuid().optional(),
-  cursor: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type TamperQueryDto = z.infer<typeof TamperQuerySchema>;
 
 // ---- Manual time (FR-TRK-17, F27)
 export const CreateManualTimeSchema = z.object({
-  employeeId: z.string().uuid().optional(), // defaults to caller
+  employeeId: z.string().guid().optional(), // defaults to caller
   date: z.string().date(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
@@ -103,10 +103,10 @@ export type DecideManualTimeDto = z.infer<typeof DecideManualTimeSchema>;
 
 export const ManualTimeQuerySchema = z.object({
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   from: z.string().date().optional(),
   to: z.string().date().optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type ManualTimeQueryDto = z.infer<typeof ManualTimeQuerySchema>;

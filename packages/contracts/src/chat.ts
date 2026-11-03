@@ -26,7 +26,7 @@ export const ChatRecordRefType = {
 export type ChatRecordRefTypeValue = (typeof ChatRecordRefType)[keyof typeof ChatRecordRefType];
 export const ChatRecordRefSchema = z.object({
   type: z.enum(['task', 'lead', 'deal', 'contact', 'mail']),
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 export type ChatRecordRef = z.infer<typeof ChatRecordRefSchema>;
 
@@ -41,12 +41,12 @@ export const CHAT_RETENTION_DAYS_DEFAULT = 365;
 export const CreateGroupChannelSchema = z.object({
   kind: z.literal('group').default('group'),
   name: z.string().trim().min(1).max(80),
-  memberIds: z.array(z.string().uuid()).max(500).default([]),
+  memberIds: z.array(z.string().guid()).max(500).default([]),
 });
 export type CreateGroupChannelDto = z.infer<typeof CreateGroupChannelSchema>;
 
 export const CreateDirectChannelSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().guid(),
 });
 export type CreateDirectChannelDto = z.infer<typeof CreateDirectChannelSchema>;
 
@@ -60,40 +60,40 @@ export type UpdateChannelDto = z.infer<typeof UpdateChannelSchema>;
 
 export const SendMessageSchema = z.object({
   body: z.string().min(1).max(CHAT_MESSAGE_MAX_LENGTH),
-  mentions: z.array(z.string().uuid()).max(50).optional(),
+  mentions: z.array(z.string().guid()).max(50).optional(),
   recordRef: ChatRecordRefSchema.nullable().optional(),
 });
 export type SendMessageDto = z.infer<typeof SendMessageSchema>;
 
 export const EditMessageSchema = z.object({
   body: z.string().min(1).max(CHAT_MESSAGE_MAX_LENGTH),
-  mentions: z.array(z.string().uuid()).max(50).optional(),
+  mentions: z.array(z.string().guid()).max(50).optional(),
 });
 export type EditMessageDto = z.infer<typeof EditMessageSchema>;
 
 export const MarkReadSchema = z.object({
-  lastReadMessageId: z.string().uuid(),
+  lastReadMessageId: z.string().guid(),
 });
 export type MarkReadDto = z.infer<typeof MarkReadSchema>;
 
 export const ListMessagesQuerySchema = z.object({
   /** Message id; returns messages strictly older than it (newest first). */
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type ListMessagesQueryDto = z.infer<typeof ListMessagesQuerySchema>;
 
 export const ChatSearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(200),
-  channelId: z.string().uuid().optional(),
-  cursor: z.string().uuid().optional(),
+  channelId: z.string().guid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(30),
 });
 export type ChatSearchQueryDto = z.infer<typeof ChatSearchQuerySchema>;
 
 export const ChatDirectoryQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type ChatDirectoryQueryDto = z.infer<typeof ChatDirectoryQuerySchema>;

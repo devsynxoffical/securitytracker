@@ -15,8 +15,8 @@ export const UpdateScheduleSchema = CreateScheduleSchema.partial();
 export type UpdateScheduleDto = z.infer<typeof UpdateScheduleSchema>;
 
 export const AssignScheduleSchema = z.object({
-  employeeId: z.string().uuid(),
-  scheduleId: z.string().uuid(),
+  employeeId: z.string().guid(),
+  scheduleId: z.string().guid(),
   effectiveFrom: z.string().date(),
   effectiveTo: z.string().date().optional(),
 });
@@ -96,7 +96,7 @@ export type MeShiftPolicyDto = z.infer<typeof MeShiftPolicySchema>;
 
 /** /me payload: the employee's effective schedule resolved for today in the company timezone. */
 export const MeScheduleSchema = z.object({
-  scheduleId: z.string().uuid(),
+  scheduleId: z.string().guid(),
   name: z.string(),
   timezone: z.string(),
   workdays: z.array(z.number().int().min(1).max(7)),
