@@ -39,8 +39,10 @@ jobs:
 
       - name: Throwaway secrets for this run (never literals in the repository)
         run: |
-          echo "JWT_SECRET=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
-          echo "ENCRYPTION_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          jwt="$(openssl rand -base64 48)"; enc="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt"; echo "::add-mask::$enc"
+          echo "JWT_SECRET=$jwt" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_SECRET=$enc" >> "$GITHUB_ENV"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -79,7 +81,7 @@ jobs:
         run: |
           pnpm --filter @company-os/api exec prisma migrate diff \
             --from-url "$DATABASE_URL" \
-            --to-schema-datamodel apps/api/prisma/schema.prisma \
+            --to-schema-datamodel prisma/schema.prisma \
             --exit-code
         # exit code 2 = drift between schema.prisma and the applied migrations
 
