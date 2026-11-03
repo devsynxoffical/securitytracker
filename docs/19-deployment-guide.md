@@ -195,7 +195,7 @@ Railway runs the same Docker image as the VPS stack (`railway.toml` at the repos
 Railway sets `PORT`; the image listens on it. The API refuses to start in production without `JWT_SECRET` and `ENCRYPTION_SECRET`.
 
 4. Deploy. The logs show `All migrations have been successfully applied` and `Company OS Central Backend running`. Check `https://<railway domain>/api/v1/health/ready`.
-5. On Hostinger set `NEXT_PUBLIC_API_URL` to `https://<railway domain>/api/v1` and redeploy the website. Open `/admin` and complete the sign-up.
+5. The same image serves the admin panel and public site from the same address: `https://<railway domain>/admin` (sign-up on the first visit, then login), `/` and `/install`. They call the API at the relative `/api/v1`, so no CORS or extra variable is needed. Optionally also keep the Hostinger copy (section 11) with `NEXT_PUBLIC_API_URL=https://<railway domain>/api/v1`.
 
 Desktop downloads: without a VPS there is no `updates.` host. Leave `NEXT_PUBLIC_DOWNLOADS_URL` pointing at a `latest.json` you upload to the website's `downloads/` folder, or make the GitHub repository's releases public and use the manifest from the release (section 9).
 

@@ -14,7 +14,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json turbo.js
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/config/package.json packages/config/
 COPY apps/api/package.json apps/api/
-RUN pnpm install --frozen-lockfile --filter @company-os/api... --filter @company-os/contracts...
+COPY apps/admin/package.json apps/admin/
+RUN pnpm install --frozen-lockfile --filter @company-os/api... --filter @company-os/contracts... --filter @company-os/admin...
 
 # ---- build
 FROM deps AS build
@@ -27,6 +28,15 @@ RUN pnpm --filter @company-os/contracts build \
  && cd /out && ./node_modules/.bin/prisma generate --schema ./prisma/schema.prisma
 # The generated client lives next to @prisma/client; generate it again inside the production bundle so /out is self-contained.
 
+# ---- admin panel and public site (static export served by the API from /app/public, same origin)
+FROM deps AS web
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL=/api/v1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+COPY packages/contracts packages/contracts
+COPY apps/admin apps/admin
+RUN pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build
+
 # ---- runtime
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=4000
@@ -37,6 +47,7 @@ COPY --from=build --chown=app:app /out/node_modules ./node_modules
 COPY --from=build --chown=app:app /out/package.json ./package.json
 COPY --from=build --chown=app:app /repo/apps/api/dist ./dist
 COPY --from=build --chown=app:app /repo/apps/api/prisma ./prisma
+COPY --from=web --chown=app:app /repo/apps/admin/out ./public
 COPY --chown=app:app infra/docker/api-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 USER app
