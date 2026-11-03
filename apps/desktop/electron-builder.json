@@ -35,7 +35,7 @@
   "asar": true,
   "publish": null,
   "mac": {
-    "identity": null,
+    "identity": "-",
     "forceCodeSigning": false,
     "hardenedRuntime": false,
     "gatekeeperAssess": false,
@@ -56,7 +56,8 @@
       }
     ],
     "artifactName": "WorkPulse-${version}-mac-${arch}.${ext}",
-    "darkModeSupport": true
+    "darkModeSupport": true,
+    "notarize": false
   },
   "dmg": {
     "title": "WorkPulse ${version}",
