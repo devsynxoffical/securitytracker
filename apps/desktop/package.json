@@ -1,6 +1,6 @@
 {
   "name": "@company-os/desktop",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "main": "./out/main/index.js",
   "scripts": {
@@ -14,6 +14,7 @@
     "test:lockdown": "tsc src/main/lockdown.ts --outDir out/lockdown-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/lockdown.spec.mjs",
     "dist:linux": "electron-vite build && electron-builder --linux",
     "pack": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
+    "test:telemetry": "tsc src/main/mac-input-counter.ts src/main/mac-foreground.ts --outDir out/telemetry-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/telemetry.spec.mjs",
     "test:policy": "tsc src/main/shift-policy.ts --outDir out/policy-test --module commonjs --target es2022 --strict --skipLibCheck --types node && node --test test/policy.spec.mjs"
   },
   "dependencies": {
