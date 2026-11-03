@@ -12,6 +12,7 @@ const NAV = [
   { href: '/', label: 'Overview' },
   { href: '/install#download', label: 'Download' },
   { href: '/install#troubleshooting', label: 'Troubleshooting' },
+  { href: '/guide', label: 'User guide' },
 ];
 
 const TOC: Array<{ id: string; label: string; icon: ReactNode }> = [

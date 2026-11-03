@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { BookOpen, ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { Avatar } from '@/components/ui';
@@ -113,6 +113,11 @@ export function Sidebar() {
             )}
           </>
         )}
+        <Tooltip label="User guide" side="top">
+          <a href="/guide" target="_blank" rel="noopener" className="rounded-md p-1.5 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="User guide">
+            <BookOpen size={15} />
+          </a>
+        </Tooltip>
         <Tooltip label="Sign out" side="top">
           <button type="button" onClick={logout} className="rounded-md p-1.5 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Sign out">
             <LogOut size={15} />

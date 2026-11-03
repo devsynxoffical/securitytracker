@@ -54,6 +54,9 @@ export function PublicShell({ children, nav, active }: { children: ReactNode; na
             <a href="/install" className="hover:text-ink">
               Install guide
             </a>
+            <a href="/guide" className="hover:text-ink">
+              User guide
+            </a>
             <a href="/install#privacy" className="hover:text-ink">
               Privacy
             </a>

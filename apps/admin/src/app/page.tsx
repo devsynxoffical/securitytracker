@@ -10,6 +10,7 @@ const NAV = [
   { href: '/#admins', label: 'For admins' },
   { href: '/#privacy', label: 'Privacy' },
   { href: '/install', label: 'Install guide' },
+  { href: '/guide', label: 'User guide' },
 ];
 
 export default function PublicLandingPage() {
