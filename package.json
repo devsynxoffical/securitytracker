@@ -4,7 +4,7 @@
   "private": true,
   "description": "Company OS - Employee Management + Security + CRM Platform",
   "scripts": {
-    "build": "pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build",
+    "build": "npm run build --prefix packages/contracts && npm run build --prefix apps/admin",
     "dev": "turbo run dev",
     "dist:desktop": "pnpm --filter @company-os/desktop run dist",
     "dist:mac": "pnpm --filter @company-os/desktop run dist:mac",
@@ -13,7 +13,7 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "build:web": "pnpm --filter @company-os/contracts build && pnpm --filter @company-os/admin build",
+    "build:web": "npm run build --prefix packages/contracts && npm run build --prefix apps/admin",
     "build:all": "turbo run build"
   },
   "devDependencies": {
