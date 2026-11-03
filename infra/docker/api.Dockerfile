@@ -4,7 +4,7 @@
 
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+RUN npm install -g pnpm@9.15.0 \
  && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 
@@ -23,7 +23,9 @@ COPY apps/api apps/api
 RUN pnpm --filter @company-os/contracts build \
  && pnpm --filter @company-os/api exec prisma generate \
  && pnpm --filter @company-os/api exec nest build \
- && pnpm --filter @company-os/api --prod deploy /out
+ && pnpm --filter @company-os/api --prod deploy /out \
+ && cd /out && ./node_modules/.bin/prisma generate --schema ./prisma/schema.prisma
+# The generated client lives next to @prisma/client; generate it again inside the production bundle so /out is self-contained.
 
 # ---- runtime
 FROM node:22-bookworm-slim AS runtime
@@ -39,5 +41,5 @@ COPY --chown=app:app infra/docker/api-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 USER app
 EXPOSE 4000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD curl -fsS http://localhost:4000/api/v1/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD curl -fsS "http://localhost:${PORT:-4000}/api/v1/health" || exit 1
 ENTRYPOINT ["/app/entrypoint.sh"]

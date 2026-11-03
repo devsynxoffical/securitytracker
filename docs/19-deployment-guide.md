@@ -172,3 +172,30 @@ On the VPS set `UPDATES_CORS_ORIGIN=https://roofingclients.us` (your web host or
 
 The desktop app talks to `api.company.com` directly; it never needs the web host.
 
+## 12. Railway for the API (instead of a VPS)
+
+Railway runs the same Docker image as the VPS stack (`railway.toml` at the repository root points it at `infra/docker/api.Dockerfile`). Website and admin panel stay on Hostinger (section 11).
+
+1. In the Railway project add **PostgreSQL** and **Redis** (New → Database). Supabase also works for the database: use its *Session pooler* connection string, because the direct `db.<ref>.supabase.co` host is IPv6 only.
+2. The `securitytracker` service deploys from GitHub `main`. Settings → Networking → Generate domain (or add `api.company.com` as a custom domain and create the CNAME Railway shows).
+3. Variables on the service:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (or the Supabase session pooler string) |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` |
+| `JWT_SECRET` | `openssl rand -base64 48` |
+| `ENCRYPTION_SECRET` | `openssl rand -hex 32`, keep a copy offline |
+| `RUN_MIGRATIONS` | `true` |
+| `JOBS_ENABLED` | `true` (scheduled jobs; set on exactly one service) |
+| `WORKER_ENABLED` | `true` (mail sync queue; fine in the same service while it runs one replica) |
+| `ADMIN_ORIGIN` | `https://roofingclients.us` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | any SMTP mailbox, for password resets |
+
+Railway sets `PORT`; the image listens on it. The API refuses to start in production without `JWT_SECRET` and `ENCRYPTION_SECRET`.
+
+4. Deploy. The logs show `All migrations have been successfully applied` and `Company OS Central Backend running`. Check `https://<railway domain>/api/v1/health/ready`.
+5. On Hostinger set `NEXT_PUBLIC_API_URL` to `https://<railway domain>/api/v1` and redeploy the website. Open `/admin` and complete the sign-up.
+
+Desktop downloads: without a VPS there is no `updates.` host. Leave `NEXT_PUBLIC_DOWNLOADS_URL` pointing at a `latest.json` you upload to the website's `downloads/` folder, or make the GitHub repository's releases public and use the manifest from the release (section 9).
+

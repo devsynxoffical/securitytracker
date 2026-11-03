@@ -1,0 +1,11 @@
+# Railway: the API (and, as a second service with WORKER_ENABLED=true, the worker) from the production Dockerfile.
+# Variables to set in the Railway service: see docs/19-deployment-guide.md section 12.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "infra/docker/api.Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
