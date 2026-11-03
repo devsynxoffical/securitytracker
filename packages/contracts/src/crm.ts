@@ -4,10 +4,10 @@ import { CallDirection, CallOutcome, TaskPriority, TaskStatus, StageType, Pipeli
 export const CreateLeadSchema = z.object({
   name: z.string().min(1),
   companyName: z.string().optional(),
-  ownerId: z.string().uuid().optional(),
-  pipelineId: z.string().uuid(),
-  stageId: z.string().uuid(),
-  sourceId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
+  pipelineId: z.string().guid(),
+  stageId: z.string().guid(),
+  sourceId: z.string().guid().optional(),
   value: z.number().nonnegative().optional(),
   currency: z.string().length(3).default('USD'),
   phones: z
@@ -30,7 +30,7 @@ export const CreateLeadSchema = z.object({
     .optional(),
   tags: z.array(z.string()).optional(),
   followUpAt: z.string().datetime().optional(),
-  customFields: z.record(z.unknown()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
   priority: z.enum([LeadPriority.LOW, LeadPriority.NORMAL, LeadPriority.HIGH]).default(LeadPriority.NORMAL),
   allowDuplicate: z.boolean().default(false),
 });
@@ -40,19 +40,19 @@ export const UpdateLeadSchema = CreateLeadSchema.partial();
 export type UpdateLeadDto = z.infer<typeof UpdateLeadSchema>;
 
 export const UpdateLeadStageSchema = z.object({
-  stageId: z.string().uuid(),
-  lostReasonId: z.string().uuid().optional(),
+  stageId: z.string().guid(),
+  lostReasonId: z.string().guid().optional(),
 });
 export type UpdateLeadStageDto = z.infer<typeof UpdateLeadStageSchema>;
 
 export const AssignLeadSchema = z.object({
-  ownerId: z.string().uuid(),
+  ownerId: z.string().guid(),
 });
 export type AssignLeadDto = z.infer<typeof AssignLeadSchema>;
 
 export const BulkAssignLeadsSchema = z.object({
-  leadIds: z.array(z.string().uuid()).min(1),
-  ownerId: z.string().uuid(),
+  leadIds: z.array(z.string().guid()).min(1),
+  ownerId: z.string().guid(),
 });
 export type BulkAssignLeadsDto = z.infer<typeof BulkAssignLeadsSchema>;
 
@@ -76,7 +76,7 @@ export const CheckDuplicateLeadSchema = z.object({
 export type CheckDuplicateLeadDto = z.infer<typeof CheckDuplicateLeadSchema>;
 
 export const LogCallSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.string().guid(),
   direction: z.enum([CallDirection.OUTBOUND, CallDirection.INBOUND]),
   outcome: z.enum([
     CallOutcome.CONNECTED,
@@ -89,15 +89,15 @@ export const LogCallSchema = z.object({
   durationSeconds: z.number().int().nonnegative(),
   notes: z.string().optional(),
   nextFollowUpAt: z.string().datetime().optional(),
-  newStageId: z.string().uuid().optional(),
+  newStageId: z.string().guid().optional(),
 });
 export type LogCallDto = z.infer<typeof LogCallSchema>;
 
 export const CreateTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
-  assigneeId: z.string().uuid(),
-  leadId: z.string().uuid().optional(),
+  assigneeId: z.string().guid(),
+  leadId: z.string().guid().optional(),
   priority: z
     .enum([
       TaskPriority.NONE,
@@ -142,6 +142,6 @@ export const UpdatePipelineStageSchema = CreatePipelineStageSchema.partial();
 export type UpdatePipelineStageDto = z.infer<typeof UpdatePipelineStageSchema>;
 
 export const ReorderStagesSchema = z.object({
-  stageIds: z.array(z.string().uuid()).min(1),
+  stageIds: z.array(z.string().guid()).min(1),
 });
 export type ReorderStagesDto = z.infer<typeof ReorderStagesSchema>;

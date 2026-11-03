@@ -6,26 +6,26 @@ import { RequirePermission } from '../auth/decorators/require-permission.decorat
 import { CurrentUser, AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 const AuditQuerySchema = z.object({
-  actorId: z.string().uuid().optional(),
+  actorId: z.string().guid().optional(),
   entityType: z.string().max(60).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 const LoginEventsQuerySchema = z.object({
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   result: z.string().max(40).optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 const SessionsQuerySchema = z.object({
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.string().guid().optional(),
   active: z.enum(['true', 'false']).optional(),
   client: z.enum(['desktop', 'admin']).optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 

@@ -51,11 +51,11 @@ export const AddressSchema = z.object({
 export type AddressDto = z.infer<typeof AddressSchema>;
 
 export const CursorListQuerySchema = z.object({
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   search: z.string().max(200).optional(),
-  ownerId: z.string().uuid().optional(),
-  tagId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
+  tagId: z.string().guid().optional(),
   sort: z.string().max(60).optional(), // e.g. "lastActivityAt:desc"
 });
 export type CursorListQueryDto = z.infer<typeof CursorListQuerySchema>;
@@ -72,11 +72,11 @@ export const CreateAccountSchema = z.object({
   phone: z.string().max(40).optional(),
   website: z.string().url().optional(),
   address: AddressSchema.optional(),
-  ownerId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
   lifecycle: LifecycleSchema.default(Lifecycle.PROSPECT),
-  parentAccountId: z.string().uuid().optional(),
-  tagIds: z.array(z.string().uuid()).optional(),
-  customFields: z.record(z.unknown()).optional(),
+  parentAccountId: z.string().guid().optional(),
+  tagIds: z.array(z.string().guid()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
   allowDuplicate: z.boolean().default(false),
 });
 export type CreateAccountDto = z.infer<typeof CreateAccountSchema>;
@@ -98,16 +98,16 @@ export const CreateContactSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().max(100).default(''),
   title: z.string().max(120).optional(),
-  accountId: z.string().uuid().optional(),
-  ownerId: z.string().uuid().optional(),
+  accountId: z.string().guid().optional(),
+  ownerId: z.string().guid().optional(),
   lifecycle: LifecycleSchema.default(Lifecycle.LEAD),
   phones: z.array(PhoneEntrySchema).optional(),
   emails: z.array(EmailEntrySchema).optional(),
   address: AddressSchema.optional(),
   doNotCall: z.boolean().default(false),
   doNotEmail: z.boolean().default(false),
-  tagIds: z.array(z.string().uuid()).optional(),
-  customFields: z.record(z.unknown()).optional(),
+  tagIds: z.array(z.string().guid()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
   allowDuplicate: z.boolean().default(false),
 });
 export type CreateContactDto = z.infer<typeof CreateContactSchema>;
@@ -116,7 +116,7 @@ export const UpdateContactSchema = CreateContactSchema.omit({ allowDuplicate: tr
 export type UpdateContactDto = z.infer<typeof UpdateContactSchema>;
 
 export const ContactListQuerySchema = CursorListQuerySchema.extend({
-  accountId: z.string().uuid().optional(),
+  accountId: z.string().guid().optional(),
   lifecycle: LifecycleSchema.optional(),
 });
 export type ContactListQueryDto = z.infer<typeof ContactListQuerySchema>;
@@ -132,24 +132,24 @@ export type CheckDuplicateContactDto = z.infer<typeof CheckDuplicateContactSchem
 // ---------------------------------------------------------------------------
 
 export const DealContactLinkSchema = z.object({
-  contactId: z.string().uuid(),
+  contactId: z.string().guid(),
   role: z.string().max(60).optional(),
   isPrimary: z.boolean().default(false),
 });
 
 export const CreateDealSchema = z.object({
   name: z.string().min(1).max(200),
-  accountId: z.string().uuid().optional(),
+  accountId: z.string().guid().optional(),
   contacts: z.array(DealContactLinkSchema).optional(),
-  pipelineId: z.string().uuid(),
-  stageId: z.string().uuid(),
+  pipelineId: z.string().guid(),
+  stageId: z.string().guid(),
   amount: z.number().nonnegative().optional(),
   currency: z.string().length(3).default('USD'),
   probability: z.number().int().min(0).max(100).optional(),
   expectedCloseAt: z.string().datetime().optional(),
-  ownerId: z.string().uuid().optional(),
-  tagIds: z.array(z.string().uuid()).optional(),
-  customFields: z.record(z.unknown()).optional(),
+  ownerId: z.string().guid().optional(),
+  tagIds: z.array(z.string().guid()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateDealDto = z.infer<typeof CreateDealSchema>;
 
@@ -157,15 +157,15 @@ export const UpdateDealSchema = CreateDealSchema.omit({ pipelineId: true, stageI
 export type UpdateDealDto = z.infer<typeof UpdateDealSchema>;
 
 export const UpdateDealStageSchema = z.object({
-  stageId: z.string().uuid(),
-  lostReasonId: z.string().uuid().optional(),
+  stageId: z.string().guid(),
+  lostReasonId: z.string().guid().optional(),
 });
 export type UpdateDealStageDto = z.infer<typeof UpdateDealStageSchema>;
 
 export const DealListQuerySchema = CursorListQuerySchema.extend({
-  pipelineId: z.string().uuid().optional(),
-  stageId: z.string().uuid().optional(),
-  accountId: z.string().uuid().optional(),
+  pipelineId: z.string().guid().optional(),
+  stageId: z.string().guid().optional(),
+  accountId: z.string().guid().optional(),
   status: z.enum(['open', 'won', 'lost']).optional(),
 });
 export type DealListQueryDto = z.infer<typeof DealListQuerySchema>;
@@ -175,17 +175,17 @@ export type DealListQueryDto = z.infer<typeof DealListQuerySchema>;
 // ---------------------------------------------------------------------------
 
 export const AssignRecordSchema = z.object({
-  ownerId: z.string().uuid(),
+  ownerId: z.string().guid(),
 });
 export type AssignRecordDto = z.infer<typeof AssignRecordSchema>;
 
 export const BulkRecordActionSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(500),
+  ids: z.array(z.string().guid()).min(1).max(500),
   action: z.enum(['assign', 'add_tag', 'remove_tag', 'stage', 'delete']),
-  ownerId: z.string().uuid().optional(),
-  tagId: z.string().uuid().optional(),
-  stageId: z.string().uuid().optional(),
-  lostReasonId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
+  tagId: z.string().guid().optional(),
+  stageId: z.string().guid().optional(),
+  lostReasonId: z.string().guid().optional(),
 });
 export type BulkRecordActionDto = z.infer<typeof BulkRecordActionSchema>;
 
@@ -202,21 +202,21 @@ export const ConvertLeadSchema = z.object({
   account: z
     .discriminatedUnion('mode', [
       z.object({ mode: z.literal('none') }),
-      z.object({ mode: z.literal('existing'), accountId: z.string().uuid() }),
+      z.object({ mode: z.literal('existing'), accountId: z.string().guid() }),
       z.object({ mode: z.literal('new'), name: z.string().min(1).max(200), domain: z.string().optional() }),
     ])
     .default({ mode: 'none' }),
   deal: z
     .object({
       name: z.string().min(1).max(200),
-      pipelineId: z.string().uuid(),
-      stageId: z.string().uuid(),
+      pipelineId: z.string().guid(),
+      stageId: z.string().guid(),
       amount: z.number().nonnegative().optional(),
       currency: z.string().length(3).default('USD'),
       expectedCloseAt: z.string().datetime().optional(),
     })
     .optional(),
-  ownerId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
   allowDuplicate: z.boolean().default(false),
 });
 export type ConvertLeadDto = z.infer<typeof ConvertLeadSchema>;
@@ -227,7 +227,7 @@ export type ConvertLeadDto = z.infer<typeof ConvertLeadSchema>;
 
 export const CreateActivitySchema = z.object({
   entityType: CrmEntityTypeSchema,
-  entityId: z.string().uuid(),
+  entityId: z.string().guid(),
   type: z.enum([
     CrmActivityType.NOTE,
     CrmActivityType.CALL,
@@ -240,7 +240,7 @@ export const CreateActivitySchema = z.object({
   status: z.enum([CrmActivityStatus.PLANNED, CrmActivityStatus.DONE, CrmActivityStatus.CANCELLED]).optional(),
   dueAt: z.string().datetime().optional(),
   durationSeconds: z.number().int().nonnegative().optional(),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateActivityDto = z.infer<typeof CreateActivitySchema>;
 
@@ -251,8 +251,8 @@ export type UpdateActivityStatusDto = z.infer<typeof UpdateActivityStatusSchema>
 
 export const ActivityListQuerySchema = z.object({
   entityType: CrmEntityTypeSchema,
-  entityId: z.string().uuid(),
-  cursor: z.string().uuid().optional(),
+  entityId: z.string().guid(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   type: z.string().optional(),
 });
@@ -260,7 +260,7 @@ export type ActivityListQueryDto = z.infer<typeof ActivityListQuerySchema>;
 
 export const AgendaQuerySchema = z.object({
   range: z.enum(['today', 'overdue', 'upcoming', 'done']).default('today'),
-  ownerId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
   type: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
@@ -330,7 +330,7 @@ export const CreateSavedViewSchema = z.object({
   visibility: z
     .enum([SavedViewVisibility.PRIVATE, SavedViewVisibility.TEAM, SavedViewVisibility.COMPANY])
     .default(SavedViewVisibility.PRIVATE),
-  filters: z.record(z.unknown()).default({}),
+  filters: z.record(z.string(), z.unknown()).default({}),
   sort: z.object({ field: z.string(), direction: z.enum(['asc', 'desc']) }).optional(),
   columns: z.array(z.string()).optional(),
   isDefault: z.boolean().default(false),
@@ -346,20 +346,20 @@ export type UpdateSavedViewDto = z.infer<typeof UpdateSavedViewSchema>;
 export const ImportEntitySchema = z.enum([CrmEntityType.LEAD, CrmEntityType.CONTACT, CrmEntityType.ACCOUNT]);
 
 export const StartImportSchema = z.object({
-  mapping: z.record(z.string()), // csv column -> field key, "custom.<key>" or "ignore"
+  mapping: z.record(z.string(), z.string()), // csv column -> field key, "custom.<key>" or "ignore"
   duplicateMode: z
     .enum([ImportDuplicateMode.SKIP, ImportDuplicateMode.UPDATE, ImportDuplicateMode.CREATE])
     .default(ImportDuplicateMode.SKIP),
   owner: z
     .discriminatedUnion('mode', [
-      z.object({ mode: z.literal('fixed'), employeeId: z.string().uuid() }),
-      z.object({ mode: z.literal('round_robin'), employeeIds: z.array(z.string().uuid()).min(1) }),
+      z.object({ mode: z.literal('fixed'), employeeId: z.string().guid() }),
+      z.object({ mode: z.literal('round_robin'), employeeIds: z.array(z.string().guid()).min(1) }),
     ])
     .optional(),
-  tagIds: z.array(z.string().uuid()).optional(),
-  sourceId: z.string().uuid().optional(),
-  pipelineId: z.string().uuid().optional(),
-  stageId: z.string().uuid().optional(),
+  tagIds: z.array(z.string().guid()).optional(),
+  sourceId: z.string().guid().optional(),
+  pipelineId: z.string().guid().optional(),
+  stageId: z.string().guid().optional(),
 });
 export type StartImportDto = z.infer<typeof StartImportSchema>;
 

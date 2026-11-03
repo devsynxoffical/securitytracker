@@ -24,16 +24,16 @@ export const NotificationType = {
 export type NotificationTypeValue = (typeof NotificationType)[keyof typeof NotificationType];
 
 export const CreateNotificationSchema = z.object({
-  recipientId: z.string().uuid(),
+  recipientId: z.string().guid(),
   type: z.string(),
   title: z.string().min(1),
   body: z.string().min(1),
-  data: z.record(z.unknown()).optional().default({}),
+  data: z.record(z.string(), z.unknown()).optional().default({}),
 });
 export type CreateNotificationDto = z.infer<typeof CreateNotificationSchema>;
 
 export const MarkNotificationsReadSchema = z.object({
-  ids: z.array(z.string().uuid()).optional(),
+  ids: z.array(z.string().guid()).optional(),
   all: z.boolean().optional(),
 });
 export type MarkNotificationsReadDto = z.infer<typeof MarkNotificationsReadSchema>;

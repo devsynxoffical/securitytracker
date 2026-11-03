@@ -39,7 +39,7 @@ export const CreateSpaceSchema = z.object({
   colour: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#0F6B5C'),
   icon: z.string().max(40).optional(),
   visibility: z.enum([SpaceVisibility.COMPANY, SpaceVisibility.PRIVATE]).default(SpaceVisibility.COMPANY),
-  memberIds: z.array(z.string().uuid()).optional(),
+  memberIds: z.array(z.string().guid()).optional(),
   defaultStatuses: z.array(DefaultStatusSchema).min(2).optional(),
 });
 export type CreateSpaceDto = z.infer<typeof CreateSpaceSchema>;
@@ -47,14 +47,14 @@ export const UpdateSpaceSchema = CreateSpaceSchema.omit({ memberIds: true }).par
 export type UpdateSpaceDto = z.infer<typeof UpdateSpaceSchema>;
 
 export const SpaceMemberSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().guid(),
   role: z.enum(['member', 'admin']).default('member'),
 });
 export type SpaceMemberDto = z.infer<typeof SpaceMemberSchema>;
 
 // ---- Lists and statuses (FR-TASK-07)
 export const CreateListSchema = z.object({
-  spaceId: z.string().uuid(),
+  spaceId: z.string().guid(),
   name: z.string().min(1).max(100),
   description: z.string().max(2000).optional(),
 });
@@ -70,61 +70,61 @@ export const CreateStatusSchema = DefaultStatusSchema.extend({
 export type CreateStatusDto = z.infer<typeof CreateStatusSchema>;
 export const UpdateStatusSchema = CreateStatusSchema.partial();
 export type UpdateStatusDto = z.infer<typeof UpdateStatusSchema>;
-export const ReorderStatusesSchema = z.object({ statusIds: z.array(z.string().uuid()).min(1) });
+export const ReorderStatusesSchema = z.object({ statusIds: z.array(z.string().guid()).min(1) });
 export type ReorderStatusesDto = z.infer<typeof ReorderStatusesSchema>;
 
 // ---- Tasks (FR-TASK-08)
 export const CreateWorkTaskSchema = z.object({
-  listId: z.string().uuid(),
-  parentId: z.string().uuid().optional(),
+  listId: z.string().guid(),
+  parentId: z.string().guid().optional(),
   title: z.string().min(1).max(300),
   description: z.string().max(50000).optional(),
-  statusId: z.string().uuid().optional(),
+  statusId: z.string().guid().optional(),
   priority: TaskPrioritySchema.default(TaskPriority.NORMAL),
-  assigneeIds: z.array(z.string().uuid()).optional(),
+  assigneeIds: z.array(z.string().guid()).optional(),
   startAt: z.string().datetime().optional(),
   dueAt: z.string().datetime().optional(),
   timeEstimateSeconds: z.number().int().nonnegative().optional(),
-  tagIds: z.array(z.string().uuid()).optional(),
-  leadId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  accountId: z.string().uuid().optional(),
-  dealId: z.string().uuid().optional(),
-  customFields: z.record(z.unknown()).optional(),
+  tagIds: z.array(z.string().guid()).optional(),
+  leadId: z.string().guid().optional(),
+  contactId: z.string().guid().optional(),
+  accountId: z.string().guid().optional(),
+  dealId: z.string().guid().optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateWorkTaskDto = z.infer<typeof CreateWorkTaskSchema>;
 
 export const UpdateWorkTaskSchema = CreateWorkTaskSchema.omit({ listId: true, parentId: true, assigneeIds: true, statusId: true })
   .partial()
   .extend({
-    listId: z.string().uuid().optional(), // move
+    listId: z.string().guid().optional(), // move
     position: z.number().nonnegative().optional(),
   });
 export type UpdateWorkTaskDto = z.infer<typeof UpdateWorkTaskSchema>;
 
 export const SetTaskStatusSchema = z.object({
-  statusId: z.string().uuid().optional(),
+  statusId: z.string().guid().optional(),
   status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(), // legacy desktop body
 });
 export type SetTaskStatusDto = z.infer<typeof SetTaskStatusSchema>;
 
-export const AddAssigneesSchema = z.object({ employeeIds: z.array(z.string().uuid()).min(1) });
+export const AddAssigneesSchema = z.object({ employeeIds: z.array(z.string().guid()).min(1) });
 export type AddAssigneesDto = z.infer<typeof AddAssigneesSchema>;
 
 export const TaskListQuerySchema = z.object({
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
-  listId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
-  assigneeId: z.string().uuid().optional(),
-  statusId: z.string().uuid().optional(),
+  listId: z.string().guid().optional(),
+  spaceId: z.string().guid().optional(),
+  assigneeId: z.string().guid().optional(),
+  statusId: z.string().guid().optional(),
   group: TaskStatusGroupSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   dueFrom: z.string().datetime().optional(),
   dueTo: z.string().datetime().optional(),
-  tagId: z.string().uuid().optional(),
+  tagId: z.string().guid().optional(),
   search: z.string().max(200).optional(),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().guid().optional(),
   includeArchived: z.coerce.boolean().default(false),
   includeSubtasks: z.coerce.boolean().default(false),
   sort: z.string().max(60).optional(),
@@ -140,7 +140,7 @@ export type MyTasksQueryDto = z.infer<typeof MyTasksQuerySchema>;
 // ---- Comments, checklists, time (FR-TASK-09, 10, 14)
 export const CreateCommentSchema = z.object({
   body: z.string().min(1).max(20000),
-  mentions: z.array(z.string().uuid()).optional(),
+  mentions: z.array(z.string().guid()).optional(),
 });
 export type CreateCommentDto = z.infer<typeof CreateCommentSchema>;
 export const UpdateCommentSchema = CreateCommentSchema.partial();
@@ -171,13 +171,13 @@ export type CreateTimeEntryDto = z.infer<typeof CreateTimeEntrySchema>;
 
 // ---- Bulk (FR-TASK-15)
 export const BulkTaskActionSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(500),
+  ids: z.array(z.string().guid()).min(1).max(500),
   action: z.enum(['status', 'assign', 'unassign', 'priority', 'due', 'move', 'add_tag', 'remove_tag', 'archive', 'restore']),
-  statusId: z.string().uuid().optional(),
-  employeeId: z.string().uuid().optional(),
+  statusId: z.string().guid().optional(),
+  employeeId: z.string().guid().optional(),
   priority: TaskPrioritySchema.optional(),
   dueAt: z.string().datetime().nullable().optional(),
-  listId: z.string().uuid().optional(),
-  tagId: z.string().uuid().optional(),
+  listId: z.string().guid().optional(),
+  tagId: z.string().guid().optional(),
 });
 export type BulkTaskActionDto = z.infer<typeof BulkTaskActionSchema>;

@@ -8,16 +8,16 @@ export type ConversationView = z.infer<typeof ConversationViewSchema>;
 
 export const ConversationListQuerySchema = z.object({
   view: ConversationViewSchema.default('open'),
-  labelId: z.string().uuid().optional(),
-  assigneeId: z.string().uuid().optional(),
+  labelId: z.string().guid().optional(),
+  assigneeId: z.string().guid().optional(),
   q: z.string().max(200).optional(),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().guid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(30),
 });
 export type ConversationListQueryDto = z.infer<typeof ConversationListQuerySchema>;
 
 export const AssignConversationSchema = z.object({
-  assigneeId: z.string().uuid().nullable(),
+  assigneeId: z.string().guid().nullable(),
 });
 export type AssignConversationDto = z.infer<typeof AssignConversationSchema>;
 
@@ -30,15 +30,15 @@ export const SetConversationStatusSchema = z
 export type SetConversationStatusDto = z.infer<typeof SetConversationStatusSchema>;
 
 export const LinkConversationSchema = z.object({
-  contactId: z.string().uuid().nullable().optional(),
-  dealId: z.string().uuid().nullable().optional(),
-  leadId: z.string().uuid().nullable().optional(),
+  contactId: z.string().guid().nullable().optional(),
+  dealId: z.string().guid().nullable().optional(),
+  leadId: z.string().guid().nullable().optional(),
 });
 export type LinkConversationDto = z.infer<typeof LinkConversationSchema>;
 
 export const CreateMailCommentSchema = z.object({
   body: z.string().min(1).max(20000),
-  mentions: z.array(z.string().uuid()).optional(),
+  mentions: z.array(z.string().guid()).optional(),
 });
 export type CreateMailCommentDto = z.infer<typeof CreateMailCommentSchema>;
 
@@ -61,8 +61,8 @@ export const UpdateMailTemplateSchema = CreateMailTemplateSchema.partial();
 export type UpdateMailTemplateDto = z.infer<typeof UpdateMailTemplateSchema>;
 
 export const RenderTemplateSchema = z.object({
-  threadId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
+  threadId: z.string().guid().optional(),
+  contactId: z.string().guid().optional(),
 });
 export type RenderTemplateDto = z.infer<typeof RenderTemplateSchema>;
 

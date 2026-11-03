@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ShiftEventType, ShiftState } from './enums.js';
 
 export const ShiftEventItemSchema = z.object({
-  clientEventId: z.string().uuid(),
+  clientEventId: z.string().guid(),
   type: z.enum([
     ShiftEventType.START,
     ShiftEventType.BREAK_START,
@@ -29,7 +29,7 @@ export const HeartbeatSchema = z.object({
   ]),
   clientClock: z.string().datetime(),
   queueSize: z.number().int().nonnegative(),
-  shiftId: z.string().uuid().optional(),
+  shiftId: z.string().guid().optional(),
 });
 export type HeartbeatDto = z.infer<typeof HeartbeatSchema>;
 
@@ -43,7 +43,7 @@ export const ShiftClosedReason = {
 export type ShiftClosedReasonType = (typeof ShiftClosedReason)[keyof typeof ShiftClosedReason];
 
 export const ClosedShiftSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   endedAt: z.string().datetime().nullable(),
   reason: z.enum([
     ShiftClosedReason.AUTO_CLOSED_NO_HEARTBEAT,
@@ -57,7 +57,7 @@ export type ClosedShiftDto = z.infer<typeof ClosedShiftSchema>;
 /** Server to client command carried on the heartbeat response. */
 export const HeartbeatCommandSchema = z.object({
   type: z.literal('shift_closed'),
-  shiftId: z.string().uuid(),
+  shiftId: z.string().guid(),
   endedAt: z.string().datetime().nullable(),
   reason: ClosedShiftSchema.shape.reason,
 });
@@ -85,7 +85,7 @@ export const ShiftEventsResponseSchema = z.object({
   success: z.literal(true),
   processedEventsCount: z.number().int().nonnegative(),
   /** Every client event id the server has seen (created, duplicate or dropped): the client deletes them. */
-  acknowledgedEventIds: z.array(z.string().uuid()),
+  acknowledgedEventIds: z.array(z.string().guid()),
   currentShift: z.unknown().nullable(),
   /** Set when a break, end or claim event referred to a shift that is no longer open. */
   closedShift: ClosedShiftSchema.nullable(),
