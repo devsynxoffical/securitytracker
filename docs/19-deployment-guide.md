@@ -210,3 +210,7 @@ If nobody knows the Super Admin password, or the authenticator phone is lost:
 
 Only someone with access to the server's settings can use this. On a database without any account the panel shows "Create your workspace" instead of the sign-in.
 
+### Turning off the authenticator requirement
+
+Railway → service → Variables: `ADMIN_2FA_REQUIRED` = `false`, then deploy. Admins sign in with email and password only (docs/08 section 10). Delete the variable to require the authenticator again.
+

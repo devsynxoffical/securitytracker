@@ -377,6 +377,13 @@ export class AuthService {
       });
     }
 
+    // Operator opt-out (08 section 2): ADMIN_2FA_REQUIRED=false on the server lets admins sign in with
+    // email and password only. Default is required. Every such sign-in is logged as `success_no_2fa`.
+    if (this.configService.get<string>('ADMIN_2FA_REQUIRED') === 'false') {
+      await this.logLoginEvent(employee.id, dto.email, null, ip, 'admin', 'success_no_2fa');
+      return { tokens: await this.createAdminSession(employee, ip, userAgent) };
+    }
+
     // Check TOTP Enrolment
     if (!employee.totpEnabled) {
       const tempToken = this.jwtService.sign(
