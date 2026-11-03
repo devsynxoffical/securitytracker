@@ -39,6 +39,8 @@ interface AuthState {
   can: (key: string) => boolean;
   /** F29: true while the deployment has no employee yet. null = unknown (not checked). */
   needsSetup: boolean | null;
+  /** The setup check could not reach the API (wrong server address, server down). */
+  setupCheckFailed: boolean;
   refreshSetupStatus: () => Promise<boolean>;
   bootstrap: (input: { companyName: string; timezone: string; firstName: string; lastName: string; email: string; password: string }) => Promise<{ companyId: string }>;
   /** F30 */
@@ -52,13 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [status, setStatus] = useState<AuthState['status']>('loading');
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [setupCheckFailed, setSetupCheckFailed] = useState(false);
 
   const refreshSetupStatus = useCallback(async () => {
     try {
       const res = await http.get<{ needsSetup: boolean }>('/setup/status');
       setNeedsSetup(res.needsSetup);
+      setSetupCheckFailed(false);
       return res.needsSetup;
     } catch {
+      setSetupCheckFailed(true);
       setNeedsSetup(false);
       return false;
     }
@@ -156,8 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, refreshSetupStatus, bootstrap, forgotPassword, resetPassword }),
-    [me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, refreshSetupStatus, bootstrap, forgotPassword, resetPassword],
+    () => ({ me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, setupCheckFailed, refreshSetupStatus, bootstrap, forgotPassword, resetPassword }),
+    [me, status, login, startEnrollment, confirmEnrollment, verifyTwoFactor, logout, can, needsSetup, setupCheckFailed, refreshSetupStatus, bootstrap, forgotPassword, resetPassword],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

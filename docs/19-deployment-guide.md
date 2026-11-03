@@ -199,3 +199,14 @@ Railway sets `PORT`; the image listens on it. The API refuses to start in produc
 
 Desktop downloads: without a VPS there is no `updates.` host. Leave `NEXT_PUBLIC_DOWNLOADS_URL` pointing at a `latest.json` you upload to the website's `downloads/` folder, or make the GitHub repository's releases public and use the manifest from the release (section 9).
 
+### Locked out of the admin panel (break-glass)
+
+If nobody knows the Super Admin password, or the authenticator phone is lost:
+
+1. Railway → service → Variables: add `ADMIN_RECOVERY_EMAIL` (the Super Admin's email) and `ADMIN_RECOVERY_PASSWORD` (a new password, at least 10 characters). Deploy.
+2. The deploy log shows `Admin recovery applied for i***@domain` (or, when the email matches no Super Admin, the masked emails of those that exist).
+3. Sign in with the new password; the panel asks to set up 2FA again. All earlier sessions were signed out.
+4. Delete both variables and deploy again. The action is recorded in the audit log as `admin_recovery`.
+
+Only someone with access to the server's settings can use this. On a database without any account the panel shows "Create your workspace" instead of the sign-in.
+

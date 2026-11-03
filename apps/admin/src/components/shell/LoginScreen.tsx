@@ -68,7 +68,7 @@ function ResetFromLink() {
 }
 
 function SignIn() {
-  const { login, needsSetup } = useAuth();
+  const { login, needsSetup, setupCheckFailed, refreshSetupStatus } = useAuth();
   const [view, setView] = useState<View>({ step: 'credentials' });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -112,6 +112,17 @@ function SignIn() {
 
   return (
     <AuthLayout footer={footer} width={view.step === 'setup' ? 460 : 420}>
+      {setupCheckFailed && view.step === 'credentials' && (
+        <div className="mb-4">
+          <Banner tone="amber">
+            Cannot reach the server at <span className="font-mono">{getApiBaseUrl()}</span>. Open Advanced, clear the API server field and save, then{' '}
+            <button type="button" className="font-semibold underline" onClick={() => void refreshSetupStatus()}>
+              try again
+            </button>
+            .
+          </Banner>
+        </div>
+      )}
       {error && view.step !== 'forgot' && (
         <div className="mb-4">
           <Banner tone="red">{error}</Banner>
