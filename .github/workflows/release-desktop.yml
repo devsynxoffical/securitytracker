@@ -140,7 +140,7 @@ jobs:
             target: --linux
             unpacked: dist/linux-unpacked/WorkPulse
             glob: |
-              apps/desktop/dist/WorkPulse-*-linux-x64.AppImage
+              apps/desktop/dist/WorkPulse-*-linux-*.AppImage
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:

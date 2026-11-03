@@ -186,7 +186,13 @@ public class UuidV7Tests
         var now = new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc);
         var ids = Enumerable.Range(0, 100).Select(_ => UuidV7.New(now)).ToList();
         Assert.All(ids, id => Assert.Equal(7, UuidV7.Version(id)));
-        Assert.All(ids, id => Assert.Equal(new DateTimeOffset(now).ToUnixTimeMilliseconds(), UuidV7.TimestampMs(id)));
+        // The generator is monotonic for the whole process (a clock that steps back never reorders ids), so
+        // when other tests already used later times the ids carry that later time. Assert the guarantees:
+        // never earlier than the requested time, and non-decreasing.
+        var nowMs = new DateTimeOffset(now).ToUnixTimeMilliseconds();
+        var stamps = ids.Select(UuidV7.TimestampMs).ToList();
+        Assert.All(stamps, ms => Assert.True(ms >= nowMs));
+        Assert.True(stamps.Zip(stamps.Skip(1), (x, y) => y >= x).All(ok => ok), "timestamps must not decrease");
         Assert.Equal(100, ids.Distinct().Count());
         var strings = ids.Select(i => i.ToString("N")).ToList();
         Assert.True(strings.SequenceEqual(strings.OrderBy(s => s, StringComparer.Ordinal)), "ids created in one millisecond must sort in creation order");
