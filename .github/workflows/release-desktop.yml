@@ -180,6 +180,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
         run: |
+          # Secrets that are not configured arrive as empty strings; electron-builder would read an empty
+          # CSC_LINK as a file path ("... not a file"). Drop every empty signing variable.
+          for v in CSC_LINK CSC_KEY_PASSWORD WIN_CSC_LINK WIN_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v}" ]; then unset "$v"; fi
+          done
           pnpm exec electron-vite build
           pnpm exec electron-builder ${{ matrix.target }} --publish never
 

@@ -266,10 +266,24 @@ public sealed class SegmentBuilder
         {
             var kind = _current.Kind;
             var cur = _current;
-            cur.EndedAt = t.Now;
+            var idleSince = _idleSince;
+
+            // An active segment whose tail has had no input yet is cut at the last input, not at the cap:
+            // the tail continues as its own segment, so if it turns out to be idle the idle split can still be
+            // backdated to the last input instead of counting up to the idle threshold as active (09 section 3).
+            // Exceptions (calls, meetings, microphone) keep the plain cap: their quiet time is active by rule.
+            var lastInput = t.Now - t.SinceInput;
+            var capAt = kind == SegmentKind.Active && t.SinceInput > TimeSpan.Zero && ExceptionFor(t) == ActivityException.None && lastInput > cur.StartedAt
+                ? lastInput
+                : t.Now;
+
+            cur.EndedAt = capAt;
             EmitPendingThen(cur);
-            Open(t.Now, kind, t);
-            if (kind == SegmentKind.Idle) _idleSince ??= cur.StartedAt;
+            Open(capAt, kind, t);
+            _current!.EndedAt = t.Now;
+
+            // The long-idle clock keeps running across caps; it measures the whole absence, not the last slice.
+            if (kind == SegmentKind.Idle) _idleSince = idleSince ?? cur.StartedAt;
         }
     }
 
